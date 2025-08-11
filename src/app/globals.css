@@ -1,0 +1,226 @@
+@import "tailwindcss";
+
+/* 브랜드 컬러 시스템 - CSS Custom Properties */
+:root {
+  /* ==========  브랜드 컬러 시스템  ========== */
+  
+  /* Sage Green 10단계 그라데이션 */
+  --sage-10: #F7F9F8;
+  --sage-20: #EDF2EE;
+  --sage-30: #DFE8E1;
+  --sage-40: #C9D6CB;
+  --sage-50: #B2C5B8;    /* Primary Brand */
+  --sage-60: #9BB5A2;
+  --sage-70: #84A68C;
+  --sage-80: #6D9676;
+  --sage-90: #568660;
+  --sage-100: #3F764A;
+
+  /* 보조 컬러 팔레트 */
+  --off-white: #FDFDFD;
+  --medium-gray: #6D7275;
+  --pale-lavender: #D2D4E1;
+  --ivory-cream: #F9F5EF;
+  --soft-rose: #E8C4C0;
+
+  /* ==========  의미론적 토큰  ========== */
+  
+  /* Interactive 토큰 */
+  --interactive-primary: var(--sage-50);
+  --interactive-primary-hover: var(--sage-60);
+  --interactive-primary-active: var(--sage-70);
+  --interactive-primary-disabled: var(--sage-40);
+  --interactive-secondary: var(--sage-20);
+  --interactive-tertiary: var(--sage-10);
+  
+  /* Background 토큰 */
+  --background-primary: var(--off-white);
+  --background-secondary: var(--sage-10);
+  --background-tertiary: var(--sage-20);
+  --background-hover: var(--sage-30);
+  --background-selected: var(--sage-40);
+  --background-brand: var(--sage-50);
+  
+  /* Text 토큰 */
+  --text-primary: var(--medium-gray);
+  --text-secondary: #9CA3AF;
+  --text-placeholder: #D1D5DB;
+  --text-on-color: #FFFFFF;
+  --text-on-brand: var(--sage-100);
+  --text-inverse: #111827;
+  
+  /* Border 토큰 */
+  --border-subtle: var(--sage-20);
+  --border-strong: var(--sage-40);
+  --border-interactive: var(--sage-50);
+  --border-focus: var(--sage-70);
+  --border-inverse: var(--sage-100);
+
+  /* ==========  감정별 색상 시스템  ========== */
+  
+  /* 감정 주요 색상 (브랜드 톤 조화) */
+  --emotion-happy: #E6C55A;      /* Soft Gold */
+  --emotion-sad: #6B8AC7;        /* Calm Blue */
+  --emotion-angry: #D67D5C;      /* Warm Orange */
+  --emotion-peaceful: #7DB87D;   /* Natural Green */
+  --emotion-worried: #E6B366;    /* Gentle Orange */
+
+  /* 감정별 보조 색상 */
+  --emotion-happy-secondary: #F5F0DB;
+  --emotion-sad-secondary: #E8EEF7;
+  --emotion-angry-secondary: #F3E5E0;
+  --emotion-peaceful-secondary: #E8F0E8;
+  --emotion-worried-secondary: #F5EBDC;
+
+  /* 감정별 배경 색상 */
+  --emotion-happy-bg: #FAF7E8;
+  --emotion-sad-bg: #F2F6FB;
+  --emotion-angry-bg: #F8F0EC;
+  --emotion-peaceful-bg: #F0F7F0;
+  --emotion-worried-bg: #FAF4E8;
+
+  /* ==========  시스템 색상  ========== */
+  
+  --success: #10B981;
+  --warning: #F59E0B;
+  --error: #EF4444;
+  --info: #3B82F6;
+}
+
+/* ==========  다크 모드 변형  ========== */
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    /* 배경 시스템 */
+    --background-primary: #1A1E1C;
+    --background-secondary: #232822;
+    --background-tertiary: #2C322B;
+    --background-hover: #343A33;
+    --background-selected: #3C443B;
+    
+    /* 텍스트 시스템 */
+    --text-primary: #E5E7E6;
+    --text-secondary: #B8BAB9;
+    --text-placeholder: #8A8C8B;
+    --text-inverse: #111827;
+    
+    /* 브랜드 컬러 다크 모드 조정 */
+    --interactive-primary: #8FB59C;
+    --interactive-primary-hover: #A3C4B0;
+    --interactive-primary-active: #7AA287;
+    
+    /* 보더 시스템 */
+    --border-subtle: #2C322B;
+    --border-strong: #3C443B;
+    --border-focus: #8FB59C;
+    
+    /* 감정별 다크 모드 색상 */
+    --emotion-happy: #E6C55A;        /* 유지 */
+    --emotion-happy-bg: #2B2820;
+    --emotion-sad: #7A9BD1;          /* 더 밝게 */
+    --emotion-sad-bg: #1F242B;
+    --emotion-angry: #E08A6B;        /* 더 밝게 */
+    --emotion-angry-bg: #2B221F;
+    --emotion-peaceful: #8FC28F;     /* 더 밝게 */
+    --emotion-peaceful-bg: #1F2B1F;
+    --emotion-worried: #EBC170;      /* 더 밝게 */
+    --emotion-worried-bg: #2B2620;
+  }
+}
+
+/* ==========  기본 스타일  ========== */
+
+body {
+  background: var(--background-primary);
+  color: var(--text-primary);
+  font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  line-height: 1.6;
+}
+
+/* ==========  유틸리티 클래스  ========== */
+
+/* 부드러운 전환 효과 */
+* {
+  transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+}
+
+/* 모션 민감성 고려 */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* 감정 선택 버튼 스타일 */
+.emotion-button {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  transition: all 0.3s ease;
+}
+
+.emotion-button:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.emotion-button.selected {
+  border-color: var(--interactive-primary);
+}
+
+/* AI 생성 글귀 스타일 */
+.ai-poem {
+  font-family: 'Nanum Myeongjo', 'Noto Serif KR', serif;
+  font-size: 16px;
+  line-height: 28px;
+  letter-spacing: 0.02em;
+  text-align: center;
+}
+
+.ai-prose {
+  font-family: 'Noto Serif KR', Georgia, serif;
+  font-size: 14px;
+  line-height: 24px;
+  letter-spacing: 0.01em;
+  text-align: justify;
+}
+
+/* 접근성 */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+/* 포커스 스타일 */
+.focus-ring {
+  outline: 2px solid var(--border-focus);
+  outline-offset: 2px;
+}
+
+/* 스크롤바 스타일 */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--background-secondary);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--interactive-primary);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--interactive-primary-hover);
+}
