@@ -1,0 +1,323 @@
+---
+description: 새김(Saegim) 프론트엔드 개발 규칙 - Next.js 15 + TypeScript + Tailwind + Zustand
+globs:
+  - 'src/**/*.{ts,tsx,js,jsx,css}'
+  - '*.config.{ts,js}'
+  - 'tailwind.config.ts'
+  - 'next.config.ts'
+  - 'package.json'
+excludeGlobs:
+  - 'node_modules/**'
+  - '.next/**'
+  - 'dist/**'
+  - 'build/**'
+  - '**/*.test.{ts,tsx,js,jsx}'
+  - '**/*.spec.{ts,tsx,js,jsx}'
+  - '**/*.d.ts'
+alwaysApply: false
+---
+
+# 새김(Saegim) Frontend Development Rules
+
+## 🎯 프로젝트 개요
+
+- **서비스명**: 새김(Saegim) - 감성 AI 다이어리
+- **기술 스택**: Next.js 15 + TypeScript + Tailwind CSS + Zustand 5.x
+- **백엔드**: FastAPI (별도 서버)
+- **언어**: 한국어 기반 (lang="ko")
+- **UI**: 반응형 웹, 모바일 우선
+
+## 📁 디렉터리 구조 (src/ 기반)
+
+```
+src/
+├── app/              # Next.js App Router
+│   ├── layout.tsx    # 루트 레이아웃 (한국어, 메타데이터)
+│   ├── page.tsx      # 홈페이지
+│   ├── globals.css   # 전역 스타일 (디자인 시스템)
+│   └── [routes]/     # 각 라우트별 페이지
+├── components/       # 재사용 가능한 UI 컴포넌트
+│   ├── ui/          # 기본 UI 컴포넌트 (버튼, 입력 등)
+│   ├── layout/      # 레이아웃 관련 컴포넌트
+│   └── features/    # 기능별 컴포넌트
+├── stores/          # Zustand 상태 관리
+│   ├── auth-store.ts      # 사용자 인증 상태
+│   ├── diary-store.ts     # 다이어리 CRUD
+│   ├── ai-store.ts        # AI 생성 콘텐츠
+│   ├── emotion-store.ts   # 감정 선택/관리
+│   └── ui-store.ts        # UI 상태 (모달, 로딩)
+├── types/           # TypeScript 타입 정의
+│   ├── index.ts     # 공통 타입 (EmotionType 등)
+│   ├── api.ts       # API 응답 타입
+│   └── store.ts     # 스토어 타입
+├── lib/             # 라이브러리, 유틸리티
+│   ├── api.ts       # API 클라이언트 설정
+│   ├── utils.ts     # 공통 유틸리티
+│   └── constants.ts # 상수 정의
+├── hooks/           # 커스텀 React 훅
+│   ├── use-auth.ts  # 인증 관련 훅
+│   └── use-api.ts   # API 호출 훅
+└── utils/           # 헬퍼 함수
+```
+
+## 📝 네이밍 컨벤션
+
+### 파일/폴더
+
+- 파일: `kebab-case.tsx` (예: `auth-store.ts`, `diary-list.tsx`)
+- 폴더: `kebab-case` (예: `components/`, `auth-pages/`)
+- 컴포넌트 파일: `PascalCase.tsx` 또는 `kebab-case.tsx`
+
+### 코드
+
+- **컴포넌트**: `PascalCase` (예: `DiaryCard`, `EmotionSelector`)
+- **함수/변수**: `camelCase` (예: `getUserData`, `isAuthenticated`)
+- **상수**: `UPPER_SNAKE_CASE` (예: `API_BASE_URL`, `EMOTION_COLORS`)
+- **타입/인터페이스**: `PascalCase` (예: `EmotionType`, `DiaryResponse`)
+- **Zustand 스토어**: `camelCase` (예: `useAuthStore`, `useDiaryStore`)
+
+## ⚛️ React & Next.js 규칙
+
+### 컴포넌트 작성
+
+```tsx
+// ✅ 올바른 패턴
+export default function DiaryCard({ title, emotion }: DiaryCardProps) {
+  return (
+    <div className="bg-background-primary p-4">
+      <h3 className="text-h3 text-text-primary">{title}</h3>
+    </div>
+  );
+}
+
+// ❌ 잘못된 패턴
+const DiaryCard = ({ title, emotion }) => {
+  /* ... */
+};
+```
+
+### App Router 파일 규칙
+
+- `layout.tsx`: 레이아웃 정의
+- `page.tsx`: 페이지 컴포넌트
+- `loading.tsx`: 로딩 UI
+- `error.tsx`: 에러 핸들링
+- `not-found.tsx`: 404 페이지
+
+### 라우팅
+
+- **정적 라우트**: `app/diary/page.tsx` → `/diary`
+- **동적 라우트**: `app/diary/[id]/page.tsx` → `/diary/123`
+- **그룹**: `app/(auth)/login/page.tsx` (URL에 영향 없음)
+
+## 🎨 디자인 시스템 & 스타일링
+
+### Tailwind CSS 클래스 우선순위
+
+1. **브랜드 컬러**: `bg-sage-50`, `text-sage-100`
+2. **의미론적 토큰**: `bg-background-primary`, `text-text-primary`
+3. **감정별 색상**: `bg-emotion-happy`, `text-emotion-sad`
+
+### 감정별 색상 시스템
+
+```tsx
+// ✅ 감정별 색상 사용
+const emotionColors = {
+  happy: 'bg-emotion-happy',
+  sad: 'bg-emotion-sad',
+  angry: 'bg-emotion-angry',
+  peaceful: 'bg-emotion-peaceful',
+  worried: 'bg-emotion-worried',
+} as const;
+```
+
+### 반응형 클래스
+
+- 모바일 우선: `text-sm md:text-base lg:text-lg`
+- 컨테이너: `container mx-auto px-4`
+- 그리드: `grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3`
+
+## 🔄 Zustand 상태관리 패턴
+
+### 스토어 작성 규칙
+
+```tsx
+// ✅ 올바른 Zustand 패턴
+export const useAuthStore = create<AuthState>((set, get) => ({
+  user: null,
+  isAuthenticated: false,
+  login: (userData) => set({ user: userData, isAuthenticated: true }),
+  logout: () => set({ user: null, isAuthenticated: false }),
+}));
+
+// 사용법
+const { user, login } = useAuthStore();
+```
+
+### 스토어 구조
+
+- **상태**: 데이터 저장
+- **액션**: 상태 변경 함수
+- **Computed**: 파생 상태 (get 활용)
+
+## 🌐 API 통신
+
+### API 클라이언트 패턴
+
+```tsx
+// ✅ API 호출 패턴
+const api = {
+  baseURL: process.env.NEXT_PUBLIC_API_BASE_URL,
+
+  async post<T>(endpoint: string, data: any): Promise<T> {
+    const response = await fetch(`${this.baseURL}${endpoint}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    return response.json();
+  },
+};
+```
+
+### 환경변수
+
+- **공개**: `NEXT_PUBLIC_` 접두사 필수
+- **비공개**: 서버 사이드에서만 접근 가능
+
+## 🔒 타입 안전성
+
+### 엄격한 TypeScript
+
+```tsx
+// ✅ 엄격한 타입 정의
+export type EmotionType = 'happy' | 'sad' | 'angry' | 'peaceful' | 'worried';
+
+export interface DiaryEntry {
+  id: string;
+  title: string;
+  content: string;
+  emotion: EmotionType;
+  createdAt: string;
+  keywords: string[];
+}
+
+// ❌ any 사용 금지
+const data: any = response.data; // 절대 하지 마세요
+```
+
+### Props 타입 정의
+
+```tsx
+interface DiaryCardProps {
+  diary: DiaryEntry;
+  onEdit?: (id: string) => void;
+  className?: string;
+}
+```
+
+## 🚫 금지 사항
+
+### 절대 하지 말 것
+
+- `any` 타입 사용
+- inline 스타일 (style={{}}) 사용
+- 직접적인 DOM 조작
+- `var` 키워드 사용
+- 하드코딩된 색상값 (Tailwind 클래스 사용)
+- `console.log` 프로덕션 코드에 남기기
+- 한글 변수/함수명
+
+### Next.js 특화 금지사항
+
+- `<img>` 태그 (next/image 사용)
+- `<a>` 태그 (next/link 사용)
+- `<script>` 태그 (next/script 사용)
+- pages 폴더 사용 (App Router 전용)
+
+## ✅ 베스트 프랙티스
+
+### 성능 최적화
+
+- `next/image` 사용으로 이미지 최적화
+- 동적 import로 코드 스플리팅
+- `loading.tsx`로 로딩 상태 처리
+- 적절한 캐싱 전략
+
+### 접근성 (a11y)
+
+- `alt` 속성 필수
+- `aria-label` 적절히 사용
+- 키보드 네비게이션 지원
+- 색상만으로 정보 전달 금지
+
+### 코드 품질
+
+- 함수형 컴포넌트 우선
+- 커스텀 훅으로 로직 분리
+- 조기 반환 (early return) 패턴
+- 의미 있는 변수명 사용
+
+### 한국어 처리
+
+- `lang="ko"` 설정
+- 한국어 폰트 (`Pretendard`, `Noto Serif KR`) 사용
+- 날짜/시간 한국 형식 처리
+- 적절한 줄바꿈과 여백
+
+## 🎯 새김 프로젝트 특화 규칙
+
+### 감정 데이터 처리
+
+```tsx
+// ✅ 감정 타입 체크
+const isValidEmotion = (emotion: string): emotion is EmotionType => {
+  return ['happy', 'sad', 'angry', 'peaceful', 'worried'].includes(emotion);
+};
+```
+
+### AI 생성 콘텐츠
+
+- 사용자 입력과 AI 생성 콘텐츠 명확히 구분
+- AI 응답 에러 처리 필수
+- 적절한 로딩 상태 표시
+
+### 다이어리 작성 플로우
+
+1. 감정 선택 → 2. 키워드 입력 → 3. 본문 작성 → 4. AI 생성 → 5. 저장
+
+### 컴포넌트 설계 원칙
+
+- 단일 책임 원칙 준수
+- Props drilling 최소화 (Zustand 활용)
+- 재사용 가능한 UI 컴포넌트 분리
+- 비즈니스 로직과 UI 분리
+
+### 에러 처리
+
+```tsx
+// ✅ 에러 경계 활용
+export default function DiaryPage() {
+  return (
+    <ErrorBoundary fallback={<ErrorMessage />}>
+      <DiaryList />
+    </ErrorBoundary>
+  );
+}
+```
+
+### 로딩 상태 관리
+
+```tsx
+// ✅ 적절한 로딩 표시
+export default function DiaryList() {
+  const { diaries, isLoading, error } = useDiaryStore();
+
+  if (isLoading) return <LoadingSpinner />;
+  if (error) return <ErrorMessage error={error} />;
+
+  return <div>{/* 컨텐츠 */}</div>;
+}
+```
+
+이 규칙을 따라 일관되고 고품질의 새김 프론트엔드 코드를 작성하세요!

@@ -3,28 +3,28 @@
 /* 브랜드 컬러 시스템 - CSS Custom Properties */
 :root {
   /* ==========  브랜드 컬러 시스템  ========== */
-  
+
   /* Sage Green 10단계 그라데이션 */
-  --sage-10: #F7F9F8;
-  --sage-20: #EDF2EE;
-  --sage-30: #DFE8E1;
-  --sage-40: #C9D6CB;
-  --sage-50: #B2C5B8;    /* Primary Brand */
-  --sage-60: #9BB5A2;
-  --sage-70: #84A68C;
-  --sage-80: #6D9676;
+  --sage-10: #f7f9f8;
+  --sage-20: #edf2ee;
+  --sage-30: #dfe8e1;
+  --sage-40: #c9d6cb;
+  --sage-50: #b2c5b8; /* Primary Brand */
+  --sage-60: #9bb5a2;
+  --sage-70: #84a68c;
+  --sage-80: #6d9676;
   --sage-90: #568660;
-  --sage-100: #3F764A;
+  --sage-100: #3f764a;
 
   /* 보조 컬러 팔레트 */
-  --off-white: #FDFDFD;
-  --medium-gray: #6D7275;
-  --pale-lavender: #D2D4E1;
-  --ivory-cream: #F9F5EF;
-  --soft-rose: #E8C4C0;
+  --off-white: #fdfdfd;
+  --medium-gray: #6d7275;
+  --pale-lavender: #d2d4e1;
+  --ivory-cream: #f9f5ef;
+  --soft-rose: #e8c4c0;
 
   /* ==========  의미론적 토큰  ========== */
-  
+
   /* Interactive 토큰 */
   --interactive-primary: var(--sage-50);
   --interactive-primary-hover: var(--sage-60);
@@ -32,7 +32,7 @@
   --interactive-primary-disabled: var(--sage-40);
   --interactive-secondary: var(--sage-20);
   --interactive-tertiary: var(--sage-10);
-  
+
   /* Background 토큰 */
   --background-primary: var(--off-white);
   --background-secondary: var(--sage-10);
@@ -40,15 +40,15 @@
   --background-hover: var(--sage-30);
   --background-selected: var(--sage-40);
   --background-brand: var(--sage-50);
-  
+
   /* Text 토큰 */
   --text-primary: var(--medium-gray);
-  --text-secondary: #9CA3AF;
-  --text-placeholder: #D1D5DB;
-  --text-on-color: #FFFFFF;
+  --text-secondary: #9ca3af;
+  --text-placeholder: #d1d5db;
+  --text-on-color: #ffffff;
   --text-on-brand: var(--sage-100);
   --text-inverse: #111827;
-  
+
   /* Border 토큰 */
   --border-subtle: var(--sage-20);
   --border-strong: var(--sage-40);
@@ -57,34 +57,34 @@
   --border-inverse: var(--sage-100);
 
   /* ==========  감정별 색상 시스템  ========== */
-  
+
   /* 감정 주요 색상 (브랜드 톤 조화) */
-  --emotion-happy: #E6C55A;      /* Soft Gold */
-  --emotion-sad: #6B8AC7;        /* Calm Blue */
-  --emotion-angry: #D67D5C;      /* Warm Orange */
-  --emotion-peaceful: #7DB87D;   /* Natural Green */
-  --emotion-worried: #E6B366;    /* Gentle Orange */
+  --emotion-happy: #e6c55a; /* Soft Gold */
+  --emotion-sad: #6b8ac7; /* Calm Blue */
+  --emotion-angry: #d67d5c; /* Warm Orange */
+  --emotion-peaceful: #7db87d; /* Natural Green */
+  --emotion-worried: #e6b366; /* Gentle Orange */
 
   /* 감정별 보조 색상 */
-  --emotion-happy-secondary: #F5F0DB;
-  --emotion-sad-secondary: #E8EEF7;
-  --emotion-angry-secondary: #F3E5E0;
-  --emotion-peaceful-secondary: #E8F0E8;
-  --emotion-worried-secondary: #F5EBDC;
+  --emotion-happy-secondary: #f5f0db;
+  --emotion-sad-secondary: #e8eef7;
+  --emotion-angry-secondary: #f3e5e0;
+  --emotion-peaceful-secondary: #e8f0e8;
+  --emotion-worried-secondary: #f5ebdc;
 
   /* 감정별 배경 색상 */
-  --emotion-happy-bg: #FAF7E8;
-  --emotion-sad-bg: #F2F6FB;
-  --emotion-angry-bg: #F8F0EC;
-  --emotion-peaceful-bg: #F0F7F0;
-  --emotion-worried-bg: #FAF4E8;
+  --emotion-happy-bg: #faf7e8;
+  --emotion-sad-bg: #f2f6fb;
+  --emotion-angry-bg: #f8f0ec;
+  --emotion-peaceful-bg: #f0f7f0;
+  --emotion-worried-bg: #faf4e8;
 
   /* ==========  시스템 색상  ========== */
-  
-  --success: #10B981;
-  --warning: #F59E0B;
-  --error: #EF4444;
-  --info: #3B82F6;
+
+  --success: #10b981;
+  --warning: #f59e0b;
+  --error: #ef4444;
+  --info: #3b82f6;
 }
 
 /* ==========  다크 모드 변형  ========== */
@@ -92,39 +92,39 @@
 @media (prefers-color-scheme: dark) {
   :root {
     /* 배경 시스템 */
-    --background-primary: #1A1E1C;
+    --background-primary: #1a1e1c;
     --background-secondary: #232822;
-    --background-tertiary: #2C322B;
-    --background-hover: #343A33;
-    --background-selected: #3C443B;
-    
+    --background-tertiary: #2c322b;
+    --background-hover: #343a33;
+    --background-selected: #3c443b;
+
     /* 텍스트 시스템 */
-    --text-primary: #E5E7E6;
-    --text-secondary: #B8BAB9;
-    --text-placeholder: #8A8C8B;
+    --text-primary: #e5e7e6;
+    --text-secondary: #b8bab9;
+    --text-placeholder: #8a8c8b;
     --text-inverse: #111827;
-    
+
     /* 브랜드 컬러 다크 모드 조정 */
-    --interactive-primary: #8FB59C;
-    --interactive-primary-hover: #A3C4B0;
-    --interactive-primary-active: #7AA287;
-    
+    --interactive-primary: #8fb59c;
+    --interactive-primary-hover: #a3c4b0;
+    --interactive-primary-active: #7aa287;
+
     /* 보더 시스템 */
-    --border-subtle: #2C322B;
-    --border-strong: #3C443B;
-    --border-focus: #8FB59C;
-    
+    --border-subtle: #2c322b;
+    --border-strong: #3c443b;
+    --border-focus: #8fb59c;
+
     /* 감정별 다크 모드 색상 */
-    --emotion-happy: #E6C55A;        /* 유지 */
-    --emotion-happy-bg: #2B2820;
-    --emotion-sad: #7A9BD1;          /* 더 밝게 */
-    --emotion-sad-bg: #1F242B;
-    --emotion-angry: #E08A6B;        /* 더 밝게 */
-    --emotion-angry-bg: #2B221F;
-    --emotion-peaceful: #8FC28F;     /* 더 밝게 */
-    --emotion-peaceful-bg: #1F2B1F;
-    --emotion-worried: #EBC170;      /* 더 밝게 */
-    --emotion-worried-bg: #2B2620;
+    --emotion-happy: #e6c55a; /* 유지 */
+    --emotion-happy-bg: #2b2820;
+    --emotion-sad: #7a9bd1; /* 더 밝게 */
+    --emotion-sad-bg: #1f242b;
+    --emotion-angry: #e08a6b; /* 더 밝게 */
+    --emotion-angry-bg: #2b221f;
+    --emotion-peaceful: #8fc28f; /* 더 밝게 */
+    --emotion-peaceful-bg: #1f2b1f;
+    --emotion-worried: #ebc170; /* 더 밝게 */
+    --emotion-worried-bg: #2b2620;
   }
 }
 
@@ -133,7 +133,12 @@
 body {
   background: var(--background-primary);
   color: var(--text-primary);
-  font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  font-family:
+    "Pretendard",
+    -apple-system,
+    BlinkMacSystemFont,
+    system-ui,
+    sans-serif;
   line-height: 1.6;
 }
 
@@ -141,7 +146,10 @@ body {
 
 /* 부드러운 전환 효과 */
 * {
-  transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+  transition:
+    background-color 0.3s ease,
+    color 0.3s ease,
+    border-color 0.3s ease;
 }
 
 /* 모션 민감성 고려 */
@@ -173,7 +181,7 @@ body {
 
 /* AI 생성 글귀 스타일 */
 .ai-poem {
-  font-family: 'Nanum Myeongjo', 'Noto Serif KR', serif;
+  font-family: "Nanum Myeongjo", "Noto Serif KR", serif;
   font-size: 16px;
   line-height: 28px;
   letter-spacing: 0.02em;
@@ -181,7 +189,7 @@ body {
 }
 
 .ai-prose {
-  font-family: 'Noto Serif KR', Georgia, serif;
+  font-family: "Noto Serif KR", Georgia, serif;
   font-size: 14px;
   line-height: 24px;
   letter-spacing: 0.01em;
