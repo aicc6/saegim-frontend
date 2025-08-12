@@ -9,7 +9,8 @@
     "lint": "next lint",
     "lint:fix": "next lint --fix",
     "format": "prettier --check --ignore-unknown .",
-    "format:fix": "prettier --write --ignore-unknown ."
+    "format:fix": "prettier --write --ignore-unknown .",
+    "clean:install": "rimraf node_modules .next && npm install"
   },
   "dependencies": {
     "next": "15.4.6",
@@ -30,10 +31,11 @@
     "eslint-config-prettier": "^9.0.0",
     "eslint-plugin-import": "^2.32.0",
     "eslint-plugin-jsx-a11y": "^6.10.2",
+    "eslint-plugin-prettier": "^5.1.3",
     "eslint-plugin-react": "^7.37.5",
     "eslint-plugin-unused-imports": "^4.1.4",
-    "eslint-plugin-prettier": "^5.1.3",
     "prettier": "^3.6.2",
+    "rimraf": "^6.0.1",
     "tailwindcss": "^4",
     "typescript": "^5"
   }
