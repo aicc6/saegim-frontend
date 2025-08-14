@@ -1,4 +1,64 @@
-@import "tailwindcss";
+@import 'tailwindcss';
+
+@theme {
+  /* Basic colors - 기본 색상 정의 */
+  --color-white: #ffffff;
+  --color-black: #000000;
+
+  /* Gray scale */
+  --color-gray-50: #f9fafb;
+  --color-gray-100: #f3f4f6;
+  --color-gray-200: #e5e7eb;
+  --color-gray-300: #d1d5db;
+  --color-gray-400: #9ca3af;
+  --color-gray-500: #6b7280;
+  --color-gray-600: #4b5563;
+  --color-gray-700: #374151;
+  --color-gray-800: #1f2937;
+  --color-gray-900: #111827;
+
+  /* Map brand palette to Tailwind v4 color tokens */
+  --color-sage-10: var(--sage-10);
+  --color-sage-20: var(--sage-20);
+  --color-sage-30: var(--sage-30);
+  --color-sage-40: var(--sage-40);
+  --color-sage-50: var(--sage-50);
+  --color-sage-60: var(--sage-60);
+  --color-sage-70: var(--sage-70);
+  --color-sage-80: var(--sage-80);
+  --color-sage-90: var(--sage-90);
+  --color-sage-100: var(--sage-100);
+
+  /* Semantic background tokens */
+  --color-background-primary: var(--background-primary);
+  --color-background-secondary: var(--background-secondary);
+  --color-background-tertiary: var(--background-tertiary);
+  --color-background-hover: var(--background-hover);
+  --color-background-selected: var(--background-selected);
+  --color-background-brand: var(--background-brand);
+
+  /* Semantic text tokens */
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-placeholder: var(--text-placeholder);
+  --color-text-on-color: var(--text-on-color);
+  --color-text-on-brand: var(--text-on-brand);
+  --color-text-inverse: var(--text-inverse);
+
+  /* Semantic border tokens */
+  --color-border-subtle: var(--border-subtle);
+  --color-border-strong: var(--border-strong);
+  --color-border-interactive: var(--border-interactive);
+  --color-border-focus: var(--border-focus);
+  --color-border-inverse: var(--border-inverse);
+
+  /* Emotion color tokens */
+  --color-emotion-happy: var(--emotion-happy);
+  --color-emotion-sad: var(--emotion-sad);
+  --color-emotion-angry: var(--emotion-angry);
+  --color-emotion-peaceful: var(--emotion-peaceful);
+  --color-emotion-worried: var(--emotion-worried);
+}
 
 /* 브랜드 컬러 시스템 - CSS Custom Properties */
 :root {
@@ -34,7 +94,7 @@
   --interactive-tertiary: var(--sage-10);
 
   /* Background 토큰 */
-  --background-primary: var(--off-white);
+  --background-primary: #eaebe6;
   --background-secondary: var(--sage-10);
   --background-tertiary: var(--sage-20);
   --background-hover: var(--sage-30);
@@ -134,7 +194,7 @@ body {
   background: var(--background-primary);
   color: var(--text-primary);
   font-family:
-    "Pretendard",
+    'Pretendard',
     -apple-system,
     BlinkMacSystemFont,
     system-ui,
@@ -181,7 +241,7 @@ body {
 
 /* AI 생성 글귀 스타일 */
 .ai-poem {
-  font-family: "Nanum Myeongjo", "Noto Serif KR", serif;
+  font-family: 'Nanum Myeongjo', 'Noto Serif KR', serif;
   font-size: 16px;
   line-height: 28px;
   letter-spacing: 0.02em;
@@ -189,7 +249,7 @@ body {
 }
 
 .ai-prose {
-  font-family: "Noto Serif KR", Georgia, serif;
+  font-family: 'Noto Serif KR', Georgia, serif;
   font-size: 14px;
   line-height: 24px;
   letter-spacing: 0.01em;
@@ -231,4 +291,25 @@ body {
 
 ::-webkit-scrollbar-thumb:hover {
   background: var(--interactive-primary-hover);
+}
+
+/* 강제 다크 모드 토글 (data-theme="dark") */
+:root[data-theme='dark'] {
+  --background-primary: #1a1e1c;
+  --background-secondary: #232822;
+  --background-tertiary: #2c322b;
+  --background-hover: #343a33;
+  --background-selected: #3c443b;
+
+  --text-primary: #e5e7e6;
+  --text-secondary: #b8bab9;
+  --text-placeholder: #8a8c8b;
+
+  --interactive-primary: #8fb59c;
+  --interactive-primary-hover: #a3c4b0;
+  --interactive-primary-active: #7aa287;
+
+  --border-subtle: #2c322b;
+  --border-strong: #3c443b;
+  --border-focus: #8fb59c;
 }
