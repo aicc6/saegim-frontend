@@ -1,10 +1,10 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import Select, { type SelectOption } from './ui/Select';
 import { CiLocationArrow1 } from 'react-icons/ci';
 import { MdNavigateNext } from 'react-icons/md';
 import { GrFormPrevious } from 'react-icons/gr';
+import Select from './ui/Select';
 
 // 타입 정의
 type WritingStyle = '시' | '단편글';
@@ -605,7 +605,10 @@ export default function CreateAi() {
           {/* 문체와 길이 선택 */}
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="mb-2 block text-body-small text-text-secondary">
+              <label
+                className="mb-2 block text-body-small text-text-secondary"
+                htmlFor="style"
+              >
                 문체 선택
               </label>
               <Select
@@ -617,7 +620,10 @@ export default function CreateAi() {
             </div>
 
             <div>
-              <label className="mb-2 block text-body-small text-text-secondary">
+              <label
+                className="mb-2 block text-body-small text-text-secondary"
+                htmlFor="length"
+              >
                 길이 선택
               </label>
               <Select
@@ -631,11 +637,14 @@ export default function CreateAi() {
 
           {/* 감정 선택 - 이모지 버튼 형태 */}
           <div>
-            <label className="mb-3 block text-body-small text-text-secondary">
+            <label
+              className="mb-3 block text-body-small text-text-secondary"
+              htmlFor="emotion"
+            >
               감정을 선택해주세요 😊 (선택 사항)
             </label>
             <div className="flex flex-wrap gap-3 justify-center">
-              {CONFIG.emotions.map(({ value, emoji, label, styles }) => (
+              {CONFIG.emotions.map(({ value, emoji, label }) => (
                 <button
                   key={value}
                   type="button"

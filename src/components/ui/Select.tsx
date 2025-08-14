@@ -134,11 +134,19 @@ export default function Select({
                 key={opt.value}
                 role="option"
                 aria-selected={isSelected}
+                tabIndex={0}
                 onMouseEnter={() => setHighlightedIndex(idx)}
                 onMouseDown={(e) => e.preventDefault()}
                 onClick={() => {
                   onChange(opt.value);
                   setIsOpen(false);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    onChange(opt.value);
+                    setIsOpen(false);
+                  }
                 }}
                 className={`px-3.5 py-2.5 cursor-pointer text-body ${
                   isHighlighted

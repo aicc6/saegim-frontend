@@ -94,12 +94,19 @@
   --interactive-tertiary: var(--sage-10);
 
   /* Background 토큰 */
-  --background-primary: #eaebe6;
+  --background-primary: var(--off-white);
   --background-secondary: var(--sage-10);
   --background-tertiary: var(--sage-20);
   --background-hover: var(--sage-30);
   --background-selected: var(--sage-40);
   --background-brand: var(--sage-50);
+
+  /* Header 토큰 */
+  --header-background: #5c8d89;
+  --header-text: #ffffff;
+
+  /* Page Background 토큰 */
+  --page-background: #e5f0ef;
 
   /* Text 토큰 */
   --text-primary: var(--medium-gray);
@@ -186,6 +193,23 @@
     --emotion-worried: #ebc170; /* 더 밝게 */
     --emotion-worried-bg: #2b2620;
   }
+}
+
+/* 공통 버튼 스타일 */
+.saegim-button {
+  @apply bg-[#5C8D89] text-white hover:bg-[#4A7A76] transition-colors;
+}
+
+.saegim-button-small {
+  @apply px-3 py-2 text-sm rounded;
+}
+
+.saegim-button-medium {
+  @apply px-4 py-2 text-base rounded font-medium;
+}
+
+.saegim-button-large {
+  @apply px-6 py-3 text-base rounded-lg font-medium;
 }
 
 /* ==========  기본 스타일  ========== */
