@@ -6,18 +6,10 @@ import { CiLocationArrow1 } from 'react-icons/ci';
 import { MdNavigateNext } from 'react-icons/md';
 import { GrFormPrevious } from 'react-icons/gr';
 
+// 타입 정의
 type WritingStyle = '시' | '단편글';
 type LengthOption = '단문' | '중문' | '장문';
 type EmotionOption = '' | '슬픔' | '기쁨' | '분노' | '당황' | '평온';
-
-// 감정별 이모지 매핑
-const emotionEmojis: Record<Exclude<EmotionOption, ''>, string> = {
-  기쁨: '😊',
-  슬픔: '😢',
-  분노: '😠',
-  당황: '😰',
-  평온: '😌',
-};
 
 // 결과 카드 데이터 구조
 interface GeneratedResult {
@@ -29,51 +21,75 @@ interface GeneratedResult {
   prompt: string;
   createdAt: Date;
   isRegenerating?: boolean;
-  history: string[]; // 이전 생성 내용들
-  currentHistoryIndex: number; // 현재 보고 있는 히스토리 인덱스
-  regenerateCount: number; // 재생성 횟수
+  history: string[];
+  currentHistoryIndex: number;
+  regenerateCount: number;
 }
 
-// 액션 버튼 데이터 구조
-interface ActionButton {
-  id: string;
-  label: string;
-  icon?: string;
-  onClick: () => void;
-}
-
-// 스타일 매핑
-const STYLE_DISPLAY_MAP: Record<WritingStyle, string> = {
-  시: 'poem',
-  단편글: 'prose',
+// 상수 배열들 (백엔드에서 가져올 데이터)
+const CONFIG = {
+  styles: [
+    { value: '시' as WritingStyle, label: '시', displayName: 'poem' },
+    { value: '단편글' as WritingStyle, label: '단편글', displayName: 'prose' },
+  ],
+  lengths: [
+    { value: '단문' as LengthOption, label: '단문', displayName: 'short' },
+    { value: '중문' as LengthOption, label: '중문', displayName: 'medium' },
+    { value: '장문' as LengthOption, label: '장문', displayName: 'long' },
+  ],
+  emotions: [
+    {
+      value: '기쁨' as EmotionOption,
+      label: '기쁨',
+      emoji: '😄',
+      styles: {
+        bg: 'bg-yellow-50',
+        text: 'text-yellow-600',
+        ring: 'ring-yellow-300',
+      },
+    },
+    {
+      value: '슬픔' as EmotionOption,
+      label: '슬픔',
+      emoji: '😢',
+      styles: {
+        bg: 'bg-blue-50',
+        text: 'text-blue-600',
+        ring: 'ring-blue-300',
+      },
+    },
+    {
+      value: '분노' as EmotionOption,
+      label: '분노',
+      emoji: '😠',
+      styles: { bg: 'bg-red-50', text: 'text-red-600', ring: 'ring-red-300' },
+    },
+    {
+      value: '당황' as EmotionOption,
+      label: '당황',
+      emoji: '😰',
+      styles: {
+        bg: 'bg-orange-50',
+        text: 'text-orange-600',
+        ring: 'ring-orange-300',
+      },
+    },
+    {
+      value: '평온' as EmotionOption,
+      label: '평온',
+      emoji: '😌',
+      styles: {
+        bg: 'bg-green-50',
+        text: 'text-green-600',
+        ring: 'ring-green-300',
+      },
+    },
+  ],
+  maxRegenerateCount: 5,
+  loadingDelay: 450,
 };
 
-const LENGTH_DISPLAY_MAP: Record<LengthOption, string> = {
-  단문: 'short',
-  중문: 'medium',
-  장문: 'long',
-};
-
-// 감정별 스타일 매핑
-const EMOTION_STYLE_MAP: Record<
-  Exclude<EmotionOption, ''>,
-  { bg: string; text: string; ring: string }
-> = {
-  기쁨: {
-    bg: 'bg-yellow-50',
-    text: 'text-yellow-600',
-    ring: 'ring-yellow-300',
-  },
-  슬픔: { bg: 'bg-blue-50', text: 'text-blue-600', ring: 'ring-blue-300' },
-  분노: { bg: 'bg-red-50', text: 'text-red-600', ring: 'ring-red-300' },
-  당황: {
-    bg: 'bg-orange-50',
-    text: 'text-orange-600',
-    ring: 'ring-orange-300',
-  },
-  평온: { bg: 'bg-green-50', text: 'text-green-600', ring: 'ring-green-300' },
-};
-
+// 임시 텍스트 생성 함수 (백엔드 API로 대체 예정)
 function generateText(
   prompt: string,
   style: WritingStyle,
@@ -83,25 +99,14 @@ function generateText(
   const trimmed = prompt.trim();
   if (!trimmed) return '';
 
-  const emotionMood: Record<
-    Exclude<EmotionOption, ''>,
-    { tone: string; color: string }
-  > = {
-    기쁨: { tone: '따스한 기쁨', color: 'emotion-happy' },
-    슬픔: { tone: '잔잔한 슬픔', color: 'emotion-sad' },
-    분노: { tone: '서늘한 분노', color: 'emotion-angry' },
-    당황: { tone: '어수선한 당황', color: 'emotion-worried' },
-    평온: { tone: '고요한 평온', color: 'emotion-peaceful' },
-  } as const;
-
-  const tone = emotion ? emotionMood[emotion].tone : '담담한 마음';
+  const emotionTone = emotion ? `${emotion}이 배어있는` : '담담한';
 
   if (style === '시') {
     const linesCount = length === '단문' ? 3 : length === '중문' ? 5 : 7;
     const lines: string[] = [];
     for (let i = 0; i < linesCount; i++) {
       if (i === 0) lines.push(`${trimmed} 위로`);
-      else if (i === 1) lines.push(`${tone}이 스며들고`);
+      else if (i === 1) lines.push(`${emotionTone} 마음이 스며들고`);
       else if (i === linesCount - 1) lines.push(`오늘의 나를 조심스레 새긴다`);
       else lines.push(`사이사이 숨을 고르며, ${trimmed}을(를) 떠올린다`);
     }
@@ -113,7 +118,7 @@ function generateText(
   for (let i = 0; i < sentencesCount; i++) {
     if (i === 0)
       sentences.push(
-        `${trimmed}에 대해 생각해 본다. ${tone}이 가볍게 배어 나온다.`,
+        `${trimmed}에 대해 생각해 본다. ${emotionTone} 감정이 가볍게 배어 나온다.`,
       );
     else if (i === sentencesCount - 1)
       sentences.push(
@@ -137,107 +142,47 @@ export default function CreateAi() {
     [],
   );
 
-  // 옵션 데이터 (백엔드에서 가져올 수 있음)
-  const styleOptions: SelectOption[] = [
-    { value: '시', label: '시' },
-    { value: '단편글', label: '단편글' },
-  ];
+  // 메모이제이션된 옵션들
+  const { styleOptions, lengthOptions } = useMemo(
+    () => ({
+      styleOptions: CONFIG.styles.map(({ value, label }) => ({ value, label })),
+      lengthOptions: CONFIG.lengths.map(({ value, label }) => ({
+        value,
+        label,
+      })),
+    }),
+    [],
+  );
 
-  const lengthOptions: SelectOption[] = [
-    { value: '단문', label: '단문' },
-    { value: '중문', label: '중문' },
-    { value: '장문', label: '장문' },
-  ];
+  // 유틸리티 함수들
+  const getStyleDisplayName = (style: WritingStyle) =>
+    CONFIG.styles.find((s) => s.value === style)?.displayName || style;
 
-  // 액션 버튼 생성 함수 (백엔드 API 호출 함수들로 대체 예정)
-  const createActionButtons = (result: GeneratedResult): ActionButton[] => {
-    const buttons: ActionButton[] = [
-      {
-        id: 'copy',
-        label: '복사하기',
-        onClick: () => {
-          navigator.clipboard.writeText(result.content);
-          // TODO: 토스트 메시지 표시
-        },
-      },
-      {
-        id: 'save-diary',
-        label: '다이어리에 저장',
-        icon: 'document',
-        onClick: () => {
-          // TODO: API 호출 - saveToDiary(result.id)
-          console.log('다이어리에 저장:', result.id);
-        },
-      },
-    ];
+  const getLengthDisplayName = (length: LengthOption) =>
+    CONFIG.lengths.find((l) => l.value === length)?.displayName || length;
 
-    // 히스토리 네비게이션 버튼들
-    if (result.history.length > 1) {
-      if (result.currentHistoryIndex > 0) {
-        buttons.push({
-          id: 'prev-history',
-          label: '이전',
-          icon: 'arrow-left',
-          onClick: () => goToPreviousHistory(result),
-        });
-      }
+  const getEmotionConfig = (emotion: EmotionOption) =>
+    CONFIG.emotions.find((e) => e.value === emotion);
 
-      if (result.currentHistoryIndex < result.history.length - 1) {
-        buttons.push({
-          id: 'next-history',
-          label: '다음',
-          icon: 'arrow-right',
-          onClick: () => goToNextHistory(result),
-        });
-      }
-    }
-
-    // 재생성 버튼 (5번 제한)
-    if (result.regenerateCount < 5) {
-      buttons.push({
-        id: 'regenerate',
-        label: `다시 생성 (${result.regenerateCount}/5)`,
-        onClick: () => {
-          handleRegenerate(result);
-        },
-      });
-    }
-
-    return buttons;
-  };
-
-  // 감정별 이모지 버튼 데이터
-  const emotionButtons = [
-    { emotion: '', emoji: '😊', label: '선택 안함' },
-    { emotion: '기쁨', emoji: '😄', label: '기쁨' },
-    { emotion: '슬픔', emoji: '😢', label: '슬픔' },
-    { emotion: '분노', emoji: '😠', label: '분노' },
-    { emotion: '평온', emoji: '😌', label: '평온' },
-  ];
-
-  // 생성 함수 (백엔드 API로 대체 예정)
+  // 생성 함수
   const onGenerate = async () => {
     if (!prompt.trim()) return;
 
     setIsGenerating(true);
-
     try {
-      // TODO: 실제 API 호출
-      // const response = await generateTextAPI({ prompt, style, length, emotion });
-
-      // 임시 로딩
-      await new Promise((r) => setTimeout(r, 450));
+      // TODO: 실제 API 호출로 대체
+      await new Promise((resolve) => setTimeout(resolve, CONFIG.loadingDelay));
 
       const content = generateText(prompt, style, length, emotion);
       const newResult: GeneratedResult = {
-        id: Date.now(), // TODO: 백엔드에서 생성된 ID 사용
+        id: Date.now(),
         content,
         style,
         length,
         emotion,
         prompt,
         createdAt: new Date(),
-        history: [content], // 첫 번째 생성 내용을 히스토리에 추가
+        history: [content],
         currentHistoryIndex: 0,
         regenerateCount: 0,
       };
@@ -245,7 +190,6 @@ export default function CreateAi() {
       setGeneratedResults((prev) => [newResult, ...prev]);
     } catch (error) {
       console.error('텍스트 생성 실패:', error);
-      // TODO: 에러 처리 UI
     } finally {
       setIsGenerating(false);
     }
@@ -253,22 +197,19 @@ export default function CreateAi() {
 
   // 재생성 함수
   const handleRegenerate = async (result: GeneratedResult) => {
-    // 재생성 횟수 제한 확인
-    if (result.regenerateCount >= 5) {
-      alert('재생성은 최대 5번까지만 가능합니다.');
+    if (result.regenerateCount >= CONFIG.maxRegenerateCount) {
+      alert(`재생성은 최대 ${CONFIG.maxRegenerateCount}번까지만 가능합니다.`);
       return;
     }
 
     try {
-      // 해당 결과를 로딩 상태로 설정
       setGeneratedResults((prev) =>
         prev.map((item) =>
           item.id === result.id ? { ...item, isRegenerating: true } : item,
         ),
       );
 
-      // 임시 로딩
-      await new Promise((r) => setTimeout(r, 450));
+      await new Promise((resolve) => setTimeout(resolve, CONFIG.loadingDelay));
 
       const newContent = generateText(
         result.prompt,
@@ -277,7 +218,6 @@ export default function CreateAi() {
         result.emotion,
       );
 
-      // 해당 결과의 내용과 히스토리 업데이트
       setGeneratedResults((prev) =>
         prev.map((item) =>
           item.id === result.id
@@ -286,16 +226,15 @@ export default function CreateAi() {
                 content: newContent,
                 createdAt: new Date(),
                 isRegenerating: false,
-                history: [...item.history, newContent], // 새 내용을 히스토리에 추가
-                currentHistoryIndex: item.history.length, // 새 내용을 현재 인덱스로 설정
-                regenerateCount: item.regenerateCount + 1, // 재생성 횟수 증가
+                history: [...item.history, newContent],
+                currentHistoryIndex: item.history.length,
+                regenerateCount: item.regenerateCount + 1,
               }
             : item,
         ),
       );
     } catch (error) {
       console.error('텍스트 재생성 실패:', error);
-      // 로딩 상태 해제
       setGeneratedResults((prev) =>
         prev.map((item) =>
           item.id === result.id ? { ...item, isRegenerating: false } : item,
@@ -304,45 +243,40 @@ export default function CreateAi() {
     }
   };
 
-  // 히스토리 네비게이션 함수들
-  const goToPreviousHistory = (result: GeneratedResult) => {
-    if (result.currentHistoryIndex > 0) {
-      const newIndex = result.currentHistoryIndex - 1;
-      setGeneratedResults((prev) =>
-        prev.map((item) =>
-          item.id === result.id
-            ? {
-                ...item,
-                content: item.history[newIndex],
-                currentHistoryIndex: newIndex,
-              }
-            : item,
-        ),
-      );
-    }
+  // 히스토리 네비게이션
+  const navigateHistory = (
+    result: GeneratedResult,
+    direction: 'prev' | 'next',
+  ) => {
+    const newIndex =
+      direction === 'prev'
+        ? result.currentHistoryIndex - 1
+        : result.currentHistoryIndex + 1;
+
+    if (newIndex < 0 || newIndex >= result.history.length) return;
+
+    setGeneratedResults((prev) =>
+      prev.map((item) =>
+        item.id === result.id
+          ? {
+              ...item,
+              content: item.history[newIndex],
+              currentHistoryIndex: newIndex,
+            }
+          : item,
+      ),
+    );
   };
 
-  const goToNextHistory = (result: GeneratedResult) => {
-    if (result.currentHistoryIndex < result.history.length - 1) {
-      const newIndex = result.currentHistoryIndex + 1;
-      setGeneratedResults((prev) =>
-        prev.map((item) =>
-          item.id === result.id
-            ? {
-                ...item,
-                content: item.history[newIndex],
-                currentHistoryIndex: newIndex,
-              }
-            : item,
-        ),
-      );
-    }
+  // 기타 액션 함수들
+  const copyToClipboard = (content: string) => {
+    navigator.clipboard.writeText(content);
+    // TODO: 토스트 메시지 표시
   };
 
-  // 감정 스타일 가져오기
-  const getEmotionStyle = (emotion: EmotionOption) => {
-    if (!emotion) return null;
-    return EMOTION_STYLE_MAP[emotion as Exclude<EmotionOption, ''>];
+  const saveToDiary = (resultId: number) => {
+    // TODO: API 호출
+    console.log('다이어리에 저장:', resultId);
   };
 
   // 결과 화면 렌더링
@@ -365,111 +299,163 @@ export default function CreateAi() {
             )}
 
             {/* 생성된 결과들 */}
-            {generatedResults.map((result, index) => {
-              const actionButtons = createActionButtons(result);
-
-              return (
-                <div
-                  key={result.id}
-                  className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm"
-                >
-                  {/* 헤더 */}
-
-                  <div className="mb-4 flex justify-between items-center ">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm text-gray-500">생성된 글</span>
-                      {result.history.length > 1 && (
-                        <span className="text-xs text-gray-400">
-                          ({result.currentHistoryIndex + 1}/
-                          {result.history.length})
-                        </span>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <div className="flex gap-2">
-                        {result.emotion && (
-                          <span className="rounded-full bg-sage-30 px-2 py-1 text-xs text-gray-600">
-                            {result.emotion}
-                          </span>
-                        )}
-                        <span className="rounded-full bg-sage-30 px-2 py-1 text-xs text-gray-600">
-                          {LENGTH_DISPLAY_MAP[result.length]}
-                        </span>
-                        <span className="rounded-full bg-sage-30 px-2 py-1 text-xs text-gray-600">
-                          {STYLE_DISPLAY_MAP[result.style]}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* 내용 */}
-                  <div className="space-y-2 text-gray-800 leading-relaxed">
-                    {result.isRegenerating ? (
-                      <div className="space-y-3 animate-pulse">
-                        <div className="h-4 w-full rounded bg-gray-200" />
-                        <div className="h-4 w-11/12 rounded bg-gray-200" />
-                        <div className="h-4 w-5/6 rounded bg-gray-200" />
-                      </div>
-                    ) : result.style === '시' ? (
-                      result.content
-                        .split('\n')
-                        .map((line, idx) => <div key={idx}>{line}</div>)
-                    ) : (
-                      result.content
+            {generatedResults.map((result) => (
+              <div
+                key={result.id}
+                className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm"
+              >
+                {/* 헤더 */}
+                <div className="mb-4 flex justify-between items-center">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-gray-500">생성된 글</span>
+                    {result.history.length > 1 && (
+                      <span className="text-xs text-gray-400">
+                        ({result.currentHistoryIndex + 1}/
+                        {result.history.length})
+                      </span>
                     )}
                   </div>
-
-                  {/* 액션 버튼들 */}
-                  <div className="mt-6 flex gap-2">
-                    {actionButtons.map((button) => (
-                      <button
-                        key={button.id}
-                        type="button"
-                        onClick={button.onClick}
-                        disabled={result.isRegenerating}
-                        className={`flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium transition-colors ${
-                          result.isRegenerating
-                            ? 'text-gray-400 cursor-not-allowed'
-                            : 'text-gray-700 hover:bg-gray-50'
-                        }`}
-                      >
-                        {button.icon === 'document' && (
-                          <svg
-                            className="h-4 w-4"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                            />
-                          </svg>
-                        )}
-                        {button.icon === 'arrow-left' && (
-                          <GrFormPrevious className="h-4 w-4" />
-                        )}
-                        {button.icon === 'arrow-right' && (
-                          <MdNavigateNext className="h-4 w-4" />
-                        )}
-                        {button.label}
-                      </button>
-                    ))}
+                  <div className="flex items-center gap-2">
+                    <div className="flex gap-2">
+                      {result.emotion && (
+                        <span className="rounded-full bg-sage-30 px-2 py-1 text-xs text-gray-600">
+                          {result.emotion}
+                        </span>
+                      )}
+                      <span className="rounded-full bg-sage-30 px-2 py-1 text-xs text-gray-600">
+                        {getLengthDisplayName(result.length)}
+                      </span>
+                      <span className="rounded-full bg-sage-30 px-2 py-1 text-xs text-gray-600">
+                        {getStyleDisplayName(result.style)}
+                      </span>
+                    </div>
                   </div>
                 </div>
-              );
-            })}
+
+                {/* 내용 */}
+                <div className="space-y-2 text-gray-800 leading-relaxed">
+                  {result.isRegenerating ? (
+                    <div className="space-y-3 animate-pulse">
+                      <div className="h-4 w-full rounded bg-gray-200" />
+                      <div className="h-4 w-11/12 rounded bg-gray-200" />
+                      <div className="h-4 w-5/6 rounded bg-gray-200" />
+                    </div>
+                  ) : result.style === '시' ? (
+                    result.content
+                      .split('\n')
+                      .map((line, idx) => <div key={idx}>{line}</div>)
+                  ) : (
+                    result.content
+                  )}
+                </div>
+
+                {/* 액션 버튼들 */}
+                <div className="mt-6 flex gap-2">
+                  {/* 복사하기 */}
+                  <button
+                    type="button"
+                    onClick={() => copyToClipboard(result.content)}
+                    disabled={result.isRegenerating}
+                    className={`flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium transition-colors ${
+                      result.isRegenerating
+                        ? 'text-gray-400 cursor-not-allowed'
+                        : 'text-gray-700 hover:bg-gray-50'
+                    }`}
+                  >
+                    복사하기
+                  </button>
+
+                  {/* 다이어리에 저장 */}
+                  <button
+                    type="button"
+                    onClick={() => saveToDiary(result.id)}
+                    disabled={result.isRegenerating}
+                    className={`flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium transition-colors ${
+                      result.isRegenerating
+                        ? 'text-gray-400 cursor-not-allowed'
+                        : 'text-gray-700 hover:bg-gray-50'
+                    }`}
+                  >
+                    <svg
+                      className="h-4 w-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                      />
+                    </svg>
+                    다이어리에 저장
+                  </button>
+
+                  {/* 히스토리 네비게이션 */}
+                  {result.history.length > 1 && (
+                    <>
+                      {result.currentHistoryIndex > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => navigateHistory(result, 'prev')}
+                          disabled={result.isRegenerating}
+                          className={`flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium transition-colors ${
+                            result.isRegenerating
+                              ? 'text-gray-400 cursor-not-allowed'
+                              : 'text-gray-700 hover:bg-gray-50'
+                          }`}
+                        >
+                          <GrFormPrevious className="h-4 w-4" />
+                          이전
+                        </button>
+                      )}
+
+                      {result.currentHistoryIndex <
+                        result.history.length - 1 && (
+                        <button
+                          type="button"
+                          onClick={() => navigateHistory(result, 'next')}
+                          disabled={result.isRegenerating}
+                          className={`flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium transition-colors ${
+                            result.isRegenerating
+                              ? 'text-gray-400 cursor-not-allowed'
+                              : 'text-gray-700 hover:bg-gray-50'
+                          }`}
+                        >
+                          <MdNavigateNext className="h-4 w-4" />
+                          다음
+                        </button>
+                      )}
+                    </>
+                  )}
+
+                  {/* 재생성 */}
+                  {result.regenerateCount < CONFIG.maxRegenerateCount && (
+                    <button
+                      type="button"
+                      onClick={() => handleRegenerate(result)}
+                      disabled={result.isRegenerating}
+                      className={`flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium transition-colors ${
+                        result.isRegenerating
+                          ? 'text-gray-400 cursor-not-allowed'
+                          : 'text-gray-700 hover:bg-gray-50'
+                      }`}
+                    >
+                      다시 생성 ({result.regenerateCount}/
+                      {CONFIG.maxRegenerateCount})
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))}
 
             {/* 감정 선택 안내 */}
             <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
               <div className="flex items-center gap-2 mb-3">
                 <span className="text-sm font-medium">
                   AI가 추측한 감정은 {emotion || '감정 선택 안함'}
-                  {emotion &&
-                    emotionEmojis[emotion as Exclude<EmotionOption, ''>]}
-                  입니다.
+                  {emotion && getEmotionConfig(emotion)?.emoji} 입니다.
                 </span>
               </div>
 
@@ -478,36 +464,24 @@ export default function CreateAi() {
               </p>
 
               <div className="flex gap-2">
-                {emotionButtons
-                  .filter(({ emotion: emotionValue }) => emotionValue !== '') // ❓ 버튼 제거
-                  .map(({ emotion: emotionValue, emoji, label }) => {
-                    const emotionStyle = getEmotionStyle(
-                      emotionValue as EmotionOption,
-                    );
-                    const isSelected = emotion === emotionValue;
-
-                    return (
-                      <button
-                        key={emotionValue}
-                        type="button"
-                        onClick={() =>
-                          setEmotion(
-                            emotion === emotionValue
-                              ? ''
-                              : (emotionValue as EmotionOption),
-                          )
-                        }
-                        className={`flex h-10 w-10 items-center justify-center rounded-full text-lg transition-all ${
-                          isSelected && emotionStyle
-                            ? `${emotionStyle.bg} ring-2 ${emotionStyle.ring}`
-                            : 'hover:bg-gray-50'
-                        }`}
-                        aria-label={label}
-                      >
-                        {emoji}
-                      </button>
-                    );
-                  })}
+                {CONFIG.emotions.map(({ value, emoji, label, styles }) => {
+                  const isSelected = emotion === value;
+                  return (
+                    <button
+                      key={value}
+                      type="button"
+                      onClick={() => setEmotion(emotion === value ? '' : value)}
+                      className={`flex h-10 w-10 items-center justify-center rounded-full text-lg transition-all ${
+                        isSelected
+                          ? `${styles.bg} ring-2 ${styles.ring}`
+                          : 'hover:bg-gray-50'
+                      }`}
+                      aria-label={label}
+                    >
+                      {emoji}
+                    </button>
+                  );
+                })}
               </div>
             </div>
           </div>
@@ -541,7 +515,7 @@ export default function CreateAi() {
                   onClick={onGenerate}
                   disabled={isGenerating || !prompt.trim()}
                 >
-                  <div className="flex hover:bg-sage-50 h-12 w-12 items-center justify-center rounded-2xl bg-sage-40 transition-colors text-2xl ">
+                  <div className="flex hover:bg-sage-50 h-12 w-12 items-center justify-center rounded-2xl bg-sage-40 transition-colors text-2xl">
                     <CiLocationArrow1 className="text-sage-100" />
                   </div>
                 </button>
@@ -576,19 +550,13 @@ export default function CreateAi() {
 
                 {/* 감정 이모지 선택 */}
                 <div className="flex gap-1 ml-auto">
-                  {Object.entries(emotionEmojis).map(([emotionKey, emoji]) => (
+                  {CONFIG.emotions.map(({ value, emoji }) => (
                     <button
-                      key={emotionKey}
+                      key={value}
                       type="button"
-                      onClick={() =>
-                        setEmotion(
-                          emotion === emotionKey
-                            ? ''
-                            : (emotionKey as EmotionOption),
-                        )
-                      }
+                      onClick={() => setEmotion(emotion === value ? '' : value)}
                       className={`h-8 w-8 rounded-full text-sm transition-all ${
-                        emotion === emotionKey
+                        emotion === value
                           ? 'bg-green-100 ring-2 ring-green-300 scale-110'
                           : 'hover:bg-gray-50'
                       }`}
@@ -667,23 +635,17 @@ export default function CreateAi() {
               감정을 선택해주세요 😊 (선택 사항)
             </label>
             <div className="flex flex-wrap gap-3 justify-center">
-              {Object.entries(emotionEmojis).map(([emotionKey, emoji]) => (
+              {CONFIG.emotions.map(({ value, emoji, label, styles }) => (
                 <button
-                  key={emotionKey}
+                  key={value}
                   type="button"
-                  onClick={() =>
-                    setEmotion(
-                      emotion === emotionKey
-                        ? ''
-                        : (emotionKey as EmotionOption),
-                    )
-                  }
+                  onClick={() => setEmotion(emotion === value ? '' : value)}
                   className={`flex h-16 w-16 items-center justify-center rounded-full border-2 text-2xl transition-all ${
-                    emotion === emotionKey
+                    emotion === value
                       ? 'border-sage-60 bg-sage-50 shadow-md scale-110'
                       : 'border-sage-20 bg-white hover:border-sage-40 hover:bg-sage-10 hover:scale-105'
                   }`}
-                  aria-label={`${emotionKey} 선택`}
+                  aria-label={`${label} 선택`}
                 >
                   {emoji}
                 </button>
