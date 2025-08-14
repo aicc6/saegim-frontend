@@ -36,7 +36,8 @@ const config: Config = {
 
         // Background 토큰
         background: {
-          primary: '#EAEBE6', // new site background
+          // primary: '#EAEBE6', // FIXME: new site background
+          primary: '#FDFDFD', // off-white
           secondary: '#F7F9F8', // sage-10
           tertiary: '#EDF2EE', // sage-20
           hover: '#DFE8E1', // sage-30
@@ -81,9 +82,9 @@ const config: Config = {
           'peaceful-secondary': '#E8F0E8',
           'peaceful-bg': '#F0F7F0',
 
-          worried: '#E6B366', // Gentle Orange
-          'worried-secondary': '#F5EBDC',
-          'worried-bg': '#FAF4E8',
+          unrest: '#E6B366', // Gentle Orange
+          'unrest-secondary': '#F5EBDC',
+          'unrest-bg': '#FAF4E8',
         },
 
         // 시스템 컬러
@@ -196,6 +197,7 @@ const config: Config = {
 
       screens: {
         xs: '475px',
+        'chart-lg': '1330px', // 차트 가로 배치용 커스텀 브레이크포인트
       },
 
       boxShadow: {
