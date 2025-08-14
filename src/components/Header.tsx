@@ -35,11 +35,7 @@ export default function Header() {
   };
 
   return (
-<<<<<<< HEAD
-    <header className="w-full bg-sage-40 backdrop-blur-sm">
-=======
     <header className="w-full bg-background-primary/80 backdrop-blur-sm">
->>>>>>> 2692b657b1409853ec30c89a04a26ee06d567b37
       <nav className="mx-auto max-w-4xl px-4 py-3 flex items-center justify-between">
         <Link href="/" className="flex items-center gap-2">
           <span className="text-soft-rose text-xl">✿</span>
