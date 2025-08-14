@@ -1,19 +1,6 @@
 ---
 description: 새김(Saegim) 프론트엔드 개발 규칙 - Next.js 15 + TypeScript + Tailwind + Zustand
 globs:
-  - 'src/**/*.{ts,tsx,js,jsx,css}'
-  - '*.config.{ts,js}'
-  - 'tailwind.config.ts'
-  - 'next.config.ts'
-  - 'package.json'
-excludeGlobs:
-  - 'node_modules/**'
-  - '.next/**'
-  - 'dist/**'
-  - 'build/**'
-  - '**/*.test.{ts,tsx,js,jsx}'
-  - '**/*.spec.{ts,tsx,js,jsx}'
-  - '**/*.d.ts'
 alwaysApply: false
 ---
 
@@ -127,7 +114,7 @@ const emotionColors = {
   sad: 'bg-emotion-sad',
   angry: 'bg-emotion-angry',
   peaceful: 'bg-emotion-peaceful',
-  worried: 'bg-emotion-worried',
+  unrest: 'bg-emotion-unrest',
 } as const;
 ```
 
@@ -191,7 +178,7 @@ const api = {
 
 ```tsx
 // ✅ 엄격한 타입 정의
-export type EmotionType = 'happy' | 'sad' | 'angry' | 'peaceful' | 'worried';
+export type EmotionType = 'happy' | 'sad' | 'angry' | 'peaceful' | 'unrest';
 
 export interface DiaryEntry {
   id: string;
@@ -272,7 +259,7 @@ interface DiaryCardProps {
 ```tsx
 // ✅ 감정 타입 체크
 const isValidEmotion = (emotion: string): emotion is EmotionType => {
-  return ['happy', 'sad', 'angry', 'peaceful', 'worried'].includes(emotion);
+  return ['happy', 'sad', 'angry', 'peaceful', 'unrest'].includes(emotion);
 };
 ```
 
