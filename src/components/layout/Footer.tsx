@@ -17,6 +17,9 @@ export function Footer({ className }: FooterProps) {
           <p className="text-body-small text-text-secondary">
             © 2025 새김. All rights reserved.
           </p>
+          <p className="text-caption text-text-placeholder mt-1">
+            AI와 함께 쓰는 감성 다이어리
+          </p>
         </div>
       </div>
     </footer>

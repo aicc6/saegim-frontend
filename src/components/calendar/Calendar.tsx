@@ -171,6 +171,22 @@ export function Calendar({
   };
 
   const handleDateClick = (dateStr: string) => {
+    // 클릭한 날짜 파싱
+    const clickedDate = new Date(dateStr);
+    const clickedMonth = clickedDate.getMonth();
+    const clickedYear = clickedDate.getFullYear();
+
+    // 현재 표시된 월과 비교
+    const currentMonth = currentDate.getMonth();
+    const currentYear = currentDate.getFullYear();
+
+    // 다른 월의 날짜를 클릭한 경우 해당 월로 이동
+    if (clickedMonth !== currentMonth || clickedYear !== currentYear) {
+      const newDate = new Date(clickedYear, clickedMonth, 1);
+      setCurrentDate(newDate);
+      onDateChange?.(newDate);
+    }
+
     setSelectedDate(dateStr);
     onDateSelect?.(dateStr);
   };
@@ -258,7 +274,7 @@ export function Calendar({
               // 현재 월 날짜의 배경을 약간 진하게
               ...(day.isCurrentMonth && !day.isSelected
                 ? {
-                    backgroundColor: 'rgba(201, 214, 203, 0.4)', // sage-40 with opacity (더 진한 색상)
+                    backgroundColor: 'rgba(247, 249, 248, 0.5)', // sage-10 with opacity
                   }
                 : {}),
               // 선택된 날짜 스타일
