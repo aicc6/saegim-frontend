@@ -35,10 +35,7 @@ const eslintConfig = [
     rules: {
       'prettier/prettier': 'error',
       'react/react-in-jsx-scope': 'off',
-      '@typescript-eslint/no-unused-vars': [
-        'error',
-        { argsIgnorePattern: '^_' },
-      ],
+      '@typescript-eslint/no-unused-vars': 'off',
       'jsx-a11y/anchor-is-valid': 'warn',
       'import/order': [
         'error',

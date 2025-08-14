@@ -33,7 +33,7 @@ export default function LoginForm() {
       formData.password === DEMO_ACCOUNT.password
     ) {
       localStorage.setItem('isLoggedIn', 'true');
-      router.push('/dashboard');
+      router.push('/');
     } else {
       alert(
         '데모 계정 정보가 일치하지 않습니다.\n이메일: demo@saegim.com\n비밀번호: saegim2024',

@@ -1,19 +1,14 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { useAuthStore } from '@/stores/auth';
 import { useDiaryStore } from '@/stores/diary';
-import { Header } from '@/components/layout/Header';
-import { Sidebar } from '@/components/layout/Sidebar';
-import { Footer } from '@/components/layout/Footer';
 import { Calendar } from '@/components/calendar/Calendar';
 import { EmotionPieChart } from '@/components/charts/EmotionPieChart';
 import { KeywordBarChart } from '@/components/charts/KeywordBarChart';
-import { Button } from '@/components/ui/Button';
+import { Button } from '@/components/ui/custom/Button';
 import { formatDate } from '@/lib/utils';
 
 export default function CalendarPage() {
-  const { isAuthenticated } = useAuthStore();
   const {
     getEntriesByDate,
     getEmotionDistribution,
@@ -80,32 +75,9 @@ export default function CalendarPage() {
     setSelectedDate(null);
   };
 
-  if (isAuthenticated) {
-    return (
-      <div className="min-h-screen bg-background-primary flex flex-col">
-        <Header />
-        <main className="flex-1 flex items-center justify-center">
-          <div className="text-center">
-            <h1 className="text-h2 text-text-primary mb-4">
-              로그인이 필요합니다
-            </h1>
-            <p className="text-body text-text-secondary">
-              캘린더를 보려면 먼저 로그인해주세요.
-            </p>
-          </div>
-        </main>
-        <Footer />
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-screen bg-background-primary flex flex-col">
-      <Header />
-
       <div className="flex flex-1">
-        <Sidebar />
-
         <main className="flex-1 ml-64">
           <div className="container mx-auto px-6 py-8">
             {/* 페이지 헤더 */}
@@ -311,8 +283,6 @@ export default function CalendarPage() {
           </div>
         </main>
       </div>
-
-      <Footer />
     </div>
   );
 }
