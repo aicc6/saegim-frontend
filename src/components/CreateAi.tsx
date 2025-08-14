@@ -3,6 +3,8 @@
 import { useMemo, useState } from 'react';
 import Select, { type SelectOption } from './ui/Select';
 import { CiLocationArrow1 } from 'react-icons/ci';
+import { MdNavigateNext } from 'react-icons/md';
+import { GrFormPrevious } from 'react-icons/gr';
 
 type WritingStyle = '시' | '단편글';
 type LengthOption = '단문' | '중문' | '장문';
@@ -26,6 +28,10 @@ interface GeneratedResult {
   emotion: EmotionOption;
   prompt: string;
   createdAt: Date;
+  isRegenerating?: boolean;
+  history: string[]; // 이전 생성 내용들
+  currentHistoryIndex: number; // 현재 보고 있는 히스토리 인덱스
+  regenerateCount: number; // 재생성 횟수
 }
 
 // 액션 버튼 데이터 구조
@@ -144,33 +150,61 @@ export default function CreateAi() {
   ];
 
   // 액션 버튼 생성 함수 (백엔드 API 호출 함수들로 대체 예정)
-  const createActionButtons = (result: GeneratedResult): ActionButton[] => [
-    {
-      id: 'copy',
-      label: '복사하기',
-      onClick: () => {
-        navigator.clipboard.writeText(result.content);
-        // TODO: 토스트 메시지 표시
+  const createActionButtons = (result: GeneratedResult): ActionButton[] => {
+    const buttons: ActionButton[] = [
+      {
+        id: 'copy',
+        label: '복사하기',
+        onClick: () => {
+          navigator.clipboard.writeText(result.content);
+          // TODO: 토스트 메시지 표시
+        },
       },
-    },
-    {
-      id: 'save-diary',
-      label: '다이어리에 저장',
-      icon: 'document',
-      onClick: () => {
-        // TODO: API 호출 - saveToDiary(result.id)
-        console.log('다이어리에 저장:', result.id);
+      {
+        id: 'save-diary',
+        label: '다이어리에 저장',
+        icon: 'document',
+        onClick: () => {
+          // TODO: API 호출 - saveToDiary(result.id)
+          console.log('다이어리에 저장:', result.id);
+        },
       },
-    },
-    {
-      id: 'regenerate',
-      label: '다시 생성',
-      onClick: () => {
-        // TODO: API 호출 - regenerateText(result.prompt, result.style, result.length, result.emotion)
-        handleRegenerate(result);
-      },
-    },
-  ];
+    ];
+
+    // 히스토리 네비게이션 버튼들
+    if (result.history.length > 1) {
+      if (result.currentHistoryIndex > 0) {
+        buttons.push({
+          id: 'prev-history',
+          label: '이전',
+          icon: 'arrow-left',
+          onClick: () => goToPreviousHistory(result),
+        });
+      }
+
+      if (result.currentHistoryIndex < result.history.length - 1) {
+        buttons.push({
+          id: 'next-history',
+          label: '다음',
+          icon: 'arrow-right',
+          onClick: () => goToNextHistory(result),
+        });
+      }
+    }
+
+    // 재생성 버튼 (5번 제한)
+    if (result.regenerateCount < 5) {
+      buttons.push({
+        id: 'regenerate',
+        label: `다시 생성 (${result.regenerateCount}/5)`,
+        onClick: () => {
+          handleRegenerate(result);
+        },
+      });
+    }
+
+    return buttons;
+  };
 
   // 감정별 이모지 버튼 데이터
   const emotionButtons = [
@@ -203,6 +237,9 @@ export default function CreateAi() {
         emotion,
         prompt,
         createdAt: new Date(),
+        history: [content], // 첫 번째 생성 내용을 히스토리에 추가
+        currentHistoryIndex: 0,
+        regenerateCount: 0,
       };
 
       setGeneratedResults((prev) => [newResult, ...prev]);
@@ -216,11 +253,90 @@ export default function CreateAi() {
 
   // 재생성 함수
   const handleRegenerate = async (result: GeneratedResult) => {
-    setPrompt(result.prompt);
-    setStyle(result.style);
-    setLength(result.length);
-    setEmotion(result.emotion);
-    await onGenerate();
+    // 재생성 횟수 제한 확인
+    if (result.regenerateCount >= 5) {
+      alert('재생성은 최대 5번까지만 가능합니다.');
+      return;
+    }
+
+    try {
+      // 해당 결과를 로딩 상태로 설정
+      setGeneratedResults((prev) =>
+        prev.map((item) =>
+          item.id === result.id ? { ...item, isRegenerating: true } : item,
+        ),
+      );
+
+      // 임시 로딩
+      await new Promise((r) => setTimeout(r, 450));
+
+      const newContent = generateText(
+        result.prompt,
+        result.style,
+        result.length,
+        result.emotion,
+      );
+
+      // 해당 결과의 내용과 히스토리 업데이트
+      setGeneratedResults((prev) =>
+        prev.map((item) =>
+          item.id === result.id
+            ? {
+                ...item,
+                content: newContent,
+                createdAt: new Date(),
+                isRegenerating: false,
+                history: [...item.history, newContent], // 새 내용을 히스토리에 추가
+                currentHistoryIndex: item.history.length, // 새 내용을 현재 인덱스로 설정
+                regenerateCount: item.regenerateCount + 1, // 재생성 횟수 증가
+              }
+            : item,
+        ),
+      );
+    } catch (error) {
+      console.error('텍스트 재생성 실패:', error);
+      // 로딩 상태 해제
+      setGeneratedResults((prev) =>
+        prev.map((item) =>
+          item.id === result.id ? { ...item, isRegenerating: false } : item,
+        ),
+      );
+    }
+  };
+
+  // 히스토리 네비게이션 함수들
+  const goToPreviousHistory = (result: GeneratedResult) => {
+    if (result.currentHistoryIndex > 0) {
+      const newIndex = result.currentHistoryIndex - 1;
+      setGeneratedResults((prev) =>
+        prev.map((item) =>
+          item.id === result.id
+            ? {
+                ...item,
+                content: item.history[newIndex],
+                currentHistoryIndex: newIndex,
+              }
+            : item,
+        ),
+      );
+    }
+  };
+
+  const goToNextHistory = (result: GeneratedResult) => {
+    if (result.currentHistoryIndex < result.history.length - 1) {
+      const newIndex = result.currentHistoryIndex + 1;
+      setGeneratedResults((prev) =>
+        prev.map((item) =>
+          item.id === result.id
+            ? {
+                ...item,
+                content: item.history[newIndex],
+                currentHistoryIndex: newIndex,
+              }
+            : item,
+        ),
+      );
+    }
   };
 
   // 감정 스타일 가져오기
@@ -260,7 +376,15 @@ export default function CreateAi() {
                   {/* 헤더 */}
 
                   <div className="mb-4 flex justify-between items-center ">
-                    <span className="text-sm text-gray-500">생성된 글</span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm text-gray-500">생성된 글</span>
+                      {result.history.length > 1 && (
+                        <span className="text-xs text-gray-400">
+                          ({result.currentHistoryIndex + 1}/
+                          {result.history.length})
+                        </span>
+                      )}
+                    </div>
                     <div className="flex items-center gap-2">
                       <div className="flex gap-2">
                         {result.emotion && (
@@ -280,11 +404,19 @@ export default function CreateAi() {
 
                   {/* 내용 */}
                   <div className="space-y-2 text-gray-800 leading-relaxed">
-                    {result.style === '시'
-                      ? result.content
-                          .split('\n')
-                          .map((line, idx) => <div key={idx}>{line}</div>)
-                      : result.content}
+                    {result.isRegenerating ? (
+                      <div className="space-y-3 animate-pulse">
+                        <div className="h-4 w-full rounded bg-gray-200" />
+                        <div className="h-4 w-11/12 rounded bg-gray-200" />
+                        <div className="h-4 w-5/6 rounded bg-gray-200" />
+                      </div>
+                    ) : result.style === '시' ? (
+                      result.content
+                        .split('\n')
+                        .map((line, idx) => <div key={idx}>{line}</div>)
+                    ) : (
+                      result.content
+                    )}
                   </div>
 
                   {/* 액션 버튼들 */}
@@ -294,7 +426,12 @@ export default function CreateAi() {
                         key={button.id}
                         type="button"
                         onClick={button.onClick}
-                        className="flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+                        disabled={result.isRegenerating}
+                        className={`flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium transition-colors ${
+                          result.isRegenerating
+                            ? 'text-gray-400 cursor-not-allowed'
+                            : 'text-gray-700 hover:bg-gray-50'
+                        }`}
                       >
                         {button.icon === 'document' && (
                           <svg
@@ -311,6 +448,12 @@ export default function CreateAi() {
                             />
                           </svg>
                         )}
+                        {button.icon === 'arrow-left' && (
+                          <GrFormPrevious className="h-4 w-4" />
+                        )}
+                        {button.icon === 'arrow-right' && (
+                          <MdNavigateNext className="h-4 w-4" />
+                        )}
                         {button.label}
                       </button>
                     ))}
@@ -323,8 +466,10 @@ export default function CreateAi() {
             <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
               <div className="flex items-center gap-2 mb-3">
                 <span className="text-sm font-medium">
-                  AI가 추측한 감정은 {emotion}
-                  {emotionEmojis[emotion as Exclude<EmotionOption, ''>]}입니다.
+                  AI가 추측한 감정은 {emotion || '감정 선택 안함'}
+                  {emotion &&
+                    emotionEmojis[emotion as Exclude<EmotionOption, ''>]}
+                  입니다.
                 </span>
               </div>
 
@@ -333,8 +478,9 @@ export default function CreateAi() {
               </p>
 
               <div className="flex gap-2">
-                {emotionButtons.map(
-                  ({ emotion: emotionValue, emoji, label }) => {
+                {emotionButtons
+                  .filter(({ emotion: emotionValue }) => emotionValue !== '') // ❓ 버튼 제거
+                  .map(({ emotion: emotionValue, emoji, label }) => {
                     const emotionStyle = getEmotionStyle(
                       emotionValue as EmotionOption,
                     );
@@ -342,25 +488,26 @@ export default function CreateAi() {
 
                     return (
                       <button
-                        key={emotionValue || 'none'}
+                        key={emotionValue}
                         type="button"
                         onClick={() =>
-                          setEmotion(emotionValue as EmotionOption)
+                          setEmotion(
+                            emotion === emotionValue
+                              ? ''
+                              : (emotionValue as EmotionOption),
+                          )
                         }
                         className={`flex h-10 w-10 items-center justify-center rounded-full text-lg transition-all ${
                           isSelected && emotionStyle
                             ? `${emotionStyle.bg} ring-2 ${emotionStyle.ring}`
-                            : isSelected && !emotionValue
-                              ? 'bg-gray-100 ring-2 ring-gray-300'
-                              : 'hover:bg-gray-50'
+                            : 'hover:bg-gray-50'
                         }`}
                         aria-label={label}
                       >
                         {emoji}
                       </button>
                     );
-                  },
-                )}
+                  })}
               </div>
             </div>
           </div>
@@ -429,22 +576,17 @@ export default function CreateAi() {
 
                 {/* 감정 이모지 선택 */}
                 <div className="flex gap-1 ml-auto">
-                  <button
-                    type="button"
-                    onClick={() => setEmotion('')}
-                    className={`h-8 w-8 rounded-full text-sm transition-all ${
-                      emotion === ''
-                        ? 'bg-gray-100 ring-2 ring-gray-300'
-                        : 'hover:bg-gray-50'
-                    }`}
-                  >
-                    ❓
-                  </button>
                   {Object.entries(emotionEmojis).map(([emotionKey, emoji]) => (
                     <button
                       key={emotionKey}
                       type="button"
-                      onClick={() => setEmotion(emotionKey as EmotionOption)}
+                      onClick={() =>
+                        setEmotion(
+                          emotion === emotionKey
+                            ? ''
+                            : (emotionKey as EmotionOption),
+                        )
+                      }
                       className={`h-8 w-8 rounded-full text-sm transition-all ${
                         emotion === emotionKey
                           ? 'bg-green-100 ring-2 ring-green-300 scale-110'
@@ -525,23 +667,17 @@ export default function CreateAi() {
               감정을 선택해주세요 😊 (선택 사항)
             </label>
             <div className="flex flex-wrap gap-3 justify-center">
-              <button
-                type="button"
-                onClick={() => setEmotion('')}
-                className={`flex h-16 w-16 items-center justify-center rounded-full border-2 text-2xl transition-all ${
-                  emotion === ''
-                    ? 'border-sage-60 bg-sage-50 shadow-md'
-                    : 'border-sage-20 bg-white hover:border-sage-40 hover:bg-sage-10'
-                }`}
-                aria-label="감정 선택 안 함"
-              >
-                ❓
-              </button>
               {Object.entries(emotionEmojis).map(([emotionKey, emoji]) => (
                 <button
                   key={emotionKey}
                   type="button"
-                  onClick={() => setEmotion(emotionKey as EmotionOption)}
+                  onClick={() =>
+                    setEmotion(
+                      emotion === emotionKey
+                        ? ''
+                        : (emotionKey as EmotionOption),
+                    )
+                  }
                   className={`flex h-16 w-16 items-center justify-center rounded-full border-2 text-2xl transition-all ${
                     emotion === emotionKey
                       ? 'border-sage-60 bg-sage-50 shadow-md scale-110'
@@ -553,12 +689,12 @@ export default function CreateAi() {
                 </button>
               ))}
             </div>
-            {emotion && (
-              <p className="mt-2 text-center text-body-small text-text-secondary">
-                선택된 감정:{' '}
-                <span className="font-medium text-sage-100">{emotion}</span>
-              </p>
-            )}
+            <p className="mt-2 text-center text-body-small text-text-secondary">
+              선택된 감정:{' '}
+              <span className="font-medium text-sage-100">
+                {emotion || '감정 선택 안함'}
+              </span>
+            </p>
           </div>
         </div>
 
