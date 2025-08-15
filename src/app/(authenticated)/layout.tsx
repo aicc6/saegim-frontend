@@ -2,6 +2,8 @@ import type { Metadata } from 'next';
 import Footer from '@/components/common/Footer';
 import AuthenticatedHeader from '@/components/common/AuthenticatedHeader';
 import { Sidebar } from '@/components/common/Sidebar';
+import { SidebarProvider } from '@/contexts/sidebar-context';
+import { MainContent } from '@/components/layout/MainContent';
 
 import '../globals.css';
 
@@ -22,17 +24,19 @@ export default function AuthenticatedLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <div className="min-h-screen bg-sage-10">
+    <SidebarProvider>
       <div className="min-h-screen bg-sage-10">
-        <Sidebar />
+        <div className="min-h-screen bg-sage-10">
+          <Sidebar />
 
-        <main className="lg:pl-64 pb-16 lg:pb-0">
-          {/* 헤더 */}
-          <AuthenticatedHeader />
-          {children}
-          <Footer />
-        </main>
+          <MainContent>
+            {/* 헤더 */}
+            <AuthenticatedHeader />
+            {children}
+            <Footer />
+          </MainContent>
+        </div>
       </div>
-    </div>
+    </SidebarProvider>
   );
 }

@@ -3,8 +3,18 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { PenTool, Grid3X3, Calendar, User, Menu, X, Leaf } from 'lucide-react';
+import {
+  PenTool,
+  Grid3X3,
+  Calendar,
+  User,
+  Menu,
+  X,
+  ChevronLeft,
+  ChevronRight,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useSidebar } from '@/contexts/sidebar-context';
 
 const navigation = [
   { name: '글쓰기', href: '/', icon: PenTool },
@@ -14,25 +24,67 @@ const navigation = [
 
 export function Sidebar() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const { isCollapsed, setIsCollapsed } = useSidebar();
   const pathname = usePathname();
 
   return (
     <>
       {/* 데스크톱 사이드바 */}
-      <div className="hidden lg:flex lg:w-64 lg:flex-col lg:fixed lg:inset-y-0 lg:bg-white lg:border-r lg:border-sage-20">
-        <div className="flex flex-col flex-grow pt-5 pb-4 overflow-y-auto">
-          {/* 로고 */}
-          <div className="flex items-center flex-shrink-0 px-4">
-            <div className="flex items-center space-x-2">
-              <div className="w-8 h-8 bg-sage-50 rounded-full flex items-center justify-center">
-                <Leaf className="w-4 h-4 text-sage-100" />
-              </div>
-              <span className="text-xl font-bold text-sage-100">새김</span>
-            </div>
+      <div
+        className={`hidden lg:flex lg:flex-col lg:fixed lg:inset-y-0 lg:bg-white lg:border-r lg:border-sage-20 transition-all duration-300 ${
+          isCollapsed ? 'lg:w-16' : 'lg:w-64'
+        }`}
+      >
+        <div className="flex flex-col flex-grow overflow-y-auto">
+          {/* 사용자 프로필 */}
+          <div
+            className={`flex-shrink-0 p-4 border-b border-sage-20 relative ${
+              isCollapsed ? 'px-2' : 'px-4'
+            }`}
+          >
+            {/* 토글 버튼 (프로필과 같은 높이) */}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setIsCollapsed(!isCollapsed)}
+              className="absolute top-1/2 -right-3 transform -translate-y-1/2 z-20 p-2 text-sage-70 hover:text-sage-100 bg-white border border-sage-20 rounded-full shadow-md"
+            >
+              {isCollapsed ? (
+                <ChevronRight className="h-4 w-4" />
+              ) : (
+                <ChevronLeft className="h-4 w-4" />
+              )}
+            </Button>
+
+            {isCollapsed ? (
+              <Link href="/profile">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="w-full p-2 text-sage-70 hover:text-sage-100"
+                >
+                  <User className="h-5 w-5" />
+                </Button>
+              </Link>
+            ) : (
+              <Link href="/profile">
+                <Button
+                  variant="ghost"
+                  className="w-full justify-start text-sage-70 hover:text-sage-100"
+                >
+                  <User className="mr-3 h-5 w-5" />
+                  프로필
+                </Button>
+              </Link>
+            )}
           </div>
 
           {/* 네비게이션 메뉴 */}
-          <nav className="mt-8 flex-1 px-2 space-y-1">
+          <nav
+            className={`flex-1 px-2 py-4 space-y-1 ${
+              isCollapsed ? 'px-1' : 'px-2'
+            }`}
+          >
             {navigation.slice(0, 5).map((item) => {
               const isActive = pathname === item.href;
               const Icon = item.icon;
@@ -44,27 +96,14 @@ export function Sidebar() {
                     isActive
                       ? 'bg-sage-20 text-sage-100'
                       : 'text-sage-70 hover:bg-sage-10 hover:text-sage-100'
-                  }`}
+                  } ${isCollapsed ? 'justify-center' : ''}`}
                 >
-                  <Icon className="mr-3 h-5 w-5" />
-                  {item.name}
+                  <Icon className={`h-5 w-5 ${!isCollapsed ? 'mr-3' : ''}`} />
+                  {!isCollapsed && item.name}
                 </Link>
               );
             })}
           </nav>
-
-          {/* 사용자 프로필 */}
-          <div className="flex-shrink-0 px-4 py-4 border-t border-sage-20">
-            <Link href="/profile">
-              <Button
-                variant="ghost"
-                className="w-full justify-start text-sage-70 hover:text-sage-100"
-              >
-                <User className="mr-3 h-5 w-5" />
-                프로필
-              </Button>
-            </Link>
-          </div>
         </div>
       </div>
 
@@ -72,9 +111,6 @@ export function Sidebar() {
       <div className="lg:hidden bg-white border-b border-sage-20 px-4 py-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-2">
-            <div className="w-8 h-8 bg-sage-50 rounded-full flex items-center justify-center">
-              <Leaf className="w-4 h-4 text-sage-100" />
-            </div>
             <span className="text-xl font-bold text-sage-100">새김</span>
           </div>
           <Button
