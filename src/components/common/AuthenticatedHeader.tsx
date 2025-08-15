@@ -1,27 +1,77 @@
 'use client';
-import { Save } from 'lucide-react';
+
+import { useEffect, useState } from 'react';
+import Image from 'next/image';
+import { useTheme } from 'next-themes';
+import { Bell, Sun, Moon } from 'lucide-react';
 import { Button } from '../ui/button';
 
 export default function AutheticatedHeader() {
-  const handleSave = () => {
-    // 다이어리 저장 로직
-    console.log('다이어리 저장:');
+  const { theme, setTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+
+  // 클라이언트 사이드에서만 테마 렌더링 (hydration 에러 방지)
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const toggleTheme = () => {
+    const newTheme = theme === 'dark' ? 'light' : 'dark';
+    setTheme(newTheme);
+    console.log('테마 변경:', theme, '→', newTheme);
+    
+    // 강제로 클래스 적용 (디버깅용)
+    document.documentElement.classList.toggle('dark', newTheme === 'dark');
+  };
+
+  const handleNotification = () => {
+    // 알림 로직
+    console.log('알림 클릭');
   };
 
   return (
-    <div className="bg-white border-b border-sage-20 p-4">
-      <div className="max-w-4xl mx-auto flex items-center justify-between">
-        <div className="flex items-center space-x-4">
-          <h1 className="text-xl font-semibold text-sage-100">글쓰기</h1>
+    <div className="bg-white border-b border-sage-20 p-4 dark:bg-gray-900 dark:border-gray-700">
+      <div className="max-w-full mx-auto flex items-center justify-between">
+        {/* 좌측: 로고와 서비스명 */}
+        <div className="flex items-center space-x-3">
+          <div className="w-8 h-8 rounded-full flex items-center justify-center">
+            <Image
+              src="/images/logo.webp"
+              alt="새김 로고"
+              width={32}
+              height={32}
+              className="w-8 h-8"
+            />
+          </div>
+          <h1 className="text-xl font-bold text-sage-100 dark:text-white">
+            새김
+          </h1>
         </div>
 
-        <Button
-          onClick={handleSave}
-          className="bg-sage-50 hover:bg-sage-60 text-white"
-        >
-          <Save className="w-4 h-4 mr-2" />
-          저장하기
-        </Button>
+        {/* 우측: 알림 및 테마 토글 버튼 */}
+        <div className="flex items-center space-x-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleNotification}
+            className="p-2 text-sage-70 hover:text-sage-100 hover:bg-sage-10 dark:text-gray-300 dark:hover:text-white dark:hover:bg-gray-800"
+          >
+            <Bell className="w-5 h-5" />
+          </Button>
+          
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={toggleTheme}
+            className="p-2 text-sage-70 hover:text-sage-100 hover:bg-sage-10 dark:text-gray-300 dark:hover:text-white dark:hover:bg-gray-800"
+          >
+            {mounted && theme === 'dark' ? (
+              <Sun className="w-5 h-5" />
+            ) : (
+              <Moon className="w-5 h-5" />
+            )}
+          </Button>
+        </div>
       </div>
     </div>
   );

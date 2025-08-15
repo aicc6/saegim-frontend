@@ -25,8 +25,8 @@ export default function AuthenticatedLayout({
 }>) {
   return (
     <SidebarProvider>
-      <div className="min-h-screen bg-sage-10">
-        <div className="min-h-screen bg-sage-10">
+      <div className="min-h-screen bg-sage-10 dark:bg-gray-900">
+        <div className="min-h-screen bg-sage-10 dark:bg-gray-900">
           <Sidebar />
 
           <MainContent>

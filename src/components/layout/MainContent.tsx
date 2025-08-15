@@ -11,7 +11,7 @@ export function MainContent({ children }: MainContentProps) {
 
   return (
     <main
-      className={`pb-16 lg:pb-0 transition-all duration-300 ${
+      className={`pb-16 lg:pb-0 transition-all duration-300 bg-sage-10 dark:bg-gray-900 ${
         isCollapsed ? 'lg:pl-16' : 'lg:pl-64'
       }`}
     >
