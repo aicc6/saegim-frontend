@@ -12,7 +12,7 @@ const navigation = [
   { name: '캘린더', href: '/calendar', icon: Calendar },
 ];
 
-export function Navigation() {
+export function Sidebar() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const pathname = usePathname();
 

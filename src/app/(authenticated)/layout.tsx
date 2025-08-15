@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
-import AuthenticatedHeader from '@/components/AuthenticatedHeader';
-import { Navigation } from '@/components/Navigation';
-import Footer from '@/components/Footer';
+import Footer from '@/components/common/Footer';
+import AuthenticatedHeader from '@/components/common/AuthenticatedHeader';
+import { Sidebar } from '@/components/common/Sidebar';
 
 import '../globals.css';
 
@@ -24,7 +24,8 @@ export default function AuthenticatedLayout({
   return (
     <div className="min-h-screen bg-sage-10">
       <div className="min-h-screen bg-sage-10">
-        <Navigation />
+        <Sidebar />
+
         <main className="lg:pl-64 pb-16 lg:pb-0">
           {/* 헤더 */}
           <AuthenticatedHeader />

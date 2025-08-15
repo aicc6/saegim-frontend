@@ -3,7 +3,7 @@
 import { Leaf, Menu, X } from 'lucide-react';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
-import { Button } from './ui/button';
+import { Button } from '../ui/button';
 
 type ThemeMode = 'light' | 'dark';
 
