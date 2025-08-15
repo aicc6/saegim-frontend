@@ -116,11 +116,6 @@ export function NotificationPage() {
         actions={
           <div className="flex items-center space-x-2">
             {unreadCount > 0 && (
-              <Badge className="bg-red-500 text-white mr-2">
-                {unreadCount}
-              </Badge>
-            )}
-            {unreadCount > 0 && (
               <Button
                 variant="outline"
                 size="sm"
