@@ -1,5 +1,6 @@
 // 공통 컴포넌트 export
 export { default as Header } from './common/Header';
+export { default as PageHeader } from './common/PageHeader';
 export { Sidebar } from './common/Sidebar';
 export { default as LoginForm } from './auth/LoginForm';
 export { default as SignupForm } from './auth/SignupForm';
