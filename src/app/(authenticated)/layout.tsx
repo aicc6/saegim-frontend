@@ -32,7 +32,11 @@ export default function AuthenticatedLayout({
           <MainContent>
             {/* 헤더 */}
             <AuthenticatedHeader />
-            {children}
+            
+            {/* 메인 콘텐츠 영역 - flex-1로 확장 */}
+            <div className="flex-1">{children}</div>
+            
+            {/* 푸터 - 항상 바닥에 위치 */}
             <Footer />
           </MainContent>
         </div>
