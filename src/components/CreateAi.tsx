@@ -4,7 +4,7 @@ import { useMemo, useState } from 'react';
 import { CiLocationArrow1 } from 'react-icons/ci';
 import { MdNavigateNext } from 'react-icons/md';
 import { GrFormPrevious } from 'react-icons/gr';
-import Select from './ui/Select';
+import Select from './ui/custom/Select';
 
 // 타입 정의
 type WritingStyle = '시' | '단편글';

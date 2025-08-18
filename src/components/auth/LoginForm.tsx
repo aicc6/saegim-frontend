@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import GoogleLoginButton from '@/components/ui/GoogleLoginButton';
+import GoogleLoginButton from '@/components/ui/custom/GoogleLoginButton';
 
 export default function LoginForm() {
   const router = useRouter();
