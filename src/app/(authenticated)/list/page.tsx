@@ -6,7 +6,7 @@ export default function ListPage() {
   return (
     <div className="bg-background-primary flex flex-col">
       <div className="flex flex-1">
-        <main className="flex-1 ml-64">
+        <main className="flex-1">
           <div className="container mx-auto px-6 py-8">
             <div className="max-w-4xl mx-auto">
               {/* 페이지 헤더 */}
