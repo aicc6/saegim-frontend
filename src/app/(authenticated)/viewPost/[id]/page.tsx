@@ -2,23 +2,17 @@
 
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import {
-  ArrowLeft,
-  Edit,
-  Trash2,
-  ChevronLeft,
-  ChevronRight,
-} from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import { useDiaryStore } from '@/stores/diary';
+import PageHeader from '@/components/common/PageHeader';
 import { Button } from '@/components/ui/custom/Button';
-import { formatDate } from '@/lib/utils';
 
 interface DiaryEntry {
   id: string;
   title: string;
   content: string;
-  userEmotion: string;
-  keywords: string[];
+  userEmotion?: string;
+  keywords?: string[];
   createdAt: string;
 }
 
@@ -48,7 +42,7 @@ export default function ViewPostPage() {
     // 현재 엔트리 찾기
     const foundEntry = entries.find((e) => e.id === entryId);
     if (foundEntry) {
-      setEntry(foundEntry);
+      setEntry(foundEntry as DiaryEntry);
       setEditedTitle(foundEntry.title);
       setEditedContent(foundEntry.content);
 
@@ -56,7 +50,7 @@ export default function ViewPostPage() {
       const sameDateEntries = entries.filter(
         (e) => e.createdAt === foundEntry.createdAt,
       );
-      setSameDateEntries(sameDateEntries);
+      setSameDateEntries(sameDateEntries as DiaryEntry[]);
 
       // 현재 엔트리의 인덱스 찾기
       const index = sameDateEntries.findIndex((e) => e.id === entryId);
@@ -122,10 +116,13 @@ export default function ViewPostPage() {
     return (
       <div className="min-h-screen bg-background-primary flex items-center justify-center">
         <div className="text-center">
-          <p className="text-text-secondary">기록을 찾을 수 없습니다.</p>
-          <Button onClick={handleBack} className="mt-4">
+          <p className="text-sage-100">기록을 찾을 수 없습니다.</p>
+          <button
+            onClick={handleBack}
+            className="mt-4 px-6 py-2 bg-sage-50 hover:bg-sage-60 text-white rounded-lg"
+          >
             캘린더로 돌아가기
-          </Button>
+          </button>
         </div>
       </div>
     );
@@ -135,234 +132,179 @@ export default function ViewPostPage() {
     emotionLabels[entry.userEmotion as keyof typeof emotionLabels];
 
   return (
-    <div className="min-h-screen bg-background-primary">
-      <div className="container mx-auto px-6 py-8 max-w-4xl">
-        {/* 헤더 */}
-        <div className="bg-gradient-to-r from-sage-20 to-ivory-cream rounded-2xl px-6 py-4 mb-6 border border-border-subtle">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleBack}
-                className="text-text-secondary hover:text-text-primary hover:bg-background-hover"
-              >
-                <ArrowLeft className="h-5 w-5" />
-              </Button>
-              <h1 className="text-h3 font-bold text-text-primary">
-                {formatDate(entry.createdAt)}
-              </h1>
-            </div>
-          </div>
-        </div>
+    <div className="min-h-screen bg-background-primary flex flex-col">
+      {/* 페이지 헤더 */}
+      <PageHeader
+        title={'글 편집/ 저장'}
+        subtitle={`${new Date(entry.createdAt).getMonth() + 1}월 ${new Date(entry.createdAt).getDate()}일`}
+        actions={
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleBack}
+            className="text-text-secondary hover:text-text-primary hover:bg-background-hover"
+          >
+            <ArrowLeft className="h-5 w-5 mr-2" />
+            뒤로가기
+          </Button>
+        }
+      />
 
-        {/* 본문 */}
-        <div className="space-y-6">
-          {/* 감정 및 키워드 섹션 */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* 감정 섹션 */}
-            <div className="bg-background-secondary rounded-lg p-6 border border-border-subtle">
-              <h2 className="text-body font-semibold text-text-primary mb-4 flex items-center">
-                <span className="text-sage-70 mr-2">💭</span>
-                감정
-              </h2>
-              <div className="flex items-center space-x-4">
-                <span className="text-3xl">{emotion?.emoji}</span>
-                <div>
-                  <p
-                    className={`text-body-large font-medium ${emotion?.color}`}
-                  >
-                    {emotion?.name}
-                  </p>
-                  <p className="text-body-small text-text-secondary">100%</p>
+      <div className="flex-1 bg-ivory-cream p-8">
+        <div className="max-w-4xl mx-auto">
+          {/* 메인 콘텐츠 영역 */}
+          <div className="bg-white rounded-lg border-2 border-sage-30 p-8 shadow-sm">
+            {/* 감정 및 키워드 섹션 - 수평 배치 */}
+            <div className="flex gap-8 mb-6">
+              {/* 감정 섹션 */}
+              <div className="bg-sage-10 rounded-lg p-4 border border-sage-30 flex-1">
+                <div className="flex items-center space-x-3">
+                  <span className="text-lg">감정 :</span>
+                  <div className="flex items-center space-x-2">
+                    <span className="text-2xl">{emotion?.emoji}</span>
+                    <span className="text-sage-100 font-medium">
+                      {emotion?.name} / 80%
+                    </span>
+                    <span className="text-2xl">😨</span>
+                    <span className="text-sage-100 font-medium">
+                      불안 / 20%
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* 키워드 섹션 */}
+              <div className="bg-sage-10 rounded-lg p-4 border border-sage-30 flex-1">
+                <div className="flex items-center space-x-3">
+                  <span className="text-lg">키워드 :</span>
+                  <div className="flex flex-wrap gap-2">
+                    {entry.keywords && entry.keywords.length > 0 ? (
+                      entry.keywords.map((keyword, index) => (
+                        <span key={index} className="text-sage-100 font-medium">
+                          #{keyword}
+                        </span>
+                      ))
+                    ) : (
+                      <>
+                        <span className="text-sage-100 font-medium">#소풍</span>
+                        <span className="text-sage-100 font-medium">
+                          #데이트
+                        </span>
+                      </>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
 
-            {/* 키워드 섹션 */}
-            <div className="bg-background-secondary rounded-lg p-6 border border-border-subtle">
-              <h2 className="text-body font-semibold text-text-primary mb-4 flex items-center">
-                <span className="text-sage-70 mr-2">🏷️</span>
-                키워드
-              </h2>
-              <div className="flex flex-wrap gap-2">
-                {entry.keywords && entry.keywords.length > 0 ? (
-                  entry.keywords.map((keyword, index) => (
-                    <span
-                      key={index}
-                      className="px-3 py-2 bg-sage-20 text-sage-100 rounded-full text-body font-medium border border-sage-30"
-                    >
-                      #{keyword}
-                    </span>
-                  ))
-                ) : (
-                  <p className="text-body-small text-text-secondary">
-                    키워드가 없습니다
-                  </p>
-                )}
+            {/* 제목 섹션 */}
+            <div className="mb-6">
+              <div className="block text-lg text-sage-100 mb-2">
+                제목(title) :
               </div>
+              {isEditing ? (
+                <input
+                  type="text"
+                  value={editedTitle}
+                  onChange={(e) => setEditedTitle(e.target.value)}
+                  className="w-full text-lg text-sage-100 bg-transparent border-0 border-b-2 border-sage-100 focus:outline-none focus:border-sage-70 pb-2"
+                  placeholder="제목을 입력하세요"
+                />
+              ) : (
+                <div className="w-full text-lg text-sage-100 border-b-2 border-sage-100 pb-2">
+                  {entry.title || ''}
+                </div>
+              )}
             </div>
-          </div>
 
-          {/* 제목 섹션 */}
-          <div className="bg-background-secondary rounded-lg p-6 border border-border-subtle">
-            <h2 className="text-body font-semibold text-text-primary mb-4 flex items-center">
-              <span className="text-sage-70 mr-2">📝</span>
-              제목
-            </h2>
-            {isEditing ? (
-              <input
-                type="text"
-                value={editedTitle}
-                onChange={(e) => setEditedTitle(e.target.value)}
-                className="w-full px-4 py-3 border border-border-strong rounded-lg focus:outline-none focus:ring-2 focus:ring-sage-50 focus:border-sage-50 bg-background-primary text-text-primary text-body-large"
-                placeholder="제목을 입력하세요"
-              />
-            ) : (
-              <p className="text-body-large text-text-primary font-medium">
-                {entry.title || '제목이 없습니다'}
-              </p>
-            )}
-          </div>
+            {/* 본문 영역 */}
+            <div className="mb-8">
+              {isEditing ? (
+                <textarea
+                  value={editedContent}
+                  onChange={(e) => setEditedContent(e.target.value)}
+                  className="w-full h-96 p-4 border-2 border-sage-30 rounded-lg focus:outline-none focus:border-sage-70 bg-white text-sage-100 resize-none text-base leading-relaxed"
+                  placeholder="[글 본문]"
+                />
+              ) : (
+                <div className="w-full h-96 p-4 border-2 border-sage-30 rounded-lg bg-sage-5 overflow-y-auto">
+                  <p className="text-base text-sage-100 leading-relaxed whitespace-pre-wrap">
+                    {entry.content || '[글 본문]'}
+                  </p>
+                </div>
+              )}
+            </div>
 
-          {/* 본문 섹션 */}
-          <div className="bg-background-secondary rounded-lg p-6 border border-border-subtle">
-            <h2 className="text-body font-semibold text-text-primary mb-4 flex items-center">
-              <span className="text-sage-70 mr-2">📖</span>
-              본문
-            </h2>
-            {isEditing ? (
-              <textarea
-                value={editedContent}
-                onChange={(e) => setEditedContent(e.target.value)}
-                className="w-full h-80 px-4 py-3 border border-border-strong rounded-lg focus:outline-none focus:ring-2 focus:ring-sage-50 focus:border-sage-50 bg-background-primary text-text-primary resize-none text-body"
-                placeholder="글 내용을 입력하세요"
-              />
-            ) : (
-              <div className="min-h-[320px] bg-background-primary rounded-lg p-4 border border-border-subtle">
-                <p className="text-body text-text-primary leading-relaxed whitespace-pre-wrap">
-                  {entry.content || '내용이 없습니다'}
-                </p>
-              </div>
-            )}
-          </div>
-
-          {/* 하단 액션 버튼 */}
-          <div className="bg-background-secondary rounded-lg p-6 border border-border-subtle">
+            {/* 하단 버튼 영역 */}
             <div className="flex justify-between items-center">
-              <Button
-                variant="ghost"
-                size="sm"
+              {/* 좌측 이전 버튼 */}
+              <button
                 onClick={() => handleNavigate('prev')}
                 disabled={currentIndex === 0}
-                className={`p-3 rounded-full border border-border-subtle hover:bg-background-hover ${
+                className={`w-12 h-12 rounded-full border-2 border-sage-30 bg-sage-10 flex items-center justify-center transition-all ${
                   currentIndex > 0
-                    ? 'text-text-primary hover:text-sage-70'
-                    : 'text-text-secondary cursor-not-allowed'
+                    ? 'hover:bg-sage-20 text-sage-100'
+                    : 'text-sage-50 cursor-not-allowed opacity-50'
                 }`}
               >
-                <ChevronLeft className="h-5 w-5" />
-              </Button>
+                <span className="text-lg font-bold">{'<'}</span>
+                {currentIndex > 0 && (
+                  <span className="text-xs ml-1">{currentIndex}</span>
+                )}
+              </button>
 
-              <div className="flex space-x-3">
+              {/* 중앙 버튼들 */}
+              <div className="flex space-x-4">
                 {isEditing ? (
                   <>
-                    <Button
+                    <button
                       onClick={handleEdit}
-                      className="bg-sage-50 hover:bg-sage-60 text-sage-100 border border-sage-60 px-6 py-3"
+                      className="px-6 py-2 bg-sage-50 hover:bg-sage-60 text-white rounded-lg border-2 border-sage-60 transition-colors"
                     >
-                      <Edit className="h-4 w-4 mr-2" />
                       저장
-                    </Button>
-                    <Button
-                      variant="ghost"
+                    </button>
+                    <button
                       onClick={handleCancelEdit}
-                      className="text-text-secondary hover:text-text-primary hover:bg-background-hover px-6 py-3"
+                      className="px-6 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg border-2 border-gray-300 transition-colors"
                     >
                       취소
-                    </Button>
+                    </button>
                   </>
                 ) : (
                   <>
-                    <Button
+                    <button
                       onClick={handleEdit}
-                      className="bg-sage-50 hover:bg-sage-60 text-sage-100 border border-sage-60 px-6 py-3"
+                      className="px-6 py-2 bg-sage-50 hover:bg-sage-60 text-white rounded-lg border-2 border-sage-60 transition-colors"
                     >
-                      <Edit className="h-4 w-4 mr-2" />
                       수정
-                    </Button>
-                    <Button
+                    </button>
+                    <button
                       onClick={handleDelete}
-                      className="bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 px-6 py-3"
+                      className="px-6 py-2 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg border-2 border-red-200 transition-colors"
                     >
-                      <Trash2 className="h-4 w-4 mr-2" />
                       삭제
-                    </Button>
+                    </button>
                   </>
                 )}
               </div>
 
-              <Button
-                variant="ghost"
-                size="sm"
+              {/* 우측 다음 버튼 */}
+              <button
                 onClick={() => handleNavigate('next')}
                 disabled={currentIndex === sameDateEntries.length - 1}
-                className={`p-3 rounded-full border border-border-subtle hover:bg-background-hover ${
+                className={`w-12 h-12 rounded-full border-2 border-sage-30 bg-sage-10 flex items-center justify-center transition-all ${
                   currentIndex < sameDateEntries.length - 1
-                    ? 'text-text-primary hover:text-sage-70'
-                    : 'text-text-secondary cursor-not-allowed'
+                    ? 'hover:bg-sage-20 text-sage-100'
+                    : 'text-sage-50 cursor-not-allowed opacity-50'
                 }`}
               >
-                <ChevronRight className="h-5 w-5" />
-              </Button>
+                {currentIndex < sameDateEntries.length - 1 && (
+                  <span className="text-xs mr-1">{currentIndex + 2}</span>
+                )}
+                <span className="text-lg font-bold">{'>'}</span>
+              </button>
             </div>
           </div>
-
-          {/* 같은 날짜의 다른 기록들 표시 */}
-          {sameDateEntries.length > 1 && (
-            <div className="bg-background-secondary rounded-lg p-6 border border-border-subtle">
-              <h2 className="text-body font-semibold text-text-primary mb-4">
-                같은 날의 다른 기록들 ({sameDateEntries.length}개)
-              </h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {sameDateEntries.map((sameDateEntry, index) => (
-                  <div
-                    key={sameDateEntry.id}
-                    className={`p-4 rounded-lg border cursor-pointer transition-all duration-200 ${
-                      sameDateEntry.id === entry.id
-                        ? 'bg-sage-20 border-sage-50 ring-2 ring-sage-50'
-                        : 'bg-background-primary border-border-subtle hover:bg-background-hover hover:border-border-strong'
-                    }`}
-                    onClick={() => router.push(`/viewPost/${sameDateEntry.id}`)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' || e.key === ' ') {
-                        router.push(`/viewPost/${sameDateEntry.id}`);
-                      }
-                    }}
-                    tabIndex={0}
-                    role="button"
-                    aria-label={`${sameDateEntry.title || `기록 ${index + 1}`} 보기`}
-                  >
-                    <div className="flex items-center justify-between mb-2">
-                      <h3 className="text-body-small font-medium text-text-primary truncate">
-                        {sameDateEntry.title || `기록 ${index + 1}`}
-                      </h3>
-                      <span className="text-lg">
-                        {
-                          emotionLabels[
-                            sameDateEntry.userEmotion as keyof typeof emotionLabels
-                          ]?.emoji
-                        }
-                      </span>
-                    </div>
-                    <p className="text-caption text-text-secondary line-clamp-2">
-                      {sameDateEntry.content}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
         </div>
       </div>
     </div>
