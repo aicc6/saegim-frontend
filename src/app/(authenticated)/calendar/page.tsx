@@ -6,6 +6,7 @@ import { Calendar } from '@/components/calendar/Calendar';
 import { EmotionPieChart } from '@/components/charts/EmotionPieChart';
 import { KeywordBarChart } from '@/components/charts/KeywordBarChart';
 import { Button } from '@/components/ui/custom/Button';
+import { DiaryDetailModal } from '@/components/calendar/DiaryDetailModal';
 import { formatDate } from '@/lib/utils';
 
 export default function CalendarPage() {
@@ -14,9 +15,16 @@ export default function CalendarPage() {
     getEmotionDistribution,
     getKeywordDistribution,
     getKeywordWithEmotionDistribution,
+    updateEntry,
+    deleteEntry,
   } = useDiaryStore();
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [viewDate, setViewDate] = useState(new Date());
+
+  // 모달 상태 관리
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedEntry, setSelectedEntry] = useState<any>(null);
+  const [currentEntryIndex, setCurrentEntryIndex] = useState(0);
 
   // 현재 보고 있는 월의 데이터
   const currentMonthData = useMemo(() => {
@@ -75,6 +83,73 @@ export default function CalendarPage() {
     setSelectedDate(null);
   };
 
+  // 모달 관련 핸들러들
+  const handleEntryClick = (entry: any, index: number) => {
+    setSelectedEntry(entry);
+    setCurrentEntryIndex(index);
+    setIsModalOpen(true);
+  };
+
+  const handleModalClose = () => {
+    setIsModalOpen(false);
+    setSelectedEntry(null);
+  };
+
+  const handleEditEntry = (updatedEntry: any) => {
+    // 다이어리 스토어에서 엔트리 업데이트
+    updateEntry(updatedEntry.id, updatedEntry);
+
+    // 선택된 날짜의 엔트리 목록 업데이트
+    const updatedEntries = selectedDateEntries.map((entry) =>
+      entry.id === updatedEntry.id ? updatedEntry : entry,
+    );
+
+    // 선택된 엔트리도 업데이트
+    setSelectedEntry(updatedEntry);
+
+    // 강제로 리렌더링을 위해 상태 업데이트
+    setSelectedDate(selectedDate);
+  };
+
+  const handleDeleteEntry = (entryId: string) => {
+    // 다이어리 스토어에서 엔트리 삭제
+    deleteEntry(entryId);
+
+    // 선택된 날짜의 엔트리 목록에서 제거
+    const updatedEntries = selectedDateEntries.filter(
+      (entry) => entry.id !== entryId,
+    );
+
+    if (updatedEntries.length === 0) {
+      // 해당 날짜에 기록이 없으면 선택 해제
+      setSelectedDate(null);
+    } else {
+      // 현재 선택된 엔트리 인덱스 조정
+      if (currentEntryIndex >= updatedEntries.length) {
+        setCurrentEntryIndex(updatedEntries.length - 1);
+      }
+    }
+
+    // 모달 닫기
+    setIsModalOpen(false);
+    setSelectedEntry(null);
+  };
+
+  const handleNavigate = (direction: 'prev' | 'next') => {
+    if (direction === 'prev' && currentEntryIndex > 0) {
+      const newIndex = currentEntryIndex - 1;
+      setCurrentEntryIndex(newIndex);
+      setSelectedEntry(selectedDateEntries[newIndex]);
+    } else if (
+      direction === 'next' &&
+      currentEntryIndex < selectedDateEntries.length - 1
+    ) {
+      const newIndex = currentEntryIndex + 1;
+      setCurrentEntryIndex(newIndex);
+      setSelectedEntry(selectedDateEntries[newIndex]);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background-primary flex flex-col">
       <div className="flex flex-1">
@@ -118,10 +193,11 @@ export default function CalendarPage() {
 
                     {selectedDateEntries.length > 0 ? (
                       <div className="space-y-4">
-                        {selectedDateEntries.map((entry) => (
+                        {selectedDateEntries.map((entry, index) => (
                           <div
                             key={entry.id}
-                            className="p-4 bg-background-secondary rounded-lg border border-border-subtle"
+                            className="p-4 bg-background-secondary rounded-lg border border-border-subtle cursor-pointer hover:bg-background-hover hover:border-border-strong transition-all duration-200"
+                            onClick={() => handleEntryClick(entry, index)}
                           >
                             <div className="flex items-center justify-between mb-2">
                               <h4 className="text-body font-medium text-text-primary">
@@ -138,7 +214,7 @@ export default function CalendarPage() {
                               )}
                             </div>
 
-                            <p className="text-body-small text-text-secondary mb-3">
+                            <p className="text-body-small text-text-secondary mb-3 line-clamp-2">
                               {entry.content}
                             </p>
 
@@ -283,6 +359,18 @@ export default function CalendarPage() {
           </div>
         </main>
       </div>
+
+      {/* 다이어리 상세 모달 */}
+      <DiaryDetailModal
+        isOpen={isModalOpen}
+        onClose={handleModalClose}
+        entry={selectedEntry}
+        onEdit={handleEditEntry}
+        onDelete={handleDeleteEntry}
+        onNavigate={handleNavigate}
+        hasPrev={currentEntryIndex > 0}
+        hasNext={currentEntryIndex < selectedDateEntries.length - 1}
+      />
     </div>
   );
 }

@@ -1,4 +1,5 @@
 import type { Config } from 'tailwindcss';
+import lineClamp from '@tailwindcss/line-clamp';
 
 const config: Config = {
   content: [
@@ -207,9 +208,16 @@ const config: Config = {
         'card-hover': '0 4px 12px rgba(0, 0, 0, 0.15)',
         'diary-card': '0 2px 8px rgba(0, 0, 0, 0.1)',
       },
+
+      // 커스텀 스크롤바 스타일
+      scrollbar: {
+        thin: '8px',
+        'thumb-sage-30': '#DFE8E1',
+        'track-sage-10': '#F7F9F8',
+      },
     },
   },
-  plugins: [],
+  plugins: [lineClamp],
 };
 
 export default config;
