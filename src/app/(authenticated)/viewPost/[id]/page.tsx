@@ -200,7 +200,7 @@ export default function ViewPostPage() {
             {/* 제목 섹션 */}
             <div className="mb-6">
               <div className="block text-lg text-sage-100 mb-2">
-                제목(title) :
+                제목(Title) :
               </div>
               {isEditing ? (
                 <input
@@ -248,9 +248,6 @@ export default function ViewPostPage() {
                 }`}
               >
                 <span className="text-lg font-bold">{'<'}</span>
-                {currentIndex > 0 && (
-                  <span className="text-xs ml-1">{currentIndex}</span>
-                )}
               </button>
 
               {/* 중앙 버튼들 */}
@@ -298,9 +295,6 @@ export default function ViewPostPage() {
                     : 'text-sage-50 cursor-not-allowed opacity-50'
                 }`}
               >
-                {currentIndex < sameDateEntries.length - 1 && (
-                  <span className="text-xs mr-1">{currentIndex + 2}</span>
-                )}
                 <span className="text-lg font-bold">{'>'}</span>
               </button>
             </div>
