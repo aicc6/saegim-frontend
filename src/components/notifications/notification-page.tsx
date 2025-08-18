@@ -12,6 +12,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import PageHeader from '@/components/common/PageHeader';
 
 interface Notification {
   id: string;
@@ -103,26 +104,23 @@ export function NotificationPage() {
   };
 
   return (
-    <div className="min-h-screen bg-sage-10">
-      {/* 헤더 */}
-      <div className="bg-white border-b border-sage-20 p-4">
-        <div className="max-w-4xl mx-auto flex items-center justify-between">
-          <div className="flex items-center space-x-4">
-            <div className="flex items-center space-x-2">
-              <Bell className="w-6 h-6 text-sage-100" />
-              <h1 className="text-2xl font-bold text-sage-100">알림</h1>
-              {unreadCount > 0 && (
-                <Badge className="bg-red-500 text-white">{unreadCount}</Badge>
-              )}
-            </div>
-          </div>
+    <div className="min-h-screen bg-sage-10 dark:bg-gray-900">
+      {/* PageHeader 사용 */}
+      <PageHeader
+        title="알림"
+        subtitle={
+          unreadCount > 0
+            ? `${unreadCount}개의 새로운 알림이 있습니다`
+            : undefined
+        }
+        actions={
           <div className="flex items-center space-x-2">
             {unreadCount > 0 && (
               <Button
                 variant="outline"
                 size="sm"
                 onClick={markAllAsRead}
-                className="border-sage-30 bg-transparent"
+                className="border-sage-30 bg-transparent hover:bg-sage-10 dark:border-gray-600 dark:hover:bg-gray-800"
               >
                 <Check className="w-4 h-4 mr-2" />
                 모두 읽음
@@ -131,13 +129,13 @@ export function NotificationPage() {
             <Button
               variant="outline"
               size="sm"
-              className="border-sage-30 bg-transparent"
+              className="border-sage-30 bg-transparent hover:bg-sage-10 dark:border-gray-600 dark:hover:bg-gray-800"
             >
               <Settings className="w-4 h-4" />
             </Button>
           </div>
-        </div>
-      </div>
+        }
+      />
 
       <div className="max-w-4xl mx-auto p-4">
         {/* 필터 */}
@@ -149,8 +147,8 @@ export function NotificationPage() {
               onClick={() => setFilter('all')}
               className={
                 filter === 'all'
-                  ? 'bg-sage-50 hover:bg-sage-60'
-                  : 'border-sage-30'
+                  ? 'bg-sage-50 hover:bg-sage-60 dark:bg-sage-70 dark:hover:bg-sage-80'
+                  : 'border-sage-30 dark:border-gray-600 dark:hover:bg-gray-800'
               }
             >
               전체 ({notifications.length})
@@ -161,8 +159,8 @@ export function NotificationPage() {
               onClick={() => setFilter('unread')}
               className={
                 filter === 'unread'
-                  ? 'bg-sage-50 hover:bg-sage-60'
-                  : 'border-sage-30'
+                  ? 'bg-sage-50 hover:bg-sage-60 dark:bg-sage-70 dark:hover:bg-sage-80'
+                  : 'border-sage-30 dark:border-gray-600 dark:hover:bg-gray-800'
               }
             >
               읽지 않음 ({unreadCount})

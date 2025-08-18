@@ -4,9 +4,135 @@ import { useMemo, useState, useRef, useEffect, useCallback } from 'react';
 import { CiLocationArrow1 } from 'react-icons/ci';
 import { MdNavigateNext } from 'react-icons/md';
 import { GrFormPrevious } from 'react-icons/gr';
-import Select from './ui/Select';
+import Select from './ui/custom/Select';
 import { useCreateStore } from '@/stores/create';
 import { NotebookPen } from 'lucide-react';
+
+// 타입 정의
+type WritingStyle = '시' | '단편글';
+type LengthOption = '단문' | '중문' | '장문';
+type EmotionOption = '' | '슬픔' | '기쁨' | '분노' | '당황' | '평온';
+
+// 결과 카드 데이터 구조
+interface GeneratedResult {
+  id: number;
+  content: string;
+  style: WritingStyle;
+  length: LengthOption;
+  emotion: EmotionOption;
+  prompt: string;
+  createdAt: Date;
+  isRegenerating?: boolean;
+  history: string[];
+  currentHistoryIndex: number;
+  regenerateCount: number;
+}
+
+// 상수 배열들 (백엔드에서 가져올 데이터)
+const CONFIG = {
+  styles: [
+    { value: '시' as WritingStyle, label: '시', displayName: 'poem' },
+    { value: '단편글' as WritingStyle, label: '단편글', displayName: 'prose' },
+  ],
+  lengths: [
+    { value: '단문' as LengthOption, label: '단문', displayName: 'short' },
+    { value: '중문' as LengthOption, label: '중문', displayName: 'medium' },
+    { value: '장문' as LengthOption, label: '장문', displayName: 'long' },
+  ],
+  emotions: [
+    {
+      value: '기쁨' as EmotionOption,
+      label: '기쁨',
+      emoji: '😄',
+      styles: {
+        bg: 'bg-yellow-50',
+        text: 'text-yellow-600',
+        ring: 'ring-yellow-300',
+      },
+    },
+    {
+      value: '슬픔' as EmotionOption,
+      label: '슬픔',
+      emoji: '😢',
+      styles: {
+        bg: 'bg-blue-50',
+        text: 'text-blue-600',
+        ring: 'ring-blue-300',
+      },
+    },
+    {
+      value: '분노' as EmotionOption,
+      label: '분노',
+      emoji: '😠',
+      styles: { bg: 'bg-red-50', text: 'text-red-600', ring: 'ring-red-300' },
+    },
+    {
+      value: '당황' as EmotionOption,
+      label: '당황',
+      emoji: '😰',
+      styles: {
+        bg: 'bg-orange-50',
+        text: 'text-orange-600',
+        ring: 'ring-orange-300',
+      },
+    },
+    {
+      value: '평온' as EmotionOption,
+      label: '평온',
+      emoji: '😌',
+      styles: {
+        bg: 'bg-green-50',
+        text: 'text-green-600',
+        ring: 'ring-green-300',
+      },
+    },
+  ],
+  maxRegenerateCount: 5,
+  loadingDelay: 450,
+};
+
+// 임시 텍스트 생성 함수 (백엔드 API로 대체 예정)
+function generateText(
+  prompt: string,
+  style: WritingStyle,
+  length: LengthOption,
+  emotion: EmotionOption,
+): string {
+  const trimmed = prompt.trim();
+  if (!trimmed) return '';
+
+  const emotionTone = emotion ? `${emotion}이 배어있는` : '담담한';
+
+  if (style === '시') {
+    const linesCount = length === '단문' ? 3 : length === '중문' ? 5 : 7;
+    const lines: string[] = [];
+    for (let i = 0; i < linesCount; i++) {
+      if (i === 0) lines.push(`${trimmed} 위로`);
+      else if (i === 1) lines.push(`${emotionTone} 마음이 스며들고`);
+      else if (i === linesCount - 1) lines.push(`오늘의 나를 조심스레 새긴다`);
+      else lines.push(`사이사이 숨을 고르며, ${trimmed}을(를) 떠올린다`);
+    }
+    return lines.join('\n');
+  }
+
+  const sentencesCount = length === '단문' ? 2 : length === '중문' ? 3 : 4;
+  const sentences: string[] = [];
+  for (let i = 0; i < sentencesCount; i++) {
+    if (i === 0)
+      sentences.push(
+        `${trimmed}에 대해 생각해 본다. ${emotionTone} 감정이 가볍게 배어 나온다.`,
+      );
+    else if (i === sentencesCount - 1)
+      sentences.push(
+        `나는 오늘의 감정을 조용히 기록한다. 그리고 그 안에서 작은 나를 다시 발견한다.`,
+      );
+    else
+      sentences.push(
+        `사소한 기척들 속에서 ${trimmed}은(는) 형태를 바꾸고, 나도 조금은 달라진다.`,
+      );
+  }
+  return sentences.join(' ');
+}
 
 export default function CreateAi() {
   const [showToast, setShowToast] = useState(false);

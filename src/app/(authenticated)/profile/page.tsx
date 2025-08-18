@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { NextPage } from 'next';
 
 import Image from 'next/image';
-import ConfirmModal from '@/components/ui/ConfirmModal';
+import ConfirmModal from '@/components/ui/custom/ConfirmModal';
 
 const ProfilePage: NextPage = () => {
   const router = useRouter();
