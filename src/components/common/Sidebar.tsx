@@ -38,23 +38,10 @@ export function Sidebar() {
         <div className="flex flex-col flex-grow overflow-y-auto">
           {/* 사용자 프로필 */}
           <div
-            className={`flex-shrink-0 p-4 border-b border-sage-20 dark:border-gray-700 relative ${
+            className={`flex-shrink-0 p-4 border-b border-sage-20 dark:border-gray-700 ${
               isCollapsed ? 'px-2' : 'px-4'
             }`}
           >
-            {/* 토글 버튼 (프로필과 같은 높이) */}
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setIsCollapsed(!isCollapsed)}
-              className="absolute top-1/2 -right-3 transform -translate-y-1/2 z-20 p-2 text-sage-70 hover:text-sage-100 bg-white border border-sage-20 rounded-full shadow-md dark:bg-gray-800 dark:border-gray-600 dark:text-gray-300 dark:hover:text-white"
-            >
-              {isCollapsed ? (
-                <ChevronRight className="h-4 w-4" />
-              ) : (
-                <ChevronLeft className="h-4 w-4" />
-              )}
-            </Button>
 
             {isCollapsed ? (
               <Link href="/profile">
@@ -106,6 +93,24 @@ export function Sidebar() {
           </nav>
         </div>
       </div>
+
+      {/* 토글 버튼 - 프로필 영역과 수평 정렬 */}
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={() => setIsCollapsed(!isCollapsed)}
+        className={`hidden lg:block fixed top-6 z-30 p-2 text-sage-70 hover:text-sage-100 bg-white border border-sage-20 rounded-full shadow-md dark:bg-gray-800 dark:border-gray-600 dark:text-gray-300 dark:hover:text-white transition-all duration-300`}
+        style={{
+          top: '1rem', // 프로필 버튼과 수평 정렬
+          left: isCollapsed ? '3rem' : '15rem', // 접힌 상태: 사이드바 우측 경계 중앙(48px), 펼친 상태: 사이드바 우측 경계(240px)
+        }}
+      >
+        {isCollapsed ? (
+          <ChevronRight className="h-4 w-4" />
+        ) : (
+          <ChevronLeft className="h-4 w-4" />
+        )}
+      </Button>
 
       {/* 모바일 헤더 */}
       <div className="lg:hidden bg-white border-b border-sage-20 dark:bg-gray-900 dark:border-gray-700 px-4 py-3">
