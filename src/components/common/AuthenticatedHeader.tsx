@@ -34,7 +34,7 @@ export default function AutheticatedHeader() {
   };
 
   return (
-    <div className="bg-white border-b border-sage-20 p-4 dark:bg-gray-900 w-full dark:border-gray-700">
+    <div className="bg-white border-b border-sage-20 py-4 px-12 dark:bg-gray-900 w-full dark:border-gray-700">
       <div className="max-w-full mx-auto flex items-center justify-between">
         {/* 좌측: 로고와 서비스명 */}
         <div className="flex items-center space-x-3">

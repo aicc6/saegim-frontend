@@ -17,9 +17,9 @@ export default function PageHeader({
 }: PageHeaderProps) {
   return (
     <div
-      className={`bg-white dark:bg-gray-900 border-b border-sage-20 dark:border-gray-700 px-6 py-4 ${className}`}
+      className={`bg-white dark:bg-gray-900 border-b border-sage-20 dark:border-gray-700 px-12 py-4 ${className}`}
     >
-      <div className="max-w-4xl mx-auto flex items-center justify-between">
+      <div className="max-w-full mx-auto flex items-center justify-between">
         {/* 좌측: 페이지 제목 */}
         <div className="flex flex-col">
           <h1 className="text-2xl font-bold text-sage-100 dark:text-white">

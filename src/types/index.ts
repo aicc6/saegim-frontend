@@ -1,5 +1,11 @@
 // 공통 타입 정의
-export type EmotionType = 'happy' | 'sad' | 'angry' | 'peaceful' | 'unrest';
+export type EmotionType =
+  | 'happy'
+  | 'sad'
+  | 'angry'
+  | 'peaceful'
+  | 'worried'
+  | 'unrest';
 
 export interface User {
   id: string;
@@ -14,15 +20,14 @@ export interface DiaryEntry {
   id: string;
   title: string;
   content: string;
-  userEmotion?: EmotionType;
-  aiEmotion?: EmotionType;
-  aiEmotionConfidence?: number;
-  aiGeneratedText?: string;
-  images: string[];
+  user_emotion?: EmotionType;
+  ai_emotion?: EmotionType;
+  ai_emotion_confidence?: number;
+  ai_generated_text?: string;
   keywords?: string[];
-  isPublic: boolean;
-  createdAt: string;
-  updatedAt: string;
+  is_public: boolean;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface AIStyle {
