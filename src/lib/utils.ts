@@ -29,25 +29,3 @@ export function formatTime(date: string | Date): string {
     minute: '2-digit',
   });
 }
-
-export function getEmotionColor(emotion: string): string {
-  const colors = {
-    happy: 'var(--emotion-happy)',
-    sad: 'var(--emotion-sad)',
-    angry: 'var(--emotion-angry)',
-    peaceful: 'var(--emotion-peaceful)',
-    unrest: 'var(--emotion-unrest)',
-  };
-  return colors[emotion as keyof typeof colors] || 'var(--text-secondary)';
-}
-
-export function getEmotionEmoji(emotion: string): string {
-  const emojis = {
-    happy: '😊',
-    sad: '😢',
-    angry: '😡',
-    peaceful: '😌',
-    unrest: '😨',
-  };
-  return emojis[emotion as keyof typeof emojis] || '😐';
-}

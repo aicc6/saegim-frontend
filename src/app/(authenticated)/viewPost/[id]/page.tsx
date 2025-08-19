@@ -3,75 +3,81 @@
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { ArrowLeft } from 'lucide-react';
+import { DiaryEntry, DiaryListEntry } from '@/types/diary';
 import { useDiaryStore } from '@/stores/diary';
 import PageHeader from '@/components/common/PageHeader';
 import { Button } from '@/components/ui/custom/Button';
 
-interface DiaryEntry {
-  id: string;
-  title: string;
-  content: string;
-  userEmotion?: string;
-  keywords?: string[];
-  createdAt: string;
-}
-
-const emotionLabels: Record<
-  string,
-  { emoji: string; name: string; color: string }
-> = {
+const emotionLabels = {
   happy: { emoji: '😊', name: '행복', color: 'text-emotion-happy' },
   sad: { emoji: '😢', name: '슬픔', color: 'text-emotion-sad' },
   angry: { emoji: '😡', name: '화남', color: 'text-emotion-angry' },
   peaceful: { emoji: '😌', name: '평온', color: 'text-emotion-peaceful' },
-  unrest: { emoji: '😨', name: '불안', color: 'text-emotion-unrest' },
+  unrest: { emoji: '😰', name: '불안', color: 'text-emotion-unrest' },
 };
 
 export default function ViewPostPage() {
   const params = useParams();
   const router = useRouter();
-  const { entries, updateEntry, deleteEntry } = useDiaryStore();
+  const { diaries, currentDiary, fetchDiary } = useDiaryStore();
 
   const [entry, setEntry] = useState<DiaryEntry | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [editedTitle, setEditedTitle] = useState('');
   const [editedContent, setEditedContent] = useState('');
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [sameDateEntries, setSameDateEntries] = useState<DiaryEntry[]>([]);
+  const [sameDateEntries, setSameDateEntries] = useState<DiaryListEntry[]>([]);
 
   const entryId = params.id as string;
 
   useEffect(() => {
-    // 현재 엔트리 찾기
-    const foundEntry = entries.find((e) => e.id === entryId);
-    if (foundEntry) {
-      setEntry(foundEntry as DiaryEntry);
-      setEditedTitle(foundEntry.title);
-      setEditedContent(foundEntry.content);
+    // 현재 엔트리를 diaries에서 찾기 (목록용 데이터)
+    const foundEntry = diaries.find((e: DiaryListEntry) => e.id === entryId);
 
-      // 같은 날짜의 다른 엔트리들 찾기
-      const sameDateEntries = entries.filter(
-        (e) => e.createdAt === foundEntry.createdAt,
+    if (foundEntry) {
+      // 상세 데이터 가져오기
+      fetchDiary(entryId);
+
+      // 같은 날짜의 다른 엔트리들 찾기 (목록용 데이터)
+      const sameDateEntries = diaries.filter(
+        (e: DiaryListEntry) => e.created_at === foundEntry.created_at,
       );
-      setSameDateEntries(sameDateEntries as DiaryEntry[]);
+      setSameDateEntries(sameDateEntries);
 
       // 현재 엔트리의 인덱스 찾기
-      const index = sameDateEntries.findIndex((e) => e.id === entryId);
+      const index = sameDateEntries.findIndex(
+        (e: DiaryListEntry) => e.id === entryId,
+      );
       setCurrentIndex(index);
+    } else {
+      console.log(
+        '📝 ViewPost: 해당 ID의 다이어리를 찾을 수 없습니다:',
+        entryId,
+      );
     }
-  }, [entryId, entries]);
+  }, [entryId, diaries, fetchDiary]);
+
+  // currentDiary가 업데이트되면 entry 상태 업데이트
+  useEffect(() => {
+    if (currentDiary) {
+      setEntry(currentDiary);
+      setEditedTitle(currentDiary.title);
+      setEditedContent(currentDiary.content);
+    }
+  }, [currentDiary]);
 
   const handleEdit = () => {
     if (isEditing && entry) {
-      // 수정 완료
+      // 수정 완료 - 현재는 로컬 상태만 업데이트
       const updatedEntry = {
         ...entry,
         title: editedTitle,
         content: editedContent,
       };
-      updateEntry(entry.id, updatedEntry as any); // 백엔드 API 구조와 스토어 타입 불일치로 인한 임시 캐스팅
+      // updateEntry(entry.id, updatedEntry as any); // 백엔드 API 구조와 스토어 타입 불일치로 인한 임시 캐스팅
       setEntry(updatedEntry);
       setIsEditing(false);
+      console.log('📝 ViewPost: 편집 완료 (로컬 상태만 업데이트)');
     } else {
       // 수정 모드 시작
       setIsEditing(true);
@@ -85,7 +91,8 @@ export default function ViewPostPage() {
         '정말로 이 글을 삭제하시겠습니까? 삭제된 글은 복구할 수 없습니다.',
       )
     ) {
-      deleteEntry(entry.id);
+      // 현재는 삭제 기능이 구현되지 않음
+      console.log('📝 ViewPost: 삭제 기능은 아직 구현되지 않았습니다');
       router.push('/calendar');
     }
   };
@@ -132,16 +139,14 @@ export default function ViewPostPage() {
   }
 
   const emotion =
-    entry.userEmotion && emotionLabels[entry.userEmotion]
-      ? emotionLabels[entry.userEmotion]
-      : undefined;
+    emotionLabels[entry.user_emotion as keyof typeof emotionLabels];
 
   return (
     <div className="min-h-screen bg-background-primary flex flex-col">
       {/* 페이지 헤더 */}
       <PageHeader
         title={'글 편집/ 저장'}
-        subtitle={`${new Date(entry.createdAt).getMonth() + 1}월 ${new Date(entry.createdAt).getDate()}일`}
+        subtitle={`${new Date(entry.created_at).getMonth() + 1}월 ${new Date(entry.created_at).getDate()}일`}
         actions={
           <Button
             variant="ghost"

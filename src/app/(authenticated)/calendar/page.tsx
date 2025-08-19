@@ -1,41 +1,80 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { useDiaryStore } from '@/stores/diary';
-import { Calendar } from '@/components/calendar/Calendar';
+import { Calendar } from '@/components/calendar';
 import { EmotionPieChart } from '@/components/charts/EmotionPieChart';
 import { KeywordBarChart } from '@/components/charts/KeywordBarChart';
-import { Button } from '@/components/ui/custom/Button';
-import { formatDate } from '@/lib/utils';
 import PageHeader from '@/components/common/PageHeader';
+import { Button } from '@/components/ui/button';
+import { useDiaryStore } from '@/stores/diary';
+import {
+  EmotionType,
+  EMOTION_COLORS,
+  EMOTION_EMOJIS,
+  KeywordData,
+} from '@/types/diary';
+import { cn } from '@/lib/utils';
 
 export default function CalendarPage() {
   const router = useRouter();
-  const {
-    getEntriesByDate,
-    getEmotionDistribution,
-    getKeywordWithEmotionDistribution,
-  } = useDiaryStore();
+  const { diaries, fetchDiaries } = useDiaryStore();
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [viewDate, setViewDate] = useState(new Date());
+
+  // 실제 사용자 ID (데이터베이스에 존재하는 UUID 사용)
+  const userId = '2fb9da3c-f58d-45d9-af8d-7031dd27d3b4'; // 실제 UUID 형식 사용
 
   // 현재 보고 있는 월의 데이터
   const currentMonthData = useMemo(() => {
     const year = viewDate.getFullYear();
     const month = viewDate.getMonth() + 1;
 
-    const emotionDistribution = getEmotionDistribution(year, month);
-    const keywordDistribution = getKeywordWithEmotionDistribution(year, month);
+    // 현재 월의 다이어리만 필터링
+    const currentMonthDiaries = diaries.filter((diary) => {
+      const diaryDate = new Date(diary.created_at);
+      return (
+        diaryDate.getFullYear() === year && diaryDate.getMonth() + 1 === month
+      );
+    });
+
+    // 감정별 빈도 계산
+    const emotionCounts: Record<EmotionType, number> = {
+      happy: 0,
+      sad: 0,
+      angry: 0,
+      peaceful: 0,
+      unrest: 0, // worried를 unrest로 통일
+    };
+
+    // 키워드 분포 계산
+    const keywordCounts: Record<string, number> = {};
+
+    currentMonthDiaries.forEach((diary) => {
+      // 감정 카운트
+      if (diary.user_emotion && diary.user_emotion in emotionCounts) {
+        emotionCounts[diary.user_emotion as EmotionType]++;
+      }
+
+      // 키워드 카운트
+      if (diary.keywords && Array.isArray(diary.keywords)) {
+        diary.keywords.forEach((keyword: string) => {
+          keywordCounts[keyword] = (keywordCounts[keyword] || 0) + 1;
+        });
+      }
+    });
+
+    // 키워드 분포를 배열로 변환하고 빈도순으로 정렬
+    const keywordDistribution: KeywordData[] = Object.entries(keywordCounts)
+      .map(([word, count]) => ({ word, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 10); // 상위 10개만
 
     // 총 기록 수 계산
-    const totalEntries = Object.values(emotionDistribution).reduce(
-      (sum, count) => sum + count,
-      0,
-    );
+    const totalEntries = currentMonthDiaries.length;
 
     // 가장 많은 감정 계산
-    const maxEmotion = Object.entries(emotionDistribution)
+    const maxEmotion = Object.entries(emotionCounts)
       .filter(([_, count]) => count > 0)
       .sort(([_, a], [__, b]) => b - a)[0];
 
@@ -44,7 +83,7 @@ export default function CalendarPage() {
       sad: { emoji: '😢', name: '슬픔' },
       angry: { emoji: '😡', name: '화남' },
       peaceful: { emoji: '😌', name: '평온' },
-      unrest: { emoji: '😨', name: '불안' },
+      unrest: { emoji: '😰', name: '불안' }, // worried를 unrest로 통일
     };
 
     const topEmotion = maxEmotion
@@ -52,18 +91,76 @@ export default function CalendarPage() {
       : null;
 
     return {
-      emotionDistribution,
+      emotionDistribution: emotionCounts,
       keywordDistribution,
       totalEntries,
       topEmotion,
     };
-  }, [viewDate, getEmotionDistribution, getKeywordWithEmotionDistribution]);
+  }, [viewDate, diaries]);
 
   // 선택된 날짜의 다이어리들
   const selectedDateEntries = useMemo(() => {
     if (!selectedDate) return [];
-    return getEntriesByDate(selectedDate);
-  }, [selectedDate, getEntriesByDate]);
+    return diaries.filter((diary) => diary.created_at.startsWith(selectedDate));
+  }, [selectedDate, diaries]);
+
+  // 날짜 범위 계산 - useMemo로 최적화하여 불필요한 재계산 방지
+  const dateRange = useMemo(() => {
+    const year = viewDate.getFullYear();
+    const month = viewDate.getMonth() + 1;
+
+    const startDate = new Date(year, month - 1, 1);
+    const endDate = new Date(year, month, 0);
+
+    const startDateStr = startDate.toISOString().split('T')[0];
+    const endDateStr = endDate.toISOString().split('T')[0];
+
+    return { startDate: startDateStr, endDate: endDateStr };
+  }, [viewDate.getFullYear(), viewDate.getMonth()]);
+
+  // 월별 데이터 로딩 - 의존성 배열 최적화
+  useEffect(() => {
+    console.log('📅 CalendarPage: 월별 데이터 로딩', {
+      year: viewDate.getFullYear(),
+      month: viewDate.getMonth() + 1,
+      startDate: dateRange.startDate,
+      endDate: dateRange.endDate,
+    });
+
+    // 실제 백엔드 API 호출 - 함수 참조 대신 직접 호출
+    const loadMonthData = async () => {
+      try {
+        const apiBaseUrl =
+          process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000';
+        const response = await fetch(
+          `${apiBaseUrl}/api/diary/?start_date=${dateRange.startDate}&end_date=${dateRange.endDate}`,
+        );
+
+        if (response.ok) {
+          const result = await response.json();
+          console.log('📡 CalendarPage: 직접 API 호출 결과', result);
+
+          // 스토어 상태 업데이트
+          if (result.data && Array.isArray(result.data)) {
+            useDiaryStore.setState({
+              diaries: result.data,
+              totalCount: result.data.length,
+              isLoading: false,
+              error: null,
+            });
+          }
+        }
+      } catch (error) {
+        console.error('❌ CalendarPage: API 호출 실패', error);
+        useDiaryStore.setState({
+          error: '월별 데이터를 불러오는데 실패했습니다.',
+          isLoading: false,
+        });
+      }
+    };
+
+    loadMonthData();
+  }, [viewDate.getFullYear(), viewDate.getMonth()]); // dateRange 제거하고 year, month만 의존성으로 설정
 
   const handleDateSelect = (date: string) => {
     setSelectedDate(date);
@@ -99,6 +196,7 @@ export default function CalendarPage() {
                 onDateSelect={handleDateSelect}
                 onDateChange={handleDateChange}
                 className="h-fit"
+                userId={userId}
               />
 
               {/* 선택된 날짜 정보 */}
@@ -106,7 +204,7 @@ export default function CalendarPage() {
                 <div className="mt-6 bg-background-primary rounded-lg border border-border-subtle p-6">
                   <div className="flex items-center justify-between mb-4">
                     <h3 className="text-h4 font-bold text-text-primary">
-                      {formatDate(selectedDate)} 기록
+                      {selectedDate} 기록
                     </h3>
                     <Button variant="ghost" size="sm" onClick={clearSelection}>
                       ✕
@@ -133,33 +231,51 @@ export default function CalendarPage() {
                             <h4 className="text-body font-medium text-text-primary">
                               {entry.title}
                             </h4>
-                            {entry.userEmotion && (
-                              <span className="text-lg">
-                                {entry.userEmotion === 'happy' && '😊'}
-                                {entry.userEmotion === 'sad' && '😢'}
-                                {entry.userEmotion === 'angry' && '😡'}
-                                {entry.userEmotion === 'peaceful' && '😌'}
-                                {entry.userEmotion === 'unrest' && '😨'}
+                            {entry.user_emotion && (
+                              <span
+                                className={cn(
+                                  'text-lg px-2 py-1 rounded-full',
+                                  EMOTION_COLORS[
+                                    entry.user_emotion as EmotionType
+                                  ] || 'bg-gray-100 text-gray-800',
+                                )}
+                              >
+                                {EMOTION_EMOJIS[
+                                  entry.user_emotion as EmotionType
+                                ] || '😐'}
                               </span>
                             )}
                           </div>
 
-                          <p className="text-body-small text-text-secondary mb-3">
-                            {entry.content}
-                          </p>
+                          {/* ai_generated_text 표시 */}
+                          {entry.ai_generated_text && (
+                            <p className="text-body-small text-text-secondary mb-3 line-clamp-2">
+                              {entry.ai_generated_text}
+                            </p>
+                          )}
 
+                          {/* keywords 표시 */}
                           {entry.keywords && entry.keywords.length > 0 && (
-                            <div className="flex flex-wrap gap-2">
-                              {entry.keywords.map((keyword, index) => (
-                                <span
-                                  key={index}
-                                  className="text-caption px-2 py-1 bg-interactive-secondary text-text-primary rounded-md"
-                                >
-                                  #{keyword}
-                                </span>
-                              ))}
+                            <div className="flex flex-wrap gap-2 mb-3">
+                              {entry.keywords.map(
+                                (keyword: string, index: number) => (
+                                  <span
+                                    key={index}
+                                    className="text-caption px-2 py-1 bg-interactive-secondary text-text-primary rounded-md"
+                                  >
+                                    #{keyword}
+                                  </span>
+                                ),
+                              )}
                             </div>
                           )}
+
+                          {/* 클릭 안내 메시지 */}
+                          <div className="text-right">
+                            <span className="text-caption text-interactive-primary">
+                              클릭하여 상세 보기 →
+                            </span>
+                          </div>
                         </div>
                       ))}
                     </div>
