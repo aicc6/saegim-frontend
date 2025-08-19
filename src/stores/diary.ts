@@ -8,6 +8,10 @@ interface DiaryState {
   calendarData: CalendarDay[];
   isLoading: boolean;
   error: string | null;
+  // 페이지네이션 관련 상태 추가
+  currentPage: number;
+  hasMore: boolean;
+  allEntries: DiaryEntry[]; // 전체 데이터를 저장하는 배열
 
   // Actions
   setEntries: (entries: DiaryEntry[]) => void;
@@ -19,6 +23,11 @@ interface DiaryState {
   setCalendarData: (data: CalendarDay[]) => void;
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
+
+  // 페이지네이션 액션 추가
+  fetchPosts: () => Promise<void>;
+  loadMorePosts: (page: number) => Promise<DiaryEntry[]>;
+  resetPagination: () => void;
 
   // 유틸리티 함수들
   getEntriesByDate: (date: string) => DiaryEntry[];
@@ -36,8 +45,8 @@ interface DiaryState {
   ) => { word: string; count: number; emotion: EmotionType }[];
 }
 
-// 더미 데이터 생성 함수
-const generateDummyEntries = (): DiaryEntry[] => {
+// 더미 데이터 생성 함수 (더 많은 데이터 생성)
+const generateDummyEntries = (count: number = 100): DiaryEntry[] => {
   const emotions: EmotionType[] = [
     'happy',
     'sad',
@@ -47,8 +56,8 @@ const generateDummyEntries = (): DiaryEntry[] => {
   ];
   const entries: DiaryEntry[] = [];
 
-  // 최근 30일간의 더미 데이터 생성
-  for (let i = 0; i < 30; i++) {
+  // 더 많은 더미 데이터 생성 (count개)
+  for (let i = 0; i < count; i++) {
     const date = new Date();
     date.setDate(date.getDate() - i);
 
@@ -58,32 +67,27 @@ const generateDummyEntries = (): DiaryEntry[] => {
     const day = String(date.getDate()).padStart(2, '0');
     const dateString = `${year}-${month}-${day}`;
 
-    // 하루에 0-2개의 엔트리
-    const entryCount = Math.floor(Math.random() * 3);
+    const emotion = emotions[Math.floor(Math.random() * emotions.length)];
 
-    for (let j = 0; j < entryCount; j++) {
-      const emotion = emotions[Math.floor(Math.random() * emotions.length)];
+    // 시간 정보 추가
+    const entryDate = new Date(date);
+    entryDate.setHours(9 + (i % 12), 0, 0, 0);
+    const entryDateTime = entryDate.toISOString();
 
-      // 시간 차이를 두기 위해 시간 추가 (j번째 기록은 j시간 후)
-      const entryDate = new Date(date);
-      entryDate.setHours(9 + j, 0, 0, 0); // 9시부터 시작해서 1시간씩 차이
-      const entryDateTime = entryDate.toISOString();
-
-      entries.push({
-        id: `entry-${i}-${j}`,
-        title: `${date.getDate()}일의 기록 ${j + 1}`,
-        content: `오늘의 감정을 기록합니다. ${emotion} 한 하루였습니다.`,
-        userEmotion: emotion,
-        aiEmotion: emotion,
-        aiEmotionConfidence: 0.7 + Math.random() * 0.3,
-        aiGeneratedText: generateAIText(emotion),
-        images: [],
-        keywords: generateKeywords(emotion),
-        isPublic: false,
-        createdAt: dateString,
-        updatedAt: entryDateTime, // 시간 정보 포함
-      });
-    }
+    entries.push({
+      id: `entry-${i}`,
+      title: `${i + 1}번째 일기 - ${emotion}한 하루`,
+      content: `오늘의 감정을 기록합니다. ${emotion} 한 하루였습니다. 이는 ${i + 1}번째 기록입니다.`,
+      userEmotion: emotion,
+      aiEmotion: emotion,
+      aiEmotionConfidence: 0.7 + Math.random() * 0.3,
+      aiGeneratedText: generateAIText(emotion),
+      images: [],
+      keywords: generateKeywords(emotion),
+      isPublic: false,
+      createdAt: dateString,
+      updatedAt: entryDateTime,
+    });
   }
 
   return entries.sort(
@@ -117,128 +121,197 @@ const generateKeywords = (emotion: EmotionType): string[] => {
   return keywords[emotion].slice(0, 2 + Math.floor(Math.random() * 3));
 };
 
-export const useDiaryStore = create<DiaryState>((set, get) => ({
-  entries: generateDummyEntries(),
-  currentEntry: null,
-  monthlyReport: null,
-  calendarData: [],
-  isLoading: false,
-  error: null,
+const PAGE_SIZE = 8; // 한 페이지당 보여줄 항목 수
 
-  setEntries: (entries) => set({ entries }),
+export const useDiaryStore = create<DiaryState>((set, get) => {
+  const allDummyEntries = generateDummyEntries(100);
 
-  addEntry: (entry) =>
-    set((state) => ({
-      entries: [entry, ...state.entries],
-    })),
+  return {
+    entries: allDummyEntries.slice(0, PAGE_SIZE), // 처음에는 첫 페이지만 로드
+    allEntries: allDummyEntries, // 전체 데이터 저장
+    currentEntry: null,
+    monthlyReport: null,
+    calendarData: [],
+    isLoading: false,
+    error: null,
+    currentPage: 1,
+    hasMore: true,
 
-  updateEntry: (id, updatedEntry) =>
-    set((state) => ({
-      entries: state.entries.map((entry) =>
-        entry.id === id ? { ...entry, ...updatedEntry } : entry,
-      ),
-    })),
+    setEntries: (entries) => set({ entries }),
 
-  deleteEntry: (id) =>
-    set((state) => ({
-      entries: state.entries.filter((entry) => entry.id !== id),
-    })),
+    addEntry: (entry) =>
+      set((state) => ({
+        entries: [entry, ...state.entries],
+        allEntries: [entry, ...state.allEntries],
+      })),
 
-  setCurrentEntry: (entry) => set({ currentEntry: entry }),
+    updateEntry: (id, updatedEntry) =>
+      set((state) => ({
+        entries: state.entries.map((entry) =>
+          entry.id === id ? { ...entry, ...updatedEntry } : entry,
+        ),
+        allEntries: state.allEntries.map((entry) =>
+          entry.id === id ? { ...entry, ...updatedEntry } : entry,
+        ),
+      })),
 
-  setMonthlyReport: (report) => set({ monthlyReport: report }),
+    deleteEntry: (id) =>
+      set((state) => ({
+        entries: state.entries.filter((entry) => entry.id !== id),
+        allEntries: state.allEntries.filter((entry) => entry.id !== id),
+      })),
 
-  setCalendarData: (data) => set({ calendarData: data }),
+    setCurrentEntry: (entry) => set({ currentEntry: entry }),
 
-  setLoading: (loading) => set({ isLoading: loading }),
+    setMonthlyReport: (report) => set({ monthlyReport: report }),
 
-  setError: (error) => set({ error }),
+    setCalendarData: (data) => set({ calendarData: data }),
 
-  getEntriesByDate: (date) => {
-    const entries = get().entries;
-    return entries.filter((entry) => entry.createdAt.startsWith(date));
-  },
+    setLoading: (loading) => set({ isLoading: loading }),
 
-  getEmotionDistribution: (year, month) => {
-    const entries = get().entries;
-    const monthEntries = entries.filter((entry) => {
-      const entryDate = new Date(entry.createdAt);
-      return (
-        entryDate.getFullYear() === year && entryDate.getMonth() === month - 1
-      );
-    });
+    setError: (error) => set({ error }),
 
-    const distribution: Record<EmotionType, number> = {
-      happy: 0,
-      sad: 0,
-      angry: 0,
-      peaceful: 0,
-      unrest: 0,
-    };
+    // 초기 데이터 로드
+    fetchPosts: async () => {
+      set({ isLoading: true, error: null });
 
-    monthEntries.forEach((entry) => {
-      if (entry.userEmotion) {
-        distribution[entry.userEmotion]++;
+      try {
+        // API 호출 시뮬레이션
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+
+        const { allEntries } = get();
+        const firstPageEntries = allEntries.slice(0, PAGE_SIZE);
+
+        set({
+          entries: firstPageEntries,
+          currentPage: 1,
+          hasMore: allEntries.length > PAGE_SIZE,
+          isLoading: false,
+        });
+      } catch (error) {
+        set({ error: '데이터를 불러오는데 실패했습니다.', isLoading: false });
       }
-    });
+    },
 
-    return distribution;
-  },
+    // 더 많은 포스트 로드
+    loadMorePosts: async (page: number) => {
+      const { allEntries, entries } = get();
 
-  getKeywordDistribution: (year, month) => {
-    const entries = get().entries;
-    const monthEntries = entries.filter((entry) => {
-      const entryDate = new Date(entry.createdAt);
-      return (
-        entryDate.getFullYear() === year && entryDate.getMonth() === month - 1
-      );
-    });
+      // API 호출 시뮬레이션
+      await new Promise((resolve) => setTimeout(resolve, 1000));
 
-    const keywordMap: Record<string, number> = {};
+      const startIndex = (page - 1) * PAGE_SIZE;
+      const endIndex = startIndex + PAGE_SIZE;
+      const newEntries = allEntries.slice(startIndex, endIndex);
 
-    monthEntries.forEach((entry) => {
-      entry.keywords?.forEach((keyword) => {
-        keywordMap[keyword] = (keywordMap[keyword] || 0) + 1;
+      if (newEntries.length > 0) {
+        set((state) => ({
+          entries: [...state.entries, ...newEntries],
+          currentPage: page,
+          hasMore: endIndex < allEntries.length,
+        }));
+      }
+
+      return newEntries;
+    },
+
+    resetPagination: () => {
+      const { allEntries } = get();
+      set({
+        entries: allEntries.slice(0, PAGE_SIZE),
+        currentPage: 1,
+        hasMore: allEntries.length > PAGE_SIZE,
       });
-    });
+    },
 
-    return Object.entries(keywordMap)
-      .map(([word, count]) => ({ word, count }))
-      .sort((a, b) => b.count - a.count)
-      .slice(0, 10);
-  },
+    getEntriesByDate: (date) => {
+      const entries = get().allEntries;
+      return entries.filter((entry) => entry.createdAt.startsWith(date));
+    },
 
-  getKeywordWithEmotionDistribution: (year, month) => {
-    const entries = get().entries;
-    const monthEntries = entries.filter((entry) => {
-      const entryDate = new Date(entry.createdAt);
-      return (
-        entryDate.getFullYear() === year && entryDate.getMonth() === month - 1
-      );
-    });
+    getEmotionDistribution: (year, month) => {
+      const entries = get().allEntries;
+      const monthEntries = entries.filter((entry) => {
+        const entryDate = new Date(entry.createdAt);
+        return (
+          entryDate.getFullYear() === year && entryDate.getMonth() === month - 1
+        );
+      });
 
-    const keywordMap: Record<string, { count: number; emotion: EmotionType }> =
-      {};
+      const distribution: Record<EmotionType, number> = {
+        happy: 0,
+        sad: 0,
+        angry: 0,
+        peaceful: 0,
+        unrest: 0,
+      };
 
-    monthEntries.forEach((entry) => {
-      entry.keywords?.forEach((keyword) => {
-        if (!keywordMap[keyword]) {
-          keywordMap[keyword] = {
-            count: 0,
-            emotion: entry.userEmotion || 'happy',
-          };
+      monthEntries.forEach((entry) => {
+        if (entry.userEmotion) {
+          distribution[entry.userEmotion]++;
         }
-        keywordMap[keyword].count++;
       });
-    });
 
-    return Object.entries(keywordMap)
-      .map(([word, data]) => ({
-        word,
-        count: data.count,
-        emotion: data.emotion,
-      }))
-      .sort((a, b) => b.count - a.count)
-      .slice(0, 10);
-  },
-}));
+      return distribution;
+    },
+
+    getKeywordDistribution: (year, month) => {
+      const entries = get().allEntries;
+      const monthEntries = entries.filter((entry) => {
+        const entryDate = new Date(entry.createdAt);
+        return (
+          entryDate.getFullYear() === year && entryDate.getMonth() === month - 1
+        );
+      });
+
+      const keywordMap: Record<string, number> = {};
+
+      monthEntries.forEach((entry) => {
+        entry.keywords?.forEach((keyword) => {
+          keywordMap[keyword] = (keywordMap[keyword] || 0) + 1;
+        });
+      });
+
+      return Object.entries(keywordMap)
+        .map(([word, count]) => ({ word, count }))
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 10);
+    },
+
+    getKeywordWithEmotionDistribution: (year, month) => {
+      const entries = get().allEntries;
+      const monthEntries = entries.filter((entry) => {
+        const entryDate = new Date(entry.createdAt);
+        return (
+          entryDate.getFullYear() === year && entryDate.getMonth() === month - 1
+        );
+      });
+
+      const keywordMap: Record<
+        string,
+        { count: number; emotion: EmotionType }
+      > = {};
+
+      monthEntries.forEach((entry) => {
+        entry.keywords?.forEach((keyword) => {
+          if (!keywordMap[keyword]) {
+            keywordMap[keyword] = {
+              count: 0,
+              emotion: entry.userEmotion || 'happy',
+            };
+          }
+          keywordMap[keyword].count++;
+        });
+      });
+
+      return Object.entries(keywordMap)
+        .map(([word, data]) => ({
+          word,
+          count: data.count,
+          emotion: data.emotion,
+        }))
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 10);
+    },
+  };
+});

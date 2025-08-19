@@ -1,10 +1,12 @@
 'use client';
 
+import DiaryListView from '@/components/individual/lsa/DiaryListView';
+
 export default function ListPage() {
   return (
     <div className="bg-background-primary flex flex-col">
       <div className="flex flex-1">
-        <main className="flex-1 ml-64">
+        <main className="flex-1">
           <div className="container mx-auto px-6 py-8">
             <div className="max-w-4xl mx-auto">
               {/* 페이지 헤더 */}
@@ -17,7 +19,7 @@ export default function ListPage() {
                 </p>
               </div>
 
-              {/* 기능 준비중 메시지 */}
+              {/* 기능 준비중 메시지
               <div className="bg-background-secondary rounded-2xl border border-border-subtle p-12 text-center">
                 <div className="text-6xl mb-6">📋</div>
                 <h2 className="text-h3 font-bold text-text-primary mb-4">
@@ -55,7 +57,10 @@ export default function ListPage() {
                     </p>
                   </div>
                 </div>
-              </div>
+              </div> */}
+
+              {/* 글목록 컴포넌트 */}
+              <DiaryListView />
             </div>
           </div>
         </main>
