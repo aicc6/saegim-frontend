@@ -10,7 +10,7 @@ import { Badge } from '../ui/badge';
 export default function AutheticatedHeader() {
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
-  
+
   // TODO: 실제 알림 상태관리에서 가져와야 함
   const unreadNotificationCount = 3; // 임시 하드코딩
 
@@ -23,7 +23,7 @@ export default function AutheticatedHeader() {
     const newTheme = theme === 'dark' ? 'light' : 'dark';
     setTheme(newTheme);
     console.log('테마 변경:', theme, '→', newTheme);
-    
+
     // 강제로 클래스 적용 (디버깅용)
     document.documentElement.classList.toggle('dark', newTheme === 'dark');
   };
@@ -34,17 +34,17 @@ export default function AutheticatedHeader() {
   };
 
   return (
-    <div className="bg-white border-b border-sage-20 p-4 dark:bg-gray-900 dark:border-gray-700">
+    <div className="bg-white border-b border-sage-20 p-4 dark:bg-gray-900 w-full dark:border-gray-700">
       <div className="max-w-full mx-auto flex items-center justify-between">
         {/* 좌측: 로고와 서비스명 */}
         <div className="flex items-center space-x-3">
           <div className="w-8 h-8 rounded-full flex items-center justify-center">
             <Image
-              src="/images/logo.webp"
+              src="/images/logoop.png"
               alt="새김 로고"
               width={32}
               height={32}
-              className="w-8 h-8"
+              className="w-10 h-10"
             />
           </div>
           <h1 className="text-xl font-bold text-sage-100 dark:text-white">
@@ -69,7 +69,7 @@ export default function AutheticatedHeader() {
               </Badge>
             )}
           </div>
-          
+
           <Button
             variant="ghost"
             size="sm"
