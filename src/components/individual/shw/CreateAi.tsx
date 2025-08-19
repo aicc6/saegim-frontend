@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useCallback } from 'react';
+import { useMemo, useCallback, useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Select from '../../ui/custom/Select';
 import { useCreateStore } from '@/stores/create';
@@ -10,6 +10,8 @@ import { useEmotionStore } from '@/stores/emotion';
 
 export default function CreateAi() {
   const router = useRouter();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [selectedImages, setSelectedImages] = useState<File[]>([]);
 
   const {
     config,
@@ -28,6 +30,44 @@ export default function CreateAi() {
     emotions: emotionConfigs,
     setSelectedEmotion: setEmotion,
   } = useEmotionStore();
+
+  // 이미지 파일 선택 핸들러
+  const handleImageSelect = useCallback(
+    (event: React.ChangeEvent<HTMLInputElement>) => {
+      const files = event.target.files;
+      if (files) {
+        const newImages = Array.from(files).filter(
+          (file) =>
+            file.type.startsWith('image/') && file.size <= 5 * 1024 * 1024, // 5MB 제한
+        );
+        setSelectedImages((prev) => [...prev, ...newImages].slice(0, 3)); // 최대 3개까지
+      }
+      // input 초기화
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    },
+    [],
+  );
+
+  // 이미지 삭제 핸들러
+  const handleImageRemove = useCallback((index: number) => {
+    setSelectedImages((prev) => prev.filter((_, i) => i !== index));
+  }, []);
+
+  // 이미지 추가 버튼 클릭 핸들러
+  const handleAddImageClick = useCallback(() => {
+    fileInputRef.current?.click();
+  }, []);
+
+  // 컴포넌트 언마운트 시 URL 객체 정리
+  useEffect(() => {
+    return () => {
+      selectedImages.forEach((image) => {
+        URL.revokeObjectURL(URL.createObjectURL(image));
+      });
+    };
+  }, [selectedImages]);
 
   // 글 생성 후 세션 페이지로 이동
   const handleGenerateText = useCallback(async () => {
@@ -82,17 +122,82 @@ export default function CreateAi() {
           어떤 글을 만들어드릴까요?
         </span>
       </h1>
+
       <p className="mt-2 text-body text-text-primary text-center">
         키워드나 짧은 글을 입력하면 AI가 감정적인 글을 생성해 드립니다
       </p>
 
-      <textarea
-        value={prompt}
-        onChange={(e) => setPrompt(e.target.value)}
-        rows={4}
-        placeholder="예: 바람, 초록빛 오후, 천천히 걷는 길"
-        className="w-full rounded-xl border border-border-subtle bg-white p-4 text-body text-text-primary placeholder:text-text-placeholder focus:outline-none focus:ring-2 focus:ring-border-focus shadow-card resize-none mt-15"
-      />
+      {/* 선택된 이미지들 미리보기 */}
+      {selectedImages.length > 0 && (
+        <div className="mt-6">
+          <div className="flex flex-wrap gap-3">
+            {selectedImages.map((image, index) => (
+              <div key={index} className="relative group">
+                <img
+                  src={URL.createObjectURL(image)}
+                  alt={`선택된 이미지 ${index + 1}`}
+                  className="w-20 h-20 object-cover rounded-lg border-2 border-sage-30"
+                />
+                <button
+                  type="button"
+                  onClick={() => handleImageRemove(index)}
+                  className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full text-xs flex items-center justify-center hover:bg-red-600 transition-colors"
+                >
+                  ×
+                </button>
+              </div>
+            ))}
+          </div>
+          <p className="mt-2 text-xs text-text-secondary">
+            {selectedImages.length}/3개 이미지 선택됨
+          </p>
+        </div>
+      )}
+
+      {/* textarea와 이미지 추가 버튼 */}
+      <div className="relative mt-6">
+        <textarea
+          value={prompt}
+          onChange={(e) => setPrompt(e.target.value)}
+          rows={4}
+          placeholder="예: 바람, 초록빛 오후, 천천히 걷는 길"
+          className="w-full rounded-xl border border-border-subtle bg-white p-4 pr-12 text-body text-text-primary placeholder:text-text-placeholder focus:outline-none focus:ring-2 focus:ring-border-focus shadow-card resize-none"
+        />
+
+        {/* 이미지 추가 버튼 - textarea 내부 오른쪽 위 */}
+        {selectedImages.length < 3 && (
+          <button
+            type="button"
+            onClick={handleAddImageClick}
+            className="absolute top-2 right-2 w-8 h-8 flex items-center justify-center text-sage-60 hover:text-sage-80 hover:bg-sage-10 rounded-lg transition-colors"
+            title="이미지 추가"
+          >
+            <svg
+              className="w-5 h-5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+              />
+            </svg>
+          </button>
+        )}
+
+        {/* 숨겨진 파일 input */}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          multiple
+          onChange={handleImageSelect}
+          className="hidden"
+        />
+      </div>
 
       <div className="mt-6 space-y-6">
         {/* 문체와 길이 선택 */}

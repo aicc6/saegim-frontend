@@ -7,10 +7,12 @@ import { useCreateStore } from '@/stores/create';
 import { EmotionOption, useEmotionStore } from '@/stores/emotion';
 import { useDiaryStore } from '@/stores/diary';
 import { EmotionType } from '@/types';
+import PenLoader from '@/components/common/loading';
 
 export default function CreateChat() {
   const [showToast, setShowToast] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
 
   const {
@@ -40,6 +42,11 @@ export default function CreateChat() {
   } = useEmotionStore();
 
   const { addEntry } = useDiaryStore();
+
+  // 스크롤을 최하단으로 이동
+  const scrollToBottom = useCallback(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, []);
 
   // textarea 높이 조절 최적화
   const adjustTextareaHeight = useCallback(() => {
@@ -97,9 +104,11 @@ export default function CreateChat() {
       if (e.key === 'Enter' && !e.shiftKey && !isGenerating && prompt.trim()) {
         e.preventDefault();
         generateInSession(emotion);
+        // 메시지 전송 후 스크롤 (사용자 메시지가 추가된 후)
+        setTimeout(scrollToBottom, 200);
       }
     },
-    [isGenerating, prompt, emotion, generateInSession],
+    [isGenerating, prompt, emotion, generateInSession, scrollToBottom],
   );
 
   // Effects
@@ -276,6 +285,9 @@ export default function CreateChat() {
             setEmotion={setEmotion}
             getEmotionConfig={getEmotionConfig}
           />
+
+          {/* 스크롤 타겟 */}
+          <div ref={messagesEndRef} />
         </div>
       </div>
 
@@ -298,7 +310,11 @@ export default function CreateChat() {
               onKeyDown={handleKeyDown}
             />
             <button
-              onClick={() => generateInSession(emotion)}
+              onClick={() => {
+                generateInSession(emotion);
+                // 메시지 전송 후 스크롤 (사용자 메시지가 추가된 후)
+                setTimeout(scrollToBottom, 200);
+              }}
               disabled={isGenerating || !prompt.trim()}
               className="flex hover:bg-sage-50 h-12 w-12 items-center justify-center rounded-2xl bg-sage-40 transition-colors text-2xl"
             >
