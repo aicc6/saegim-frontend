@@ -1,8 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useTheme } from 'next-themes';
 import {
   PenTool,
   Grid3X3,
@@ -24,31 +25,48 @@ const navigation = [
 
 export function Sidebar() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const { isCollapsed, setIsCollapsed } = useSidebar();
+  const { resolvedTheme } = useTheme();
   const pathname = usePathname();
+
+  useEffect(() => setMounted(true), []);
+
+  if (!mounted) {
+    return null;
+  }
+
+  const isDark = resolvedTheme === 'dark';
 
   return (
     <>
       {/* 데스크톱 사이드바 */}
       <div
-        className={`hidden lg:flex lg:flex-col lg:fixed lg:inset-y-0 lg:bg-white lg:border-r lg:border-sage-20 dark:lg:bg-gray-900 dark:lg:border-gray-700 transition-all duration-300 ${
+        className={`hidden lg:flex lg:flex-col lg:fixed lg:inset-y-0 lg:border-r transition-all duration-300 ${
           isCollapsed ? 'lg:w-16' : 'lg:w-64'
+        } ${
+          isDark
+            ? 'lg:bg-gray-900 lg:border-gray-700'
+            : 'lg:bg-white lg:border-sage-20'
         }`}
       >
         <div className="flex flex-col flex-grow overflow-y-auto">
           {/* 사용자 프로필 */}
           <div
-            className={`flex-shrink-0 p-4 border-b border-sage-20 dark:border-gray-700 ${
+            className={`flex-shrink-0 p-4 border-b ${
               isCollapsed ? 'px-2' : 'px-4'
-            }`}
+            } ${isDark ? 'border-gray-700' : 'border-sage-20'}`}
           >
-
             {isCollapsed ? (
               <Link href="/profile">
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="w-full p-2 text-sage-70 hover:text-sage-100 dark:text-gray-300 dark:hover:text-white"
+                  className={`w-full p-2 ${
+                    isDark
+                      ? 'text-gray-300 hover:text-white'
+                      : 'text-sage-70 hover:text-sage-100'
+                  }`}
                 >
                   <User className="h-5 w-5" />
                 </Button>
@@ -57,7 +75,11 @@ export function Sidebar() {
               <Link href="/profile">
                 <Button
                   variant="ghost"
-                  className="w-full justify-start text-sage-70 hover:text-sage-100 dark:text-gray-300 dark:hover:text-white"
+                  className={`w-full justify-start ${
+                    isDark
+                      ? 'text-gray-300 hover:text-white'
+                      : 'text-sage-70 hover:text-sage-100'
+                  }`}
                 >
                   <User className="mr-3 h-5 w-5" />
                   프로필
@@ -81,8 +103,12 @@ export function Sidebar() {
                   href={item.href}
                   className={`group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors ${
                     isActive
-                      ? 'bg-sage-20 text-sage-100 dark:bg-gray-700 dark:text-white'
-                      : 'text-sage-70 hover:bg-sage-10 hover:text-sage-100 dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-white'
+                      ? isDark
+                        ? 'bg-gray-700 text-white'
+                        : 'bg-sage-20 text-sage-100'
+                      : isDark
+                        ? 'text-gray-300 hover:bg-gray-800 hover:text-white'
+                        : 'text-sage-70 hover:bg-sage-10 hover:text-sage-100'
                   } ${isCollapsed ? 'justify-center' : ''}`}
                 >
                   <Icon className={`h-5 w-5 ${!isCollapsed ? 'mr-3' : ''}`} />
@@ -99,7 +125,11 @@ export function Sidebar() {
         variant="ghost"
         size="sm"
         onClick={() => setIsCollapsed(!isCollapsed)}
-        className={`hidden lg:block fixed top-6 z-30 p-2 text-sage-70 hover:text-sage-100 bg-white border border-sage-20 rounded-full shadow-md dark:bg-gray-800 dark:border-gray-600 dark:text-gray-300 dark:hover:text-white transition-all duration-300`}
+        className={`hidden lg:block fixed top-6 z-30 p-2 rounded-full shadow-md transition-all duration-300 ${
+          isDark
+            ? 'bg-gray-800 border-gray-600 text-gray-300 hover:text-white'
+            : 'bg-white border-sage-20 text-sage-70 hover:text-sage-100'
+        } border`}
         style={{
           top: '1rem', // 프로필 버튼과 수평 정렬
           left: isCollapsed ? '3rem' : '15rem', // 접힌 상태: 사이드바 우측 경계 중앙(48px), 펼친 상태: 사이드바 우측 경계(240px)
@@ -113,10 +143,18 @@ export function Sidebar() {
       </Button>
 
       {/* 모바일 헤더 */}
-      <div className="lg:hidden bg-white border-b border-sage-20 dark:bg-gray-900 dark:border-gray-700 px-4 py-3">
+      <div
+        className={`lg:hidden border-b px-4 py-3 ${
+          isDark ? 'bg-gray-900 border-gray-700' : 'bg-white border-sage-20'
+        }`}
+      >
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-2">
-            <span className="text-xl font-bold text-sage-100 dark:text-white">
+            <span
+              className={`text-xl font-bold ${
+                isDark ? 'text-white' : 'text-sage-100'
+              }`}
+            >
               새김
             </span>
           </div>
@@ -124,7 +162,7 @@ export function Sidebar() {
             variant="ghost"
             size="sm"
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            className="dark:text-gray-300 dark:hover:text-white"
+            className={isDark ? 'text-gray-300 hover:text-white' : ''}
           >
             {isMobileMenuOpen ? (
               <X className="h-6 w-6" />
@@ -137,7 +175,11 @@ export function Sidebar() {
 
       {/* 모바일 메뉴 */}
       {isMobileMenuOpen && (
-        <div className="lg:hidden bg-white border-b border-sage-20 dark:bg-gray-900 dark:border-gray-700">
+        <div
+          className={`lg:hidden border-b ${
+            isDark ? 'bg-gray-900 border-gray-700' : 'bg-white border-sage-20'
+          }`}
+        >
           <nav className="px-2 pt-2 pb-3 space-y-1">
             {navigation.slice(0, 5).map((item) => {
               const isActive = pathname === item.href;
@@ -148,8 +190,12 @@ export function Sidebar() {
                   href={item.href}
                   className={`group flex items-center px-3 py-2 text-base font-medium rounded-md transition-colors ${
                     isActive
-                      ? 'bg-sage-20 text-sage-100 dark:bg-gray-700 dark:text-white'
-                      : 'text-sage-70 hover:bg-sage-10 hover:text-sage-100 dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-white'
+                      ? isDark
+                        ? 'bg-gray-700 text-white'
+                        : 'bg-sage-20 text-sage-100'
+                      : isDark
+                        ? 'text-gray-300 hover:bg-gray-800 hover:text-white'
+                        : 'text-sage-70 hover:bg-sage-10 hover:text-sage-100'
                   }`}
                   onClick={() => setIsMobileMenuOpen(false)}
                 >
@@ -163,7 +209,11 @@ export function Sidebar() {
       )}
 
       {/* 모바일 하단 네비게이션 */}
-      <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-sage-20 dark:bg-gray-900 dark:border-gray-700 px-4 py-2">
+      <div
+        className={`lg:hidden fixed bottom-0 left-0 right-0 border-t px-4 py-2 ${
+          isDark ? 'bg-gray-900 border-gray-700' : 'bg-white border-sage-20'
+        }`}
+      >
         <nav className="flex justify-around">
           {navigation.slice(0, 5).map((item) => {
             const isActive = pathname === item.href;
@@ -174,8 +224,12 @@ export function Sidebar() {
                 href={item.href}
                 className={`flex flex-col items-center py-2 px-3 rounded-lg transition-colors ${
                   isActive
-                    ? 'text-sage-100 dark:text-white'
-                    : 'text-sage-60 hover:text-sage-100 dark:text-gray-400 dark:hover:text-white'
+                    ? isDark
+                      ? 'text-white'
+                      : 'text-sage-100'
+                    : isDark
+                      ? 'text-gray-400 hover:text-white'
+                      : 'text-sage-60 hover:text-sage-100'
                 }`}
               >
                 <Icon className="h-5 w-5 mb-1" />

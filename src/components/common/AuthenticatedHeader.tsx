@@ -3,12 +3,13 @@
 import { useEffect, useState } from 'react';
 import Image from 'next/image';
 import { useTheme } from 'next-themes';
-import { Bell, Sun, Moon } from 'lucide-react';
+import { Bell } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
+import { ThemeToggle } from '../index';
 
 export default function AutheticatedHeader() {
-  const { theme, setTheme } = useTheme();
+  const { resolvedTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
 
   // TODO: 실제 알림 상태관리에서 가져와야 함
@@ -19,14 +20,11 @@ export default function AutheticatedHeader() {
     setMounted(true);
   }, []);
 
-  const toggleTheme = () => {
-    const newTheme = theme === 'dark' ? 'light' : 'dark';
-    setTheme(newTheme);
-    console.log('테마 변경:', theme, '→', newTheme);
+  if (!mounted) {
+    return null;
+  }
 
-    // 강제로 클래스 적용 (디버깅용)
-    document.documentElement.classList.toggle('dark', newTheme === 'dark');
-  };
+  const isDark = resolvedTheme === 'dark';
 
   const handleNotification = () => {
     // 알림 로직
@@ -34,7 +32,11 @@ export default function AutheticatedHeader() {
   };
 
   return (
-    <div className="bg-white border-b border-sage-20 py-4 px-12 dark:bg-gray-900 w-full dark:border-gray-700">
+    <div
+      className={`border-b py-4 px-12 w-full ${
+        isDark ? 'bg-gray-900 border-gray-700' : 'bg-white border-sage-20'
+      }`}
+    >
       <div className="max-w-full mx-auto flex items-center justify-between">
         {/* 좌측: 로고와 서비스명 */}
         <div className="flex items-center space-x-3">
@@ -47,7 +49,11 @@ export default function AutheticatedHeader() {
               className="w-10 h-10"
             />
           </div>
-          <h1 className="text-xl font-bold text-sage-100 dark:text-white">
+          <h1
+            className={`text-xl font-bold ${
+              isDark ? 'text-white' : 'text-sage-100'
+            }`}
+          >
             새김
           </h1>
         </div>
@@ -59,7 +65,11 @@ export default function AutheticatedHeader() {
               variant="ghost"
               size="sm"
               onClick={handleNotification}
-              className="p-2 text-sage-70 hover:text-sage-100 hover:bg-sage-10 dark:text-gray-300 dark:hover:text-white dark:hover:bg-gray-800"
+              className={`p-2 ${
+                isDark
+                  ? 'text-gray-300 hover:text-white hover:bg-gray-800'
+                  : 'text-sage-70 hover:text-sage-100 hover:bg-sage-10'
+              }`}
             >
               <Bell className="w-5 h-5" />
             </Button>
@@ -70,18 +80,7 @@ export default function AutheticatedHeader() {
             )}
           </div>
 
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={toggleTheme}
-            className="p-2 text-sage-70 hover:text-sage-100 hover:bg-sage-10 dark:text-gray-300 dark:hover:text-white dark:hover:bg-gray-800"
-          >
-            {mounted && theme === 'dark' ? (
-              <Sun className="w-5 h-5" />
-            ) : (
-              <Moon className="w-5 h-5" />
-            )}
-          </Button>
+          <ThemeToggle />
         </div>
       </div>
     </div>
