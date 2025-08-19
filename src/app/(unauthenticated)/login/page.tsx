@@ -1,6 +1,6 @@
 'use client';
 
-import LoginForm from '@/components/auth/LoginForm';
+import LoginForm from '@/components/individual/smj/LoginForm';
 import { useTheme } from '@/hooks/use-theme';
 
 export default function LoginPage() {
