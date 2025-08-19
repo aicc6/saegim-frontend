@@ -16,7 +16,10 @@ interface DiaryEntry {
   createdAt: string;
 }
 
-const emotionLabels = {
+const emotionLabels: Record<
+  string,
+  { emoji: string; name: string; color: string }
+> = {
   happy: { emoji: '😊', name: '행복', color: 'text-emotion-happy' },
   sad: { emoji: '😢', name: '슬픔', color: 'text-emotion-sad' },
   angry: { emoji: '😡', name: '화남', color: 'text-emotion-angry' },
@@ -66,7 +69,7 @@ export default function ViewPostPage() {
         title: editedTitle,
         content: editedContent,
       };
-      updateEntry(entry.id, updatedEntry);
+      updateEntry(entry.id, updatedEntry as any); // 백엔드 API 구조와 스토어 타입 불일치로 인한 임시 캐스팅
       setEntry(updatedEntry);
       setIsEditing(false);
     } else {
@@ -129,7 +132,9 @@ export default function ViewPostPage() {
   }
 
   const emotion =
-    emotionLabels[entry.userEmotion as keyof typeof emotionLabels];
+    entry.userEmotion && emotionLabels[entry.userEmotion]
+      ? emotionLabels[entry.userEmotion]
+      : undefined;
 
   return (
     <div className="min-h-screen bg-background-primary flex flex-col">
