@@ -1,11 +1,11 @@
 'use client';
 
 import { useMemo } from 'react';
-import { cn, getEmotionColor } from '@/lib/utils';
-import { EmotionType } from '@/types';
+import { cn } from '@/lib/utils';
+import { KeywordData } from '@/types/diary';
 
 interface KeywordBarChartProps {
-  data: { word: string; count: number; emotion: EmotionType }[];
+  data: KeywordData[];
   className?: string;
 }
 
@@ -80,7 +80,7 @@ export function KeywordBarChart({ data, className }: KeywordBarChartProps) {
                   className="h-full rounded-full transition-all duration-500 ease-out"
                   style={{
                     width: `${item.percentage}%`,
-                    backgroundColor: getEmotionColor(item.emotion),
+                    backgroundColor: '#B2C5B8', // 기본 sage 색상 사용
                   }}
                 />
               </div>

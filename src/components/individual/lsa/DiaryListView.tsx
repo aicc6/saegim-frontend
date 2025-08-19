@@ -116,8 +116,8 @@ export default function DiaryListView() {
     }
   };
 
-  // 필터링된 posts
-  const filteredPosts = posts.filter((post) => {
+  // 필터링된 posts - posts가 undefined일 때 안전하게 처리
+  const filteredPosts = (posts || []).filter((post) => {
     const matchesSearch =
       searchTerm === '' ||
       post.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
