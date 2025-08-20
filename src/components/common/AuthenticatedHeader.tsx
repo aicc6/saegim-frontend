@@ -6,7 +6,7 @@ import { useTheme } from 'next-themes';
 import { Bell } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
-import { ThemeToggle } from '../index';
+import ThemeToggle from '../ui/custom/ThemeToggle';
 
 export default function AutheticatedHeader() {
   const { resolvedTheme } = useTheme();
