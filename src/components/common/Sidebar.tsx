@@ -53,7 +53,7 @@ export function Sidebar() {
         <div className="flex flex-col flex-grow overflow-y-auto">
           {/* 사용자 프로필 */}
           <div
-            className={`flex-shrink-0 p-4 border-b ${
+            className={`flex-shrink-0 h-18 border-b flex items-center ${
               isCollapsed ? 'px-2' : 'px-4'
             } ${isDark ? 'border-gray-700' : 'border-sage-20'}`}
           >
