@@ -2,9 +2,10 @@
 
 import { useMemo, useCallback, useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import Select from '../../ui/custom/Select';
-import { useCreateStore } from '@/stores/create';
+import Image from 'next/image';
+import { useCreateStore, WritingStyle, LengthOption } from '@/stores/create';
 import { useEmotionStore } from '@/stores/emotion';
+import Select from '../../ui/custom/Select';
 
 // 초기 입력 화면 전용 컴포넌트
 
@@ -133,9 +134,11 @@ export default function CreateAi() {
           <div className="flex flex-wrap gap-3">
             {selectedImages.map((image, index) => (
               <div key={index} className="relative group">
-                <img
+                <Image
                   src={URL.createObjectURL(image)}
                   alt={`선택된 이미지 ${index + 1}`}
+                  width={80}
+                  height={80}
                   className="w-20 h-20 object-cover rounded-lg border-2 border-sage-30"
                 />
                 <button
@@ -203,23 +206,29 @@ export default function CreateAi() {
         {/* 문체와 길이 선택 */}
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="mb-2 block text-body-small text-text-secondary">
+            <div
+              id="style-label"
+              className="mb-2 block text-body-small text-text-secondary"
+            >
               문체 선택
-            </label>
+            </div>
             <Select
               value={style}
-              onChange={(v) => setStyle(v as any)}
+              onChange={(v) => setStyle(v as WritingStyle)}
               options={styleOptions}
               ariaLabel="문체 선택"
             />
           </div>
           <div>
-            <label className="mb-2 block text-body-small text-text-secondary">
+            <div
+              id="length-label"
+              className="mb-2 block text-body-small text-text-secondary"
+            >
               길이 선택
-            </label>
+            </div>
             <Select
               value={length}
-              onChange={(v) => setLength(v as any)}
+              onChange={(v) => setLength(v as LengthOption)}
               options={lengthOptions}
               ariaLabel="길이 선택"
             />
@@ -228,10 +237,14 @@ export default function CreateAi() {
 
         {/* 감정 선택 */}
         <div>
-          <label className="mb-3 block text-body-small text-text-secondary">
+          <div className="mb-3 block text-body-small text-text-secondary">
             감정을 선택해주세요 😊 (선택 사항)
-          </label>
-          <div className="flex flex-wrap gap-3 justify-center">
+          </div>
+          <div
+            className="flex flex-wrap gap-3 justify-center"
+            role="group"
+            aria-label="감정 선택"
+          >
             {emotionConfigs.map(({ value, emoji, label }) => (
               <button
                 key={value}

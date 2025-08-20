@@ -4,7 +4,7 @@ const API_BASE_URL =
 
 export const api = {
   baseURL: API_BASE_URL,
-  
+
   // 구글 로그인 관련
   auth: {
     // 구글 로그인 시작 (백엔드로 리다이렉트)

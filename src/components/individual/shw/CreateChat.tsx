@@ -3,11 +3,14 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { CiLocationArrow1 } from 'react-icons/ci';
 import { useRouter } from 'next/navigation';
-import { useCreateStore } from '@/stores/create';
-import { EmotionOption, useEmotionStore } from '@/stores/emotion';
+import Image from 'next/image';
+import { useCreateStore, WritingStyle, LengthOption } from '@/stores/create';
+import {
+  EmotionOption,
+  useEmotionStore,
+  EmotionConfig,
+} from '@/stores/emotion';
 import { useDiaryStore } from '@/stores/diary';
-import { EmotionType } from '@/types';
-import PenLoader from '@/components/common/loading';
 
 export default function CreateChat() {
   const [showToast, setShowToast] = useState(false);
@@ -23,10 +26,10 @@ export default function CreateChat() {
     style,
     length,
     isGenerating,
-    chatMessages,
+    // chatMessages, // 사용하지 않으므로 주석 처리
     generateInSession,
     regenerateText,
-    deleteMessage,
+    // deleteMessage, // 사용하지 않으므로 주석 처리
     navigateRegenerationHistory,
     setPrompt,
     setStyle,
@@ -112,12 +115,15 @@ export default function CreateChat() {
         id: Date.now().toString(),
         title: '', // 제목은 비워두고 사용자가 입력하도록
         content: messageContent,
-        userEmotion: messageEmotion as EmotionType, // 감정 정보 전달
-        keywords: [], // 키워드는 비워둠
-        images: [], // 이미지는 비워둠
-        isPublic: false, // 기본적으로 비공개
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
+        user_emotion: messageEmotion || null, // 감정 정보 전달
+        ai_generated_text: messageContent,
+        user_id: 'current_user', // TODO: 실제 사용자 ID로 교체
+        ai_emotion: null,
+        ai_emotion_confidence: null,
+        updated_at: null,
+        keywords: null, // 키워드는 비워둠
+        is_public: false, // 기본적으로 비공개
+        created_at: new Date().toISOString(),
       };
 
       // 다이어리 스토어에 엔트리 추가
@@ -342,9 +348,11 @@ export default function CreateChat() {
                 <div className="flex flex-wrap gap-2">
                   {selectedImages.map((image, index) => (
                     <div key={index} className="relative group">
-                      <img
+                      <Image
                         src={URL.createObjectURL(image)}
                         alt={`선택된 이미지 ${index + 1}`}
+                        width={64}
+                        height={64}
                         className="w-16 h-16 object-cover rounded-lg border-2 border-sage-30"
                       />
                       <button
@@ -398,7 +406,7 @@ export default function CreateChat() {
                         strokeLinecap="round"
                         strokeLinejoin="round"
                         strokeWidth={2}
-                        d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                        d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.5~86-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
                       />
                     </svg>
                   </button>
@@ -433,7 +441,7 @@ export default function CreateChat() {
               <div className="flex gap-2">
                 <select
                   value={style}
-                  onChange={(e) => setStyle(e.target.value as any)}
+                  onChange={(e) => setStyle(e.target.value as WritingStyle)}
                   className="rounded-lg border border-gray-200 bg-white px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-green-500"
                 >
                   {config.styles.map((option) => (
@@ -444,7 +452,7 @@ export default function CreateChat() {
                 </select>
                 <select
                   value={length}
-                  onChange={(e) => setLength(e.target.value as any)}
+                  onChange={(e) => setLength(e.target.value as LengthOption)}
                   className="rounded-lg border border-gray-200 bg-white px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-green-500"
                 >
                   {config.lengths.map((option) => (
@@ -529,19 +537,25 @@ const ActionButton = ({
 );
 
 // 감정 가이드 컴포넌트
+interface EmotionGuideProps {
+  emotion: EmotionOption;
+  emotionConfigs: EmotionConfig[];
+  setEmotion: (emotion: EmotionOption) => void;
+  getEmotionConfig: (emotion: EmotionOption) => EmotionConfig | undefined;
+}
+
 const EmotionGuide = ({
   emotion,
   emotionConfigs,
   setEmotion,
   getEmotionConfig,
-}: any) => (
+}: EmotionGuideProps) => (
   <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
     <div className="flex items-center gap-2 mb-3">
       <span className="text-sm font-medium">
         AI가 추측한 감정은{' '}
         {emotion
-          ? emotionConfigs.find((e: any) => e.value === emotion)?.label ||
-            emotion
+          ? emotionConfigs.find((e) => e.value === emotion)?.label || emotion
           : '감정 선택 안함'}
         {emotion && getEmotionConfig(emotion)?.emoji} 입니다.
       </span>
@@ -550,7 +564,7 @@ const EmotionGuide = ({
       다른 감정을 원하시면 아래에 선택해 주세요
     </p>
     <div className="flex gap-2">
-      {emotionConfigs.map(({ value, emoji, label, styles }: any) => {
+      {emotionConfigs.map(({ value, emoji, label, styles }) => {
         const isSelected = emotion === value;
         return (
           <button

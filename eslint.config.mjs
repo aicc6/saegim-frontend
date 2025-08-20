@@ -32,6 +32,14 @@ const eslintConfig = [
     plugins: {
       'unused-imports': unusedImports,
     },
+    settings: {
+      'import/resolver': {
+        node: {
+          extensions: ['.js', '.jsx', '.ts', '.tsx'],
+          paths: ['src'],
+        },
+      },
+    },
     rules: {
       'prettier/prettier': 'error',
       'react/react-in-jsx-scope': 'off',

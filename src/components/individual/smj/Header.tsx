@@ -5,7 +5,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useEffect, useState } from 'react';
 import { useTheme } from 'next-themes';
-import { Button } from '../ui/button';
+import { Button } from '../../ui/button';
 
 export default function Header() {
   const { theme, setTheme } = useTheme();

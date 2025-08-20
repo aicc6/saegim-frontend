@@ -28,6 +28,7 @@ interface DiaryState {
     userId: string,
     dateRange: CalendarDateRange,
   ) => Promise<void>;
+  addEntry: (entry: DiaryEntry) => void;
   clearError: () => void;
   setPage: (page: number) => void;
   setPageSize: (size: number) => void;
@@ -172,4 +173,24 @@ export const useDiaryStore = create<DiaryState>((set, get) => ({
 
   // 페이지 크기 설정
   setPageSize: (size: number) => set({ pageSize: size }),
+
+  // 다이어리 엔트리 추가 (로컬 상태에만 추가, 실제 API 호출은 별도 처리)
+  addEntry: (entry: DiaryEntry) => {
+    set((state) => ({
+      diaries: [
+        {
+          id: entry.id,
+          title: entry.title,
+          ai_generated_text: entry.ai_generated_text,
+          user_emotion: entry.user_emotion,
+          ai_emotion: entry.ai_emotion,
+          created_at: entry.created_at,
+          is_public: entry.is_public,
+          keywords: entry.keywords,
+        },
+        ...state.diaries,
+      ],
+      totalCount: state.totalCount + 1,
+    }));
+  },
 }));
