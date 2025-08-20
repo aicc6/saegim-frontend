@@ -31,10 +31,12 @@ export interface DiaryListEntry {
 export interface DiaryFilters {
   page?: number;
   page_size?: number;
+  searchTerm?: string;
   emotion?: string;
   is_public?: boolean;
   start_date?: string;
   end_date?: string;
+  sort_order?: 'asc' | 'desc';
 }
 
 export interface CalendarDateRange {
