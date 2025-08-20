@@ -121,6 +121,14 @@ class ApiClient {
 // API 클라이언트 인스턴스 생성
 export const apiClient = new ApiClient(API_BASE_URL);
 
+// 인증 관련 API 엔드포인트
+export const authApi = {
+  // 구글 로그인 시작 (백엔드로 리다이렉트)
+  googleLogin: () => {
+    window.location.href = `${API_BASE_URL}/auth/google/login`;
+  },
+};
+
 // 다이어리 API 엔드포인트
 export const diaryApi = {
   // 다이어리 목록 조회

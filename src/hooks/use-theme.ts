@@ -3,21 +3,17 @@
 import { useTheme as useNextTheme } from 'next-themes';
 import { useEffect, useState } from 'react';
 
-export function useTheme() {
-  const { theme, setTheme, resolvedTheme } = useNextTheme();
+export const useTheme = () => {
   const [mounted, setMounted] = useState(false);
+  const { resolvedTheme } = useNextTheme();
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  const isDark = resolvedTheme === 'dark';
+  if (!mounted) {
+    return { isDark: false }; // 기본값으로 라이트 모드 반환
+  }
 
-  return {
-    theme,
-    setTheme,
-    resolvedTheme,
-    mounted,
-    isDark,
-  };
-}
+  return { isDark: resolvedTheme === 'dark' };
+};

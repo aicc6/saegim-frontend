@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { api } from '@/lib/api';
+import { API_BASE_URL } from '@/lib/api';
 
 export default function AuthCallback() {
   const router = useRouter();
@@ -30,7 +30,7 @@ export default function AuthCallback() {
 
         // 백엔드에서 토큰 가져오기
         const response = await fetch(
-          `${api.baseURL}/auth/google/token/${tokenId}`,
+          `${API_BASE_URL}/auth/google/token/${tokenId}`,
           {
             method: 'GET',
             headers: {

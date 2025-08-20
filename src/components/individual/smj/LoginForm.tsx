@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import GoogleLoginButton from '@/components/ui/custom/GoogleLoginButton';
-import { api } from '@/lib/api';
+import { authApi } from '@/lib/api';
 
 export default function LoginForm() {
   const router = useRouter();
@@ -44,7 +44,7 @@ export default function LoginForm() {
 
   const handleGoogleLogin = () => {
     // 구글 로그인 시작
-    api.auth.googleLogin();
+    authApi.googleLogin();
   };
 
   const handleFindPassword = () => {
