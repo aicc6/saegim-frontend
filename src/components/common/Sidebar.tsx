@@ -125,7 +125,7 @@ export function Sidebar() {
         variant="ghost"
         size="sm"
         onClick={() => setIsCollapsed(!isCollapsed)}
-        className={`hidden lg:block fixed top-6 z-30 p-2 rounded-full shadow-md transition-all duration-300 ${
+        className={`hidden lg:block fixed top-6 z-[60] p-2 rounded-full shadow-md transition-all duration-300 ${
           isDark
             ? 'bg-gray-800 border-gray-600 text-gray-300 hover:text-white'
             : 'bg-white border-sage-20 text-sage-70 hover:text-sage-100'

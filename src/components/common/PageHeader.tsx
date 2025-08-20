@@ -29,11 +29,11 @@ export default function PageHeader({
 
   return (
     <div
-      className={`border-b px-12 py-4 ${
+      className={`border-b px-12 h-18 flex items-center sticky top-0 z-50 ${
         isDark ? 'bg-gray-900 border-gray-700' : 'bg-white border-sage-20'
       } ${className}`}
     >
-      <div className="max-w-full mx-auto flex items-center justify-between">
+      <div className="max-w-full flex items-center justify-between w-full">
         {/* 좌측: 페이지 제목 */}
         <div className="flex flex-col">
           <h1
