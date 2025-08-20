@@ -4,7 +4,7 @@
 
 import { DiaryListEntry } from '@/types/diary';
 
-const API_BASE_URL =
+export const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000';
 
 export interface ApiResponse<T> {
@@ -120,6 +120,14 @@ class ApiClient {
 
 // API 클라이언트 인스턴스 생성
 export const apiClient = new ApiClient(API_BASE_URL);
+
+// 인증 관련 API 엔드포인트
+export const authApi = {
+  // 구글 로그인 시작 (백엔드로 리다이렉트)
+  googleLogin: () => {
+    window.location.href = `${API_BASE_URL}/auth/google/login`;
+  },
+};
 
 // 다이어리 API 엔드포인트
 export const diaryApi = {
