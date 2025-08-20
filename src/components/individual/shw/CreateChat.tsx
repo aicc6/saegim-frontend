@@ -7,10 +7,14 @@ import { useCreateStore } from '@/stores/create';
 import { EmotionOption, useEmotionStore } from '@/stores/emotion';
 import { useDiaryStore } from '@/stores/diary';
 import { EmotionType } from '@/types';
+import PenLoader from '@/components/common/loading';
 
 export default function CreateChat() {
   const [showToast, setShowToast] = useState(false);
+  const [selectedImages, setSelectedImages] = useState<File[]>([]);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
 
   const {
@@ -41,6 +45,11 @@ export default function CreateChat() {
 
   const { addEntry } = useDiaryStore();
 
+  // 스크롤을 최하단으로 이동
+  const scrollToBottom = useCallback(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, []);
+
   // textarea 높이 조절 최적화
   const adjustTextareaHeight = useCallback(() => {
     const textarea = textareaRef.current;
@@ -64,6 +73,35 @@ export default function CreateChat() {
     navigator.clipboard.writeText(content);
     setShowToast(true);
     setTimeout(() => setShowToast(false), 2000);
+  }, []);
+
+  // 이미지 파일 선택 핸들러
+  const handleImageSelect = useCallback(
+    (event: React.ChangeEvent<HTMLInputElement>) => {
+      const files = event.target.files;
+      if (files) {
+        const newImages = Array.from(files).filter(
+          (file) =>
+            file.type.startsWith('image/') && file.size <= 5 * 1024 * 1024, // 5MB 제한
+        );
+        setSelectedImages((prev) => [...prev, ...newImages].slice(0, 3)); // 최대 3개까지
+      }
+      // input 초기화
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    },
+    [],
+  );
+
+  // 이미지 삭제 핸들러
+  const handleImageRemove = useCallback((index: number) => {
+    setSelectedImages((prev) => prev.filter((_, i) => i !== index));
+  }, []);
+
+  // 이미지 추가 버튼 클릭 핸들러
+  const handleAddImageClick = useCallback(() => {
+    fileInputRef.current?.click();
   }, []);
 
   // 다이어리로 이동 핸들러
@@ -97,9 +135,12 @@ export default function CreateChat() {
       if (e.key === 'Enter' && !e.shiftKey && !isGenerating && prompt.trim()) {
         e.preventDefault();
         generateInSession(emotion);
+        // 메시지 전송 후 이미지 초기화 및 스크롤
+        setSelectedImages([]);
+        setTimeout(scrollToBottom, 200);
       }
     },
-    [isGenerating, prompt, emotion, generateInSession],
+    [isGenerating, prompt, emotion, generateInSession, scrollToBottom],
   );
 
   // Effects
@@ -111,6 +152,15 @@ export default function CreateChat() {
       textareaRef.current.style.overflowY = 'hidden';
     }
   }, [prompt]);
+
+  // 컴포넌트 언마운트 시 URL 객체 정리
+  useEffect(() => {
+    return () => {
+      selectedImages.forEach((image) => {
+        URL.revokeObjectURL(URL.createObjectURL(image));
+      });
+    };
+  }, [selectedImages]);
 
   return (
     <div className="flex min-h-screen flex-col relative">
@@ -276,79 +326,152 @@ export default function CreateChat() {
             setEmotion={setEmotion}
             getEmotionConfig={getEmotionConfig}
           />
+
+          {/* 스크롤 타겟 */}
+          <div ref={messagesEndRef} />
         </div>
       </div>
 
       {/* 하단 고정 입력 영역 */}
-      <div className="sticky bottom-0 z-50 border-t border-gray-200 rounded-t-4xl bg-white/95 backdrop-blur-sm shadow-lg">
-        <div className="mx-auto max-w-2xl p-4 space-y-3">
-          {/* 메인 입력창 */}
-          <div className="flex gap-2">
-            <textarea
-              ref={textareaRef}
-              value={prompt}
-              onChange={(e) => {
-                setPrompt(e.target.value);
-                adjustTextareaHeight();
-              }}
-              rows={1}
-              placeholder="메시지를 입력하세요..."
-              className="flex-1 rounded-2xl border border-gray-300 bg-white px-4 py-3 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500 shadow-sm resize-none min-h-[44px]"
-              style={{ height: 'auto' }}
-              onKeyDown={handleKeyDown}
-            />
-            <button
-              onClick={() => generateInSession(emotion)}
-              disabled={isGenerating || !prompt.trim()}
-              className="flex hover:bg-sage-50 h-12 w-12 items-center justify-center rounded-2xl bg-sage-40 transition-colors text-2xl"
-            >
-              <CiLocationArrow1 className="text-sage-100" />
-            </button>
-          </div>
+      <div className="sticky bottom-0 z-50">
+        <div className="mx-auto max-w-2xl">
+          <div className="border-t border-gray-200 rounded-t-4xl bg-white/95 backdrop-blur-sm shadow-lg p-4 space-y-3">
+            {/* 선택된 이미지들 미리보기 */}
+            {selectedImages.length > 0 && (
+              <div className="mb-3">
+                <div className="flex flex-wrap gap-2">
+                  {selectedImages.map((image, index) => (
+                    <div key={index} className="relative group">
+                      <img
+                        src={URL.createObjectURL(image)}
+                        alt={`선택된 이미지 ${index + 1}`}
+                        className="w-16 h-16 object-cover rounded-lg border-2 border-sage-30"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => handleImageRemove(index)}
+                        className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white rounded-full text-xs flex items-center justify-center hover:bg-red-600 transition-colors"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ))}
+                </div>
+                <p className="mt-1 text-xs text-gray-500">
+                  {selectedImages.length}/3개 이미지 선택됨
+                </p>
+              </div>
+            )}
 
-          {/* 옵션 선택 */}
-          <div className="flex items-center gap-2 text-sm">
+            {/* 메인 입력창 */}
             <div className="flex gap-2">
-              <select
-                value={style}
-                onChange={(e) => setStyle(e.target.value as any)}
-                className="rounded-lg border border-gray-200 bg-white px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-green-500"
+              <div className="flex-1 relative">
+                <textarea
+                  ref={textareaRef}
+                  value={prompt}
+                  onChange={(e) => {
+                    setPrompt(e.target.value);
+                    adjustTextareaHeight();
+                  }}
+                  rows={1}
+                  placeholder="메시지를 입력하세요..."
+                  className="w-full rounded-2xl border border-gray-300 bg-white px-4 py-3 pr-10 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500 shadow-sm resize-none min-h-[44px]"
+                  style={{ height: 'auto' }}
+                  onKeyDown={handleKeyDown}
+                />
+
+                {/* 이미지 추가 버튼 - textarea 내부 오른쪽 */}
+                {selectedImages.length < 3 && (
+                  <button
+                    type="button"
+                    onClick={handleAddImageClick}
+                    className="absolute bottom-2 right-2 w-7 h-7 flex items-center justify-center text-gray-400 hover:text-gray-600 hover:bg-gray-50 rounded-lg transition-colors"
+                    title="이미지 추가"
+                  >
+                    <svg
+                      className="w-4 h-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                      />
+                    </svg>
+                  </button>
+                )}
+              </div>
+              <button
+                onClick={() => {
+                  generateInSession(emotion);
+                  // 메시지 전송 후 이미지 초기화 및 스크롤
+                  setSelectedImages([]);
+                  setTimeout(scrollToBottom, 200);
+                }}
+                disabled={isGenerating || !prompt.trim()}
+                className="flex hover:bg-sage-50 h-12 w-12 items-center justify-center rounded-2xl bg-sage-40 transition-colors text-2xl"
               >
-                {config.styles.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-              <select
-                value={length}
-                onChange={(e) => setLength(e.target.value as any)}
-                className="rounded-lg border border-gray-200 bg-white px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-green-500"
-              >
-                {config.lengths.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
+                <CiLocationArrow1 className="text-sage-100" />
+              </button>
             </div>
 
-            {/* 감정 이모지 */}
-            <div className="flex gap-1 ml-auto">
-              {emotionConfigs.map(({ value, emoji, styles }) => (
-                <button
-                  key={value}
-                  type="button"
-                  onClick={() => setEmotion(emotion === value ? '' : value)}
-                  className={`h-8 w-8 rounded-full text-sm transition-all ${
-                    emotion === value
-                      ? `${styles.bg} ring-2 ${styles.ring} scale-110`
-                      : 'hover:bg-gray-50'
-                  }`}
+            {/* 숨겨진 파일 input */}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              multiple
+              onChange={handleImageSelect}
+              className="hidden"
+            />
+
+            {/* 옵션 선택 */}
+            <div className="flex items-center gap-2 text-sm">
+              <div className="flex gap-2">
+                <select
+                  value={style}
+                  onChange={(e) => setStyle(e.target.value as any)}
+                  className="rounded-lg border border-gray-200 bg-white px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-green-500"
                 >
-                  {emoji}
-                </button>
-              ))}
+                  {config.styles.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+                <select
+                  value={length}
+                  onChange={(e) => setLength(e.target.value as any)}
+                  className="rounded-lg border border-gray-200 bg-white px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-green-500"
+                >
+                  {config.lengths.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* 감정 이모지 */}
+              <div className="flex gap-1 ml-auto">
+                {emotionConfigs.map(({ value, emoji, styles }) => (
+                  <button
+                    key={value}
+                    type="button"
+                    onClick={() => setEmotion(emotion === value ? '' : value)}
+                    className={`h-8 w-8 rounded-full text-sm transition-all ${
+                      emotion === value
+                        ? `${styles.bg} ring-2 ${styles.ring} scale-110`
+                        : 'hover:bg-gray-50'
+                    }`}
+                  >
+                    {emoji}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
         </div>

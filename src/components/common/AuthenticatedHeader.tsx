@@ -33,11 +33,11 @@ export default function AutheticatedHeader() {
 
   return (
     <div
-      className={`border-b py-4 px-12 w-full ${
+      className={`border-b h-18 px-12 w-full flex items-center ${
         isDark ? 'bg-gray-900 border-gray-700' : 'bg-white border-sage-20'
       }`}
     >
-      <div className="max-w-full mx-auto flex items-center justify-between">
+      <div className="max-w-full mx-auto flex items-center justify-between w-full">
         {/* 좌측: 로고와 서비스명 */}
         <div className="flex items-center space-x-3">
           <div className="w-8 h-8 rounded-full flex items-center justify-center">
