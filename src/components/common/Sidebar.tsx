@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useTheme } from 'next-themes';
 import {
   PenTool,
@@ -13,9 +13,13 @@ import {
   X,
   ChevronLeft,
   ChevronRight,
+  LogOut,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useSidebar } from '@/contexts/sidebar-context';
+import { useAuthStore } from '@/stores/auth';
+import { authApi } from '@/lib/api';
+import { useToast } from '@/hooks/use-toast';
 
 const navigation = [
   { name: '글쓰기', href: '/', icon: PenTool },
@@ -29,6 +33,42 @@ export function Sidebar() {
   const { isCollapsed, setIsCollapsed } = useSidebar();
   const { resolvedTheme } = useTheme();
   const pathname = usePathname();
+  const router = useRouter();
+  const { logout } = useAuthStore();
+  const { toast } = useToast();
+
+  const handleLogout = async () => {
+    try {
+      // 백엔드에 로그아웃 요청
+      await authApi.logout();
+      
+      // 클라이언트 상태 정리
+      logout();
+      
+      // 성공 토스트 표시
+      toast({
+        title: '로그아웃 완료',
+        description: '안전하게 로그아웃되었습니다.',
+        variant: 'default',
+      });
+      
+      // 로그인 페이지로 리다이렉트
+      router.push('/login');
+    } catch (error) {
+      console.error('로그아웃 처리 중 오류:', error);
+      // 에러가 발생해도 클라이언트 상태는 정리하고 로그인 페이지로 이동
+      logout();
+      
+      // 에러 토스트 표시
+      toast({
+        title: '로그아웃 완료',
+        description: '클라이언트 상태가 정리되었습니다.',
+        variant: 'default',
+      });
+      
+      router.push('/login');
+    }
+  };
 
   useEffect(() => setMounted(true), []);
 
@@ -58,33 +98,62 @@ export function Sidebar() {
             } ${isDark ? 'border-gray-700' : 'border-sage-20'}`}
           >
             {isCollapsed ? (
-              <Link href="/profile">
+              <div className="flex flex-col space-y-1 w-full">
+                <Link href="/profile">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className={`w-full p-2 ${
+                      isDark
+                        ? 'text-gray-300 hover:text-white'
+                        : 'text-sage-70 hover:text-sage-100'
+                    }`}
+                  >
+                    <User className="h-5 w-5" />
+                  </Button>
+                </Link>
                 <Button
                   variant="ghost"
                   size="sm"
+                  onClick={handleLogout}
                   className={`w-full p-2 ${
                     isDark
-                      ? 'text-gray-300 hover:text-white'
-                      : 'text-sage-70 hover:text-sage-100'
+                      ? 'text-gray-300 hover:text-red-400'
+                      : 'text-sage-70 hover:text-red-500'
                   }`}
                 >
-                  <User className="h-5 w-5" />
+                  <LogOut className="h-5 w-5" />
                 </Button>
-              </Link>
+              </div>
             ) : (
-              <Link href="/profile">
+              <div className="flex items-center justify-between w-full">
+                <Link href="/profile">
+                  <Button
+                    variant="ghost"
+                    className={`justify-start ${
+                      isDark
+                        ? 'text-gray-300 hover:text-white'
+                        : 'text-sage-70 hover:text-sage-100'
+                    }`}
+                  >
+                    <User className="mr-3 h-5 w-5" />
+                    프로필
+                  </Button>
+                </Link>
                 <Button
                   variant="ghost"
-                  className={`w-full justify-start ${
+                  size="sm"
+                  onClick={handleLogout}
+                  className={`p-2 ${
                     isDark
-                      ? 'text-gray-300 hover:text-white'
-                      : 'text-sage-70 hover:text-sage-100'
+                      ? 'text-gray-300 hover:text-red-400'
+                      : 'text-sage-70 hover:text-red-500'
                   }`}
+                  title="로그아웃"
                 >
-                  <User className="mr-3 h-5 w-5" />
-                  프로필
+                  <LogOut className="h-4 w-4" />
                 </Button>
-              </Link>
+              </div>
             )}
           </div>
 
@@ -181,6 +250,42 @@ export function Sidebar() {
           }`}
         >
           <nav className="px-2 pt-2 pb-3 space-y-1">
+            {/* 프로필과 로그아웃 */}
+            <div className="flex items-center justify-between px-3 py-2">
+              <Link
+                href="/profile"
+                className={`group flex items-center text-base font-medium rounded-md transition-colors ${
+                  pathname === '/profile'
+                    ? isDark
+                      ? 'bg-gray-700 text-white'
+                      : 'bg-sage-20 text-sage-100'
+                    : isDark
+                      ? 'text-gray-300 hover:bg-gray-800 hover:text-white'
+                      : 'text-sage-70 hover:bg-sage-10 hover:text-sage-100'
+                }`}
+                onClick={() => setIsMobileMenuOpen(false)}
+              >
+                <User className="mr-4 h-6 w-6" />
+                프로필
+              </Link>
+              
+              <button
+                onClick={() => {
+                  handleLogout();
+                  setIsMobileMenuOpen(false);
+                }}
+                className={`group flex items-center p-2 text-base font-medium rounded-md transition-colors ${
+                  isDark
+                    ? 'text-gray-300 hover:bg-gray-800 hover:text-red-400'
+                    : 'text-sage-70 hover:bg-sage-10 hover:text-red-500'
+                }`}
+                title="로그아웃"
+              >
+                <LogOut className="h-6 w-6" />
+              </button>
+            </div>
+            
+            {/* 기존 네비게이션 링크들 */}
             {navigation.slice(0, 5).map((item) => {
               const isActive = pathname === item.href;
               const Icon = item.icon;

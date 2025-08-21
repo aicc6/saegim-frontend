@@ -8,7 +8,7 @@ import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
 import ThemeToggle from '../ui/custom/ThemeToggle';
 
-export default function AutheticatedHeader() {
+export default function AuthenticatedHeader() {
   const { resolvedTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
 
@@ -42,7 +42,7 @@ export default function AutheticatedHeader() {
         <div className="flex items-center space-x-3">
           <div className="w-8 h-8 rounded-full flex items-center justify-center">
             <Image
-              src="/images/logoop.png"
+              src="/images/logo.webp"
               alt="새김 로고"
               width={32}
               height={32}

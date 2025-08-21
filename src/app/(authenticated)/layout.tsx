@@ -4,6 +4,7 @@ import AuthenticatedHeader from '@/components/common/AuthenticatedHeader';
 import { Sidebar } from '@/components/common/Sidebar';
 import { SidebarProvider } from '@/contexts/sidebar-context';
 import { MainContent } from '@/components/layout/MainContent';
+// import AuthGuard from '@/components/auth/AuthGuard';
 
 import '../globals.css';
 

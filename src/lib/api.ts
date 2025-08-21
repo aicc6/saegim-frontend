@@ -44,6 +44,7 @@ class ApiClient {
     });
 
     const defaultOptions: RequestInit = {
+      credentials: 'include', // 모든 API 호출에 쿠키 포함
       headers: {
         'Content-Type': 'application/json',
         ...options.headers,
@@ -125,7 +126,20 @@ export const apiClient = new ApiClient(API_BASE_URL);
 export const authApi = {
   // 구글 로그인 시작 (백엔드로 리다이렉트)
   googleLogin: () => {
-    window.location.href = `${API_BASE_URL}/auth/google/login`;
+    window.location.href = `${API_BASE_URL}/api/auth/google/login`;
+  },
+
+  // 로그아웃
+  logout: async () => {
+    try {
+      // 백엔드에 로그아웃 요청 (쿠키 기반 세션 정리)
+      await apiClient.post('/api/auth/logout', {});
+      return { success: true };
+    } catch (error) {
+      console.error('로그아웃 API 호출 실패:', error);
+      // API 호출이 실패해도 클라이언트 상태는 정리
+      return { success: true };
+    }
   },
 };
 
