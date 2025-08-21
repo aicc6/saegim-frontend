@@ -90,11 +90,7 @@ export default function ChangePasswordForm() {
         </div>
 
         {/* 비밀번호 변경 버튼 */}
-        <Button
-          onClick={handlePasswordChange}
-          className="w-full"
-          size="lg"
-        >
+        <Button onClick={handlePasswordChange} className="w-full" size="lg">
           비밀번호 변경
         </Button>
       </div>

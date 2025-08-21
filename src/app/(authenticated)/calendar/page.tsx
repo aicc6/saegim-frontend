@@ -205,7 +205,7 @@ export default function CalendarPage() {
   // 인증 상태 확인 - 메인 페이지와 동일한 로직
   useEffect(() => {
     console.log('🔄 CalendarPage useEffect 실행됨 - hasChecked:', hasChecked);
-    
+
     if (hasChecked) {
       console.log('⏭️ CalendarPage 이미 체크됨 - 스킵');
       return;
@@ -215,8 +215,11 @@ export default function CalendarPage() {
       console.log('🚀 CalendarPage handleAuthCheck 시작');
       try {
         // 인증 상태 확인
-        console.log('🔍 CalendarPage 인증 상태 확인:', { isAuthenticated, hasUser: !!user });
-        
+        console.log('🔍 CalendarPage 인증 상태 확인:', {
+          isAuthenticated,
+          hasUser: !!user,
+        });
+
         // 이미 인증된 상태라면 스킵
         if (isAuthenticated && user) {
           console.log('✅ CalendarPage 이미 인증됨 - 스킵');
@@ -224,12 +227,15 @@ export default function CalendarPage() {
           setHasChecked(true);
           return;
         }
-        
+
         // 토큰 존재 여부 확인 (localStorage)
-        const token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : null;
-        
+        const token =
+          typeof window !== 'undefined'
+            ? localStorage.getItem('access_token')
+            : null;
+
         console.log('🔍 CalendarPage 토큰 확인:', { hasToken: !!token });
-        
+
         // 토큰이 없으면 서버 인증 시도 (쿠키 기반)
         if (!token) {
           console.log('🔍 CalendarPage 토큰 없음 - 서버 인증 시도 (쿠키 기반)');
@@ -239,33 +245,42 @@ export default function CalendarPage() {
 
         try {
           console.log('🔍 CalendarPage 서버 인증 확인 중...');
-          
-          const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000';
-          
+
+          const apiBaseUrl =
+            process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000';
+
           const response = await fetch(`${apiBaseUrl}/api/auth/me`, {
             method: 'GET',
             credentials: 'include',
             headers: {
               'Content-Type': 'application/json',
-              ...(token && { 'Authorization': `Bearer ${token}` }),
+              ...(token && { Authorization: `Bearer ${token}` }),
             },
           });
-          
+
           if (response.ok) {
             const userData = await response.json();
-            console.log('✅ CalendarPage 서버 인증 성공:', userData.data.email ? `${userData.data.email.substring(0, 3)}***@${userData.data.email.split('@')[1]}` : '사용자');
-            
+            console.log(
+              '✅ CalendarPage 서버 인증 성공:',
+              userData.data.email
+                ? `${userData.data.email.substring(0, 3)}***@${userData.data.email.split('@')[1]}`
+                : '사용자',
+            );
+
             // Zustand 스토어에 로그인 정보 저장
             const { login } = useAuthStore.getState();
-            login({
-              id: userData.data.user_id,
-              email: userData.data.email,
-              name: userData.data.nickname,
-              profileImage: '',
-              provider: userData.data.provider || 'email',
-              createdAt: userData.data.created_at || new Date().toISOString(),
-            }, 'cookie-based-auth');
-            
+            login(
+              {
+                id: userData.data.user_id,
+                email: userData.data.email,
+                name: userData.data.nickname,
+                profileImage: '',
+                provider: userData.data.provider || 'email',
+                createdAt: userData.data.created_at || new Date().toISOString(),
+              },
+              'cookie-based-auth',
+            );
+
             // 로딩 완료
             setIsLoading(false);
             setHasChecked(true);

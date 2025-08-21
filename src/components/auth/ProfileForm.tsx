@@ -92,7 +92,9 @@ export default function ProfileForm() {
                       height={192}
                     />
                   ) : (
-                    <span className="text-6xl" role="img" aria-label="카메라">📷</span>
+                    <span className="text-6xl" role="img" aria-label="카메라">
+                      📷
+                    </span>
                   )}
                 </div>
                 <div className="absolute inset-0 bg-black/40 flex items-center justify-center rounded-xl opacity-0 group-hover:opacity-100 transition-opacity">

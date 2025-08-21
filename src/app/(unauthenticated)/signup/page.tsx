@@ -1,7 +1,7 @@
 'use client';
 
-import SignupForm from '@/components/auth/SignupForm';
 import { useTheme } from 'next-themes';
+import SignupForm from '@/components/auth/SignupForm';
 
 export default function SignupPage() {
   const { resolvedTheme } = useTheme();

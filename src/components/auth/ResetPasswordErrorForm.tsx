@@ -18,7 +18,9 @@ export default function ResetPasswordErrorForm() {
       {/* 에러 아이콘 */}
       <div className="flex justify-center">
         <div className="w-20 h-20 bg-red-50 dark:bg-red-900/20 rounded-full flex items-center justify-center">
-          <span className="text-4xl" role="img" aria-label="경고">⚠️</span>
+          <span className="text-4xl" role="img" aria-label="경고">
+            ⚠️
+          </span>
         </div>
       </div>
 

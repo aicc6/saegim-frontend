@@ -1,7 +1,7 @@
 'use client';
 
-import LoginForm from '@/components/individual/smj/LoginForm';
 import { useTheme } from 'next-themes';
+import LoginForm from '@/components/individual/smj/LoginForm';
 
 export default function LoginPage() {
   const { resolvedTheme } = useTheme();

@@ -31,7 +31,9 @@ export default function ResetPasswordForm() {
       {/* 성공 아이콘 */}
       <div className="flex justify-center">
         <div className="w-20 h-20 bg-sage-50/20 dark:bg-sage-50/10 rounded-full flex items-center justify-center">
-          <span className="text-4xl" role="img" aria-label="이메일">✉️</span>
+          <span className="text-4xl" role="img" aria-label="이메일">
+            ✉️
+          </span>
         </div>
       </div>
 

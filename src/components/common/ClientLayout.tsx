@@ -1,13 +1,8 @@
 'use client';
 
 import { type ReactNode, useEffect, useState } from 'react';
-import { useTheme } from 'next-themes';
 
-export default function ClientLayout({
-  children,
-}: {
-  children: ReactNode;
-}) {
+export default function ClientLayout({ children }: { children: ReactNode }) {
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {

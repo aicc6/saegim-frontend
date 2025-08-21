@@ -1,7 +1,7 @@
 'use client';
 
-import ForgotPasswordForm from '@/components/auth/ForgotPasswordForm';
 import { useTheme } from 'next-themes';
+import ForgotPasswordForm from '@/components/auth/ForgotPasswordForm';
 
 export default function ForgotPasswordPage() {
   const { resolvedTheme } = useTheme();

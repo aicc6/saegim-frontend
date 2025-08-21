@@ -132,11 +132,7 @@ export default function SupportForm() {
         </div>
 
         {/* 전송 버튼 */}
-        <Button
-          onClick={handleSubmit}
-          className="w-full"
-          size="lg"
-        >
+        <Button onClick={handleSubmit} className="w-full" size="lg">
           전송하기
         </Button>
       </div>

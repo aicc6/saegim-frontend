@@ -80,7 +80,10 @@ export function useNotifications(): UseNotificationsReturn {
         } else {
           // 초기 더미 데이터 설정 (개발용)
           setNotifications(initialNotifications);
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(initialNotifications));
+          localStorage.setItem(
+            STORAGE_KEY,
+            JSON.stringify(initialNotifications),
+          );
         }
       } catch (error) {
         console.error('Failed to load notifications:', error);
@@ -112,35 +115,35 @@ export function useNotifications(): UseNotificationsReturn {
         type: params.type || 'info',
       };
 
-      setNotifications(prev => {
+      setNotifications((prev) => {
         const updated = [newNotification, ...prev];
         saveToStorage(updated);
         return updated;
       });
     },
-    [saveToStorage]
+    [saveToStorage],
   );
 
   // 알림을 읽음으로 표시
   const markAsRead = useCallback(
     (id: string) => {
-      setNotifications(prev => {
-        const updated = prev.map(notification =>
+      setNotifications((prev) => {
+        const updated = prev.map((notification) =>
           notification.id === id
             ? { ...notification, isRead: true }
-            : notification
+            : notification,
         );
         saveToStorage(updated);
         return updated;
       });
     },
-    [saveToStorage]
+    [saveToStorage],
   );
 
   // 모든 알림을 읽음으로 표시
   const markAllAsRead = useCallback(() => {
-    setNotifications(prev => {
-      const updated = prev.map(notification => ({
+    setNotifications((prev) => {
+      const updated = prev.map((notification) => ({
         ...notification,
         isRead: true,
       }));
@@ -152,13 +155,13 @@ export function useNotifications(): UseNotificationsReturn {
   // 알림 삭제
   const deleteNotification = useCallback(
     (id: string) => {
-      setNotifications(prev => {
-        const updated = prev.filter(notification => notification.id !== id);
+      setNotifications((prev) => {
+        const updated = prev.filter((notification) => notification.id !== id);
         saveToStorage(updated);
         return updated;
       });
     },
-    [saveToStorage]
+    [saveToStorage],
   );
 
   // 모든 알림 삭제
@@ -168,7 +171,7 @@ export function useNotifications(): UseNotificationsReturn {
   }, [saveToStorage]);
 
   // 읽지 않은 알림 개수
-  const unreadCount = notifications.filter(n => !n.isRead).length;
+  const unreadCount = notifications.filter((n) => !n.isRead).length;
 
   return {
     notifications,

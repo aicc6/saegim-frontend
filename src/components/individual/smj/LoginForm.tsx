@@ -11,7 +11,7 @@ export default function LoginForm() {
   const router = useRouter();
   const { toast } = useToast();
   const { login } = useAuthStore();
-  
+
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -34,7 +34,7 @@ export default function LoginForm() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     // 데모 계정 로그인 체크 (기존 기능 유지)
     if (
       formData.email === DEMO_ACCOUNT.email &&
@@ -44,39 +44,42 @@ export default function LoginForm() {
       router.push('/');
       return;
     }
-    
+
     setIsLoading(true);
-    
+
     try {
       const response = await authApi.login({
         email: formData.email,
         password: formData.password,
       });
-      
+
       // 로그인 성공 시 사용자 정보를 스토어에 저장
-      const userData = (response.data as any);
-      login({
-        id: userData.user_id,
-        email: userData.email,
-        name: userData.nickname, // 백엔드에서는 nickname, 프론트엔드에서는 name
-        profileImage: '',
-        provider: 'email',
-        createdAt: new Date().toISOString(),
-      }, 'email-login');
-      
+      const userData = response.data as any;
+      login(
+        {
+          id: userData.user_id,
+          email: userData.email,
+          name: userData.nickname, // 백엔드에서는 nickname, 프론트엔드에서는 name
+          profileImage: '',
+          provider: 'email',
+          createdAt: new Date().toISOString(),
+        },
+        'email-login',
+      );
+
       toast({
         title: '로그인 성공',
         description: '새김에 오신 것을 환영합니다!',
         variant: 'default',
       });
-      
+
       router.push('/');
-      
     } catch (error: any) {
       console.error('로그인 실패:', error);
       toast({
         title: '로그인 실패',
-        description: error.response?.data?.detail || '로그인 중 오류가 발생했습니다.',
+        description:
+          error.response?.data?.detail || '로그인 중 오류가 발생했습니다.',
         variant: 'destructive',
       });
     } finally {

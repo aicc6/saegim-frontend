@@ -43,7 +43,7 @@ export default function ChangeEmailForm() {
               프로필을 변경하기 위해 현재 비밀번호를 입력해주세요
             </p>
           </div>
-          
+
           <div>
             <input
               type="password"
@@ -53,12 +53,8 @@ export default function ChangeEmailForm() {
               placeholder="현재 비밀번호를 입력하세요"
             />
           </div>
-          
-          <Button
-            onClick={handlePasswordVerify}
-            className="w-full"
-            size="lg"
-          >
+
+          <Button onClick={handlePasswordVerify} className="w-full" size="lg">
             확인
           </Button>
         </>
@@ -73,7 +69,7 @@ export default function ChangeEmailForm() {
               닉네임과 이메일 정보를 변경할 수 있습니다
             </p>
           </div>
-          
+
           <div className="space-y-4">
             {/* 닉네임 입력 */}
             <div>
@@ -111,11 +107,7 @@ export default function ChangeEmailForm() {
               />
             </div>
 
-            <Button
-              onClick={handleProfileUpdate}
-              className="w-full"
-              size="lg"
-            >
+            <Button onClick={handleProfileUpdate} className="w-full" size="lg">
               프로필 업데이트
             </Button>
           </div>

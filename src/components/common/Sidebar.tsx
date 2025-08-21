@@ -41,31 +41,31 @@ export function Sidebar() {
     try {
       // 백엔드에 로그아웃 요청
       await authApi.logout();
-      
+
       // 클라이언트 상태 정리
       logout();
-      
+
       // 성공 토스트 표시
       toast({
         title: '로그아웃 완료',
         description: '안전하게 로그아웃되었습니다.',
         variant: 'default',
       });
-      
+
       // 로그인 페이지로 리다이렉트
       router.push('/login');
     } catch (error) {
       console.error('로그아웃 처리 중 오류:', error);
       // 에러가 발생해도 클라이언트 상태는 정리하고 로그인 페이지로 이동
       logout();
-      
+
       // 에러 토스트 표시
       toast({
         title: '로그아웃 완료',
         description: '클라이언트 상태가 정리되었습니다.',
         variant: 'default',
       });
-      
+
       router.push('/login');
     }
   };
@@ -268,7 +268,7 @@ export function Sidebar() {
                 <User className="mr-4 h-6 w-6" />
                 프로필
               </Link>
-              
+
               <button
                 onClick={() => {
                   handleLogout();
@@ -284,7 +284,7 @@ export function Sidebar() {
                 <LogOut className="h-6 w-6" />
               </button>
             </div>
-            
+
             {/* 기존 네비게이션 링크들 */}
             {navigation.slice(0, 5).map((item) => {
               const isActive = pathname === item.href;

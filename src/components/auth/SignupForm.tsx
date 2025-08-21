@@ -8,7 +8,7 @@ import { useToast } from '@/hooks/use-toast';
 export default function SignupForm() {
   const router = useRouter();
   const { toast } = useToast();
-  
+
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -47,7 +47,7 @@ export default function SignupForm() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!emailVerified || !nicknameChecked) {
       toast({
         title: '입력 확인 필요',
@@ -67,30 +67,30 @@ export default function SignupForm() {
       });
       return;
     }
-    
+
     setIsLoading(true);
-    
+
     try {
       const response = await authApi.signup({
         email: formData.email,
         password: formData.password,
         nickname: formData.nickname,
       });
-      
+
       toast({
         title: '회원가입 성공',
         description: '새김에 가입해주셔서 감사합니다!',
         variant: 'default',
       });
-      
+
       // 로그인 페이지로 이동
       router.push('/login');
-      
     } catch (error: any) {
       console.error('회원가입 실패:', error);
       toast({
         title: '회원가입 실패',
-        description: error.response?.data?.detail || '회원가입 중 오류가 발생했습니다.',
+        description:
+          error.response?.data?.detail || '회원가입 중 오류가 발생했습니다.',
         variant: 'destructive',
       });
     } finally {
@@ -107,13 +107,13 @@ export default function SignupForm() {
       });
       return;
     }
-    
+
     setIsSendingCode(true);
-    
+
     try {
       // 먼저 이메일 중복 확인
       const emailCheckResponse = await authApi.checkEmail(formData.email);
-      
+
       if (!(emailCheckResponse.data as any).available) {
         toast({
           title: '이메일 중복',
@@ -122,22 +122,23 @@ export default function SignupForm() {
         });
         return;
       }
-      
+
       // 인증 코드 발송
       await authApi.sendVerificationEmail({ email: formData.email });
-      
+
       setCodeSent(true);
       toast({
         title: '인증 코드 발송',
         description: '이메일로 인증 코드가 발송되었습니다.',
         variant: 'default',
       });
-      
     } catch (error: any) {
       console.error('인증 코드 발송 실패:', error);
       toast({
         title: '인증 코드 발송 실패',
-        description: error.response?.data?.detail || '인증 코드 발송 중 오류가 발생했습니다.',
+        description:
+          error.response?.data?.detail ||
+          '인증 코드 발송 중 오류가 발생했습니다.',
         variant: 'destructive',
       });
     } finally {
@@ -154,7 +155,7 @@ export default function SignupForm() {
       });
       return;
     }
-    
+
     if (formData.verificationCode.length !== 6) {
       toast({
         title: '인증 코드 형식 오류',
@@ -163,27 +164,27 @@ export default function SignupForm() {
       });
       return;
     }
-    
+
     setIsVerifyingCode(true);
-    
+
     try {
       await authApi.verifyEmail({
         email: formData.email,
         verification_code: formData.verificationCode,
       });
-      
+
       setEmailVerified(true);
       toast({
         title: '이메일 인증 완료',
         description: '이메일 인증이 완료되었습니다.',
         variant: 'default',
       });
-      
     } catch (error: any) {
       console.error('인증 코드 확인 실패:', error);
       toast({
         title: '인증 실패',
-        description: error.response?.data?.detail || '인증 코드가 올바르지 않습니다.',
+        description:
+          error.response?.data?.detail || '인증 코드가 올바르지 않습니다.',
         variant: 'destructive',
       });
     } finally {
@@ -211,10 +212,10 @@ export default function SignupForm() {
       });
       return;
     }
-    
+
     try {
       const response = await authApi.checkNickname(formData.nickname);
-      
+
       if ((response.data as any).available) {
         setNicknameChecked(true);
         toast({
@@ -304,7 +305,11 @@ export default function SignupForm() {
               className="px-4 py-3 text-white dark:text-text-dark-on-color rounded-lg hover:opacity-90 active:opacity-100 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 text-sm font-medium shadow-sm hover:shadow-md focus:outline-none focus:ring-2 focus:ring-sage-50 dark:focus:ring-border-dark-focus focus:ring-offset-2 dark:focus:ring-offset-background-dark-secondary"
               style={{ backgroundColor: '#5C8D89' }}
             >
-              {isSendingCode ? '발송중...' : emailVerified ? '인증완료' : '인증'}
+              {isSendingCode
+                ? '발송중...'
+                : emailVerified
+                  ? '인증완료'
+                  : '인증'}
             </button>
           </div>
         </div>
@@ -327,7 +332,11 @@ export default function SignupForm() {
               <button
                 type="button"
                 onClick={handleVerifyCode}
-                disabled={!formData.verificationCode || formData.verificationCode.length !== 6 || isVerifyingCode}
+                disabled={
+                  !formData.verificationCode ||
+                  formData.verificationCode.length !== 6 ||
+                  isVerifyingCode
+                }
                 className="px-4 py-3 text-white dark:text-text-dark-on-color rounded-lg hover:opacity-90 active:opacity-100 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 text-sm font-medium shadow-sm hover:shadow-md focus:outline-none focus:ring-2 focus:ring-sage-50 dark:focus:ring-border-dark-focus focus:ring-offset-2 dark:focus:ring-offset-background-dark-secondary"
                 style={{ backgroundColor: '#5C8D89' }}
               >
