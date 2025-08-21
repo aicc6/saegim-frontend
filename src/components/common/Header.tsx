@@ -6,7 +6,7 @@ import Image from 'next/image';
 import { useEffect, useState } from 'react';
 import { useTheme } from 'next-themes';
 import { Button } from '../ui/button';
-import { ThemeToggle } from '../index';
+import ThemeToggle from '../ui/custom/ThemeToggle';
 
 export default function Header() {
   const { resolvedTheme } = useTheme();

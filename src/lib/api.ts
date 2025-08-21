@@ -4,7 +4,7 @@
 
 import { DiaryListEntry } from '@/types/diary';
 
-const API_BASE_URL =
+export const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000';
 
 export interface ApiResponse<T> {
@@ -44,6 +44,7 @@ class ApiClient {
     });
 
     const defaultOptions: RequestInit = {
+      credentials: 'include', // 모든 API 호출에 쿠키 포함
       headers: {
         'Content-Type': 'application/json',
         ...options.headers,
@@ -125,7 +126,20 @@ export const apiClient = new ApiClient(API_BASE_URL);
 export const authApi = {
   // 구글 로그인 시작 (백엔드로 리다이렉트)
   googleLogin: () => {
-    window.location.href = `${API_BASE_URL}/auth/google/login`;
+    window.location.href = `${API_BASE_URL}/api/auth/google/login`;
+  },
+
+  // 로그아웃
+  logout: async () => {
+    try {
+      // 백엔드에 로그아웃 요청 (쿠키 기반 세션 정리)
+      await apiClient.post('/api/auth/logout', {});
+      return { success: true };
+    } catch (error) {
+      console.error('로그아웃 API 호출 실패:', error);
+      // API 호출이 실패해도 클라이언트 상태는 정리
+      return { success: true };
+    }
   },
 };
 
@@ -153,6 +167,18 @@ export const diaryApi = {
 
   // 특정 다이어리 조회
   getDiary: (id: string) => apiClient.get(`/api/diary/${id}`),
+
+  // 다이어리 수정
+  updateDiary: (
+    id: string,
+    data: {
+      title?: string;
+      content?: string;
+      user_emotion?: string;
+      is_public?: boolean;
+      keywords?: string[];
+    },
+  ) => apiClient.put(`/api/diary/${id}`, data),
 
   // 캘린더용 다이어리 조회
   getCalendarDiaries: (userId: string, startDate: string, endDate: string) =>

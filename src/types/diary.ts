@@ -20,6 +20,7 @@ export interface DiaryEntry {
 export interface DiaryListEntry {
   id: string;
   title: string;
+  content: string; // 수정된 본문 내용을 표시하기 위해 content 필드 추가
   ai_generated_text: string | null; // ai_generated_text 필드 추가
   user_emotion: string | null;
   ai_emotion: string | null;
@@ -31,10 +32,12 @@ export interface DiaryListEntry {
 export interface DiaryFilters {
   page?: number;
   page_size?: number;
+  searchTerm?: string;
   emotion?: string;
   is_public?: boolean;
   start_date?: string;
   end_date?: string;
+  sort_order?: 'asc' | 'desc';
 }
 
 export interface CalendarDateRange {

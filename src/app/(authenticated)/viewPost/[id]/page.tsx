@@ -19,7 +19,7 @@ const emotionLabels = {
 export default function ViewPostPage() {
   const params = useParams();
   const router = useRouter();
-  const { diaries, currentDiary, fetchDiary } = useDiaryStore();
+  const { diaries, currentDiary, fetchDiary, updateDiary } = useDiaryStore();
 
   const [entry, setEntry] = useState<DiaryEntry | null>(null);
   const [isEditing, setIsEditing] = useState(false);
@@ -66,18 +66,53 @@ export default function ViewPostPage() {
     }
   }, [currentDiary]);
 
-  const handleEdit = () => {
+  const handleEdit = async () => {
     if (isEditing && entry) {
-      // 수정 완료 - 현재는 로컬 상태만 업데이트
-      const updatedEntry = {
-        ...entry,
-        title: editedTitle,
-        content: editedContent,
-      };
-      // updateEntry(entry.id, updatedEntry as any); // 백엔드 API 구조와 스토어 타입 불일치로 인한 임시 캐스팅
-      setEntry(updatedEntry);
-      setIsEditing(false);
-      console.log('📝 ViewPost: 편집 완료 (로컬 상태만 업데이트)');
+      try {
+        // 백엔드 API 호출하여 다이어리 수정
+        await updateDiary(entry.id, {
+          title: editedTitle,
+          content: editedContent,
+        });
+
+        // 수정 완료 후 편집 모드 종료
+        setIsEditing(false);
+        console.log('📝 ViewPost: 편집 완료');
+
+        // 로컬 상태 즉시 업데이트 (UI 반응성 향상)
+        const updatedEntry = {
+          ...entry,
+          title: editedTitle,
+          content: editedContent,
+        };
+        setEntry(updatedEntry);
+
+        // DB에서 최신 데이터 가져오기 (데이터 동기화)
+        await fetchDiary(entryId);
+
+        // 캘린더 데이터도 새로고침 (수정된 내용이 캘린더에 반영되도록)
+        const currentDate = new Date(entry.created_at);
+        const year = currentDate.getFullYear();
+        const month = currentDate.getMonth() + 1;
+        const startDate = new Date(year, month - 1, 1);
+        const endDate = new Date(year, month, 0);
+
+        const startDateStr = startDate.toISOString().split('T')[0];
+        const endDateStr = endDate.toISOString().split('T')[0];
+
+        // 캘린더용 다이어리 새로고침
+        const { fetchCalendarDiaries } = useDiaryStore.getState();
+        await fetchCalendarDiaries(entry.user_id, {
+          startDate: startDateStr,
+          endDate: endDateStr,
+        });
+
+        // 성공 메시지 표시
+        alert('다이어리가 성공적으로 수정되었습니다.');
+      } catch (error) {
+        console.error('📝 ViewPost: 편집 실패', error);
+        alert('다이어리 수정에 실패했습니다. 다시 시도해주세요.');
+      }
     } else {
       // 수정 모드 시작
       setIsEditing(true);
@@ -145,7 +180,7 @@ export default function ViewPostPage() {
     <div className="min-h-screen bg-background-primary flex flex-col">
       {/* 페이지 헤더 */}
       <PageHeader
-        title={'글 편집/ 저장'}
+        title={'글 편집 / 저장'}
         subtitle={`${new Date(entry.created_at).getMonth() + 1}월 ${new Date(entry.created_at).getDate()}일`}
         actions={
           <Button
