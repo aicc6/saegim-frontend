@@ -196,10 +196,16 @@ export function Calendar({
     setCurrentDate((prev) => {
       const newDate = new Date(prev);
       newDate.setMonth(prev.getMonth() + (direction === 'next' ? 1 : -1));
-      onDateChange?.(newDate);
       return newDate;
     });
   };
+
+  // currentDate가 변경될 때 onDateChange 호출
+  useEffect(() => {
+    if (onDateChange) {
+      onDateChange(currentDate);
+    }
+  }, [currentDate, onDateChange]);
 
   const handleDateClick = (dateStr: string) => {
     // 클릭한 날짜 파싱
@@ -215,7 +221,7 @@ export function Calendar({
     if (clickedMonth !== currentMonth || clickedYear !== currentYear) {
       const newDate = new Date(clickedYear, clickedMonth, 1);
       setCurrentDate(newDate);
-      onDateChange?.(newDate);
+      // onDateChange는 useEffect에서 자동으로 호출됨
     }
 
     setSelectedDate(dateStr);

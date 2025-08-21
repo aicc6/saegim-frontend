@@ -8,6 +8,7 @@ import { KeywordBarChart } from '@/components/charts/KeywordBarChart';
 import PageHeader from '@/components/common/PageHeader';
 import { Button } from '@/components/ui/button';
 import { useDiaryStore } from '@/stores/diary';
+import { useAuthStore } from '@/stores/auth';
 import {
   EmotionType,
   EMOTION_COLORS,
@@ -19,11 +20,21 @@ import { cn } from '@/lib/utils';
 export default function CalendarPage() {
   const router = useRouter();
   const { diaries, fetchDiaries, fetchCalendarDiaries } = useDiaryStore();
+  const { user, isAuthenticated } = useAuthStore();
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [viewDate, setViewDate] = useState(new Date());
 
-  // 실제 사용자 ID (데이터베이스에 존재하는 UUID 사용)
-  const userId = '2fb9da3c-f58d-45d9-af8d-7031dd27d3b4'; // 실제 UUID 형식 사용
+  // 로그인한 사용자의 ID
+  const userId = user?.id;
+
+  // 인증 상태 확인
+  useEffect(() => {
+    if (!isAuthenticated || !userId) {
+      console.log('❌ CalendarPage: 인증되지 않음 또는 사용자 ID 없음');
+      router.push('/login');
+      return;
+    }
+  }, [isAuthenticated, userId, router]);
 
   // 날짜 범위 계산 - useMemo로 최적화하여 불필요한 재계산 방지
   const dateRange = useMemo(() => {
@@ -52,19 +63,34 @@ export default function CalendarPage() {
 
   // 월별 데이터 로딩 함수
   const loadMonthData = useCallback(async () => {
+    if (!userId) {
+      console.log(
+        '❌ CalendarPage: 사용자 ID가 없어 데이터를 로드할 수 없습니다.',
+      );
+      return;
+    }
+
     try {
       console.log('📅 CalendarPage: 월별 데이터 로딩', {
+        userId,
         year: viewDate.getFullYear(),
         month: viewDate.getMonth() + 1,
         startDate: dateRange.startDate,
         endDate: dateRange.endDate,
       });
 
-      // 실제 백엔드 API 호출
+      // 실제 백엔드 API 호출 (user_id 파라미터 추가)
       const apiBaseUrl =
         process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000';
+
+      const params = new URLSearchParams({
+        user_id: userId,
+        start_date: dateRange.startDate,
+        end_date: dateRange.endDate,
+      });
+
       const response = await fetch(
-        `${apiBaseUrl}/api/diary/?start_date=${dateRange.startDate}&end_date=${dateRange.endDate}`,
+        `${apiBaseUrl}/api/diary/?${params.toString()}`,
       );
 
       if (response.ok) {
@@ -88,7 +114,7 @@ export default function CalendarPage() {
         isLoading: false,
       });
     }
-  }, [viewDate, dateRange]);
+  }, [userId, viewDate, dateRange]);
 
   // 현재 보고 있는 월의 데이터
   const currentMonthData = useMemo(() => {
@@ -161,18 +187,41 @@ export default function CalendarPage() {
       totalEntries,
       topEmotion,
     };
-  }, [viewDate, diaries]);
+  }, [diaries, viewDate]);
 
-  // 선택된 날짜의 다이어리들
+  // 선택된 날짜의 다이어리
   const selectedDateEntries = useMemo(() => {
     if (!selectedDate) return [];
-    return diaries.filter((diary) => diary.created_at.startsWith(selectedDate));
-  }, [selectedDate, diaries]);
 
-  // 월별 데이터 로딩 - 의존성 배열 최적화
+    return diaries.filter((diary) => {
+      const diaryDate = new Date(diary.created_at);
+      const selectedDateObj = new Date(selectedDate);
+      return (
+        diaryDate.getFullYear() === selectedDateObj.getFullYear() &&
+        diaryDate.getMonth() === selectedDateObj.getMonth() &&
+        diaryDate.getDate() === selectedDateObj.getDate()
+      );
+    });
+  }, [diaries, selectedDate]);
+
+  // 월 변경 시 데이터 로드
   useEffect(() => {
-    loadMonthData();
-  }, [loadMonthData]); // loadMonthData 함수가 변경될 때마다 실행
+    if (userId) {
+      loadMonthData();
+    }
+  }, [loadMonthData, userId]);
+
+  // 사용자 ID가 없으면 로딩 표시
+  if (!userId) {
+    return (
+      <div className="min-h-screen bg-background-primary flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-sage-500 mx-auto mb-4"></div>
+          <p className="text-text-secondary">사용자 정보를 불러오는 중...</p>
+        </div>
+      </div>
+    );
+  }
 
   const handleDateSelect = (date: string) => {
     setSelectedDate(date);
@@ -187,7 +236,9 @@ export default function CalendarPage() {
   };
 
   const handleEntryClick = (entryId: string) => {
-    router.push(`/viewPost/${entryId}`);
+    // 현재 페이지 경로를 쿼리 파라미터로 전달
+    const currentPath = window.location.pathname;
+    router.push(`/viewPost/${entryId}?from=${encodeURIComponent(currentPath)}`);
   };
 
   return (

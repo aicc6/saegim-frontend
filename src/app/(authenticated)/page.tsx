@@ -1,12 +1,12 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuthStore } from '@/stores/auth';
 import { API_BASE_URL } from '@/lib/api';
 import CreateAi from '@/components/individual/shw/CreateAi';
 
-export default function Home() {
+function HomeContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user, isAuthenticated, login, logout } = useAuthStore();
@@ -47,7 +47,7 @@ export default function Home() {
               ...(token && { 'Authorization': `Bearer ${token}` }), // Bearer 토큰 포함 (이메일 로그인용)
             },
           });
-          
+
           if (response.ok) {
             const userData = await response.json();
             console.log('✅ 인증 성공:', userData.data.email ? `${userData.data.email.substring(0, 3)}***@${userData.data.email.split('@')[1]}` : '사용자');
@@ -66,7 +66,7 @@ export default function Home() {
             if (success === 'true') {
               router.replace('/');
             }
-            
+
             setHasChecked(true);
             setIsLoading(false);
           } else {
@@ -125,5 +125,22 @@ export default function Home() {
         </main>
       </div>
     </div>
+  );
+}
+
+export default function Home() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center bg-sage-20">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-sage-50 mx-auto mb-4"></div>
+            <p className="text-sage-80 dark:text-gray-300">로딩 중...</p>
+          </div>
+        </div>
+      }
+    >
+      <HomeContent />
+    </Suspense>
   );
 }
