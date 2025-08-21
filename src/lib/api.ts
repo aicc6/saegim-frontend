@@ -48,21 +48,21 @@ class ApiClient {
 
     // JWT 토큰 가져오기 (localStorage)
     const token = localStorage.getItem('access_token');
-    
+
     console.log('🌐 ApiClient: 요청 시작', {
       url,
       method: options.method || 'GET',
       hasAuthHeader: !!options.headers && 'Authorization' in options.headers,
       hasToken: !!token,
     });
-    
+
     const defaultOptions: RequestInit = {
       credentials: 'include', // 모든 API 호출에 쿠키 포함 (Google OAuth용)
       headers: {
         'Content-Type': 'application/json; charset=utf-8',
-        'Accept': 'application/json; charset=utf-8',
+        Accept: 'application/json; charset=utf-8',
         'Accept-Charset': 'utf-8',
-        ...(token && { 'Authorization': `Bearer ${token}` }), // Bearer 토큰 포함 (이메일 로그인용)
+        ...(token && { Authorization: `Bearer ${token}` }), // Bearer 토큰 포함 (이메일 로그인용)
         ...options.headers,
       },
       ...options,
@@ -150,11 +150,11 @@ export const authApi = {
     try {
       // 백엔드에 로그아웃 요청 (쿠키 기반 세션 정리)
       await apiClient.post('/api/auth/logout', {});
-      
+
       // 클라이언트 측 토큰 정리
       localStorage.removeItem('access_token');
       localStorage.removeItem('refresh_token');
-      
+
       return { success: true };
     } catch (error) {
       console.error('로그아웃 API 호출 실패:', error);
@@ -185,18 +185,18 @@ export const authApi = {
   },
 
   // 이메일 로그인
-  login: async (data: {
-    email: string;
-    password: string;
-  }) => {
-    const response = await apiClient.post<LoginResponse>('/api/auth/login', data);
-    
+  login: async (data: { email: string; password: string }) => {
+    const response = await apiClient.post<LoginResponse>(
+      '/api/auth/login',
+      data,
+    );
+
     // JWT 토큰 저장
     if (response.data && response.data.access_token) {
       localStorage.setItem('access_token', response.data.access_token);
       localStorage.setItem('refresh_token', response.data.refresh_token);
     }
-    
+
     return response;
   },
 
@@ -209,6 +209,11 @@ export const authApi = {
   verifyEmail: async (data: { email: string; verification_code: string }) => {
     return apiClient.post('/api/auth/verify-email', data);
   },
+
+  // 현재 사용자 정보 조회
+  getCurrentUser: async () => {
+    return apiClient.get('/api/auth/me');
+  },
 };
 
 // 다이어리 API 엔드포인트
@@ -218,9 +223,9 @@ export const diaryApi = {
     page?: number;
     page_size?: number;
     emotion?: string;
-    is_public?: boolean;
     start_date?: string;
     end_date?: string;
+    sort_order?: string;
   }) => {
     const stringParams: Record<string, string> = {};
     if (params) {
@@ -248,9 +253,9 @@ export const diaryApi = {
     },
   ) => apiClient.put(`/api/diary/${id}`, data),
 
-  // 캘린더용 다이어리 조회
-  getCalendarDiaries: (userId: string, startDate: string, endDate: string) =>
-    apiClient.get(`/api/diary/calendar/${userId}`, {
+  // 캘린더용 다이어리 조회 (JWT 기반, user_id 파라미터 제거)
+  getCalendarDiaries: (startDate: string, endDate: string) =>
+    apiClient.get('/api/diary/calendar', {
       start_date: startDate,
       end_date: endDate,
     }),

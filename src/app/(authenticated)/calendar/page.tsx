@@ -23,18 +23,11 @@ export default function CalendarPage() {
   const { user, isAuthenticated } = useAuthStore();
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [viewDate, setViewDate] = useState(new Date());
+  const [isLoading, setIsLoading] = useState(true);
+  const [hasChecked, setHasChecked] = useState(false);
 
   // 로그인한 사용자의 ID
   const userId = user?.id;
-
-  // 인증 상태 확인
-  useEffect(() => {
-    if (!isAuthenticated || !userId) {
-      console.log('❌ CalendarPage: 인증되지 않음 또는 사용자 ID 없음');
-      router.push('/login');
-      return;
-    }
-  }, [isAuthenticated, userId, router]);
 
   // 날짜 범위 계산 - useMemo로 최적화하여 불필요한 재계산 방지
   const dateRange = useMemo(() => {
@@ -50,52 +43,53 @@ export default function CalendarPage() {
     return { startDate: startDateStr, endDate: endDateStr };
   }, [viewDate.getFullYear(), viewDate.getMonth()]);
 
-  // 페이지 포커스 시 데이터 새로고침 (다이어리 수정 후 돌아왔을 때)
-  useEffect(() => {
-    const handleFocus = () => {
-      console.log('📅 CalendarPage: 페이지 포커스 감지, 데이터 새로고침');
-      loadMonthData();
-    };
-
-    window.addEventListener('focus', handleFocus);
-    return () => window.removeEventListener('focus', handleFocus);
-  }, []);
-
   // 월별 데이터 로딩 함수
   const loadMonthData = useCallback(async () => {
-    if (!userId) {
+    if (!isAuthenticated) {
       console.log(
-        '❌ CalendarPage: 사용자 ID가 없어 데이터를 로드할 수 없습니다.',
+        '❌ CalendarPage: 인증되지 않아 데이터를 로드할 수 없습니다.',
       );
       return;
     }
 
     try {
       console.log('📅 CalendarPage: 월별 데이터 로딩', {
-        userId,
         year: viewDate.getFullYear(),
         month: viewDate.getMonth() + 1,
         startDate: dateRange.startDate,
         endDate: dateRange.endDate,
       });
 
-      // 실제 백엔드 API 호출 (user_id 파라미터 추가)
+      // JWT 기반 API 호출 (user_id 파라미터 제거)
       const apiBaseUrl =
         process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000';
 
       const params = new URLSearchParams({
-        user_id: userId,
         start_date: dateRange.startDate,
         end_date: dateRange.endDate,
       });
 
+      // JWT 토큰 가져오기
+      const token = localStorage.getItem('access_token');
+
+      if (!token) {
+        console.log('❌ CalendarPage: JWT 토큰이 없습니다.');
+        return;
+      }
+
       const response = await fetch(
-        `${apiBaseUrl}/api/diary/?${params.toString()}`,
+        `${apiBaseUrl}/api/diary/calendar?${params.toString()}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        },
       );
 
       if (response.ok) {
         const result = await response.json();
-        console.log('📡 CalendarPage: 직접 API 호출 결과', result);
+        console.log('📡 CalendarPage: JWT 기반 API 호출 결과', result);
 
         // 스토어 상태 업데이트
         if (result.data && Array.isArray(result.data)) {
@@ -106,6 +100,10 @@ export default function CalendarPage() {
             error: null,
           });
         }
+      } else if (response.status === 401) {
+        console.log('❌ CalendarPage: JWT 토큰이 유효하지 않습니다.');
+        // 인증 실패 시 로그인 페이지로 리다이렉트
+        router.push('/login');
       }
     } catch (error) {
       console.error('❌ CalendarPage: API 호출 실패', error);
@@ -114,7 +112,7 @@ export default function CalendarPage() {
         isLoading: false,
       });
     }
-  }, [userId, viewDate, dateRange]);
+  }, [isAuthenticated, viewDate, dateRange, router]);
 
   // 현재 보고 있는 월의 데이터
   const currentMonthData = useMemo(() => {
@@ -204,15 +202,144 @@ export default function CalendarPage() {
     });
   }, [diaries, selectedDate]);
 
+  // 인증 상태 확인 - 메인 페이지와 동일한 로직
+  useEffect(() => {
+    console.log('🔄 CalendarPage useEffect 실행됨 - hasChecked:', hasChecked);
+    
+    if (hasChecked) {
+      console.log('⏭️ CalendarPage 이미 체크됨 - 스킵');
+      return;
+    }
+
+    const handleAuthCheck = async () => {
+      console.log('🚀 CalendarPage handleAuthCheck 시작');
+      try {
+        // 인증 상태 확인
+        console.log('🔍 CalendarPage 인증 상태 확인:', { isAuthenticated, hasUser: !!user });
+        
+        // 이미 인증된 상태라면 스킵
+        if (isAuthenticated && user) {
+          console.log('✅ CalendarPage 이미 인증됨 - 스킵');
+          setIsLoading(false);
+          setHasChecked(true);
+          return;
+        }
+        
+        // 토큰 존재 여부 확인 (localStorage)
+        const token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : null;
+        
+        console.log('🔍 CalendarPage 토큰 확인:', { hasToken: !!token });
+        
+        // 토큰이 없으면 서버 인증 시도 (쿠키 기반)
+        if (!token) {
+          console.log('🔍 CalendarPage 토큰 없음 - 서버 인증 시도 (쿠키 기반)');
+        } else {
+          console.log('✅ CalendarPage 토큰 존재 - 서버 인증 확인 중');
+        }
+
+        try {
+          console.log('🔍 CalendarPage 서버 인증 확인 중...');
+          
+          const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000';
+          
+          const response = await fetch(`${apiBaseUrl}/api/auth/me`, {
+            method: 'GET',
+            credentials: 'include',
+            headers: {
+              'Content-Type': 'application/json',
+              ...(token && { 'Authorization': `Bearer ${token}` }),
+            },
+          });
+          
+          if (response.ok) {
+            const userData = await response.json();
+            console.log('✅ CalendarPage 서버 인증 성공:', userData.data.email ? `${userData.data.email.substring(0, 3)}***@${userData.data.email.split('@')[1]}` : '사용자');
+            
+            // Zustand 스토어에 로그인 정보 저장
+            const { login } = useAuthStore.getState();
+            login({
+              id: userData.data.user_id,
+              email: userData.data.email,
+              name: userData.data.nickname,
+              profileImage: '',
+              provider: userData.data.provider || 'email',
+              createdAt: userData.data.created_at || new Date().toISOString(),
+            }, 'cookie-based-auth');
+            
+            // 로딩 완료
+            setIsLoading(false);
+            setHasChecked(true);
+          } else {
+            console.log('❌ CalendarPage 서버 인증 실패:', response.status);
+            // 서버 인증 실패 시 로그인 페이지로 이동
+            setHasChecked(true);
+            setIsLoading(false);
+            router.push('/login');
+          }
+        } catch (err) {
+          console.error('❌ CalendarPage 서버 인증 확인 실패:', err);
+          // 에러 발생 시 로그인 페이지로 이동
+          setHasChecked(true);
+          setIsLoading(false);
+          router.push('/login');
+        }
+      } catch (err) {
+        console.error('❌ CalendarPage 인증 체크 실패:', err);
+        setHasChecked(true);
+        setIsLoading(false);
+        router.push('/login');
+      }
+    };
+
+    // 약간의 지연을 두어 페이지 로딩 완료 후 인증 확인
+    const timer = setTimeout(() => {
+      console.log('⏰ CalendarPage 타이머 실행 - 인증 확인 시작');
+      handleAuthCheck();
+    }, 100);
+
+    return () => {
+      console.log('🧹 CalendarPage useEffect 정리 - 타이머 취소');
+      clearTimeout(timer);
+    };
+  }, []); // 의존성 배열을 비워서 컴포넌트 마운트 시에만 실행
+
+  // 페이지 포커스 시 데이터 새로고침 (다이어리 수정 후 돌아왔을 때)
+  useEffect(() => {
+    const handleFocus = () => {
+      console.log('📅 CalendarPage: 페이지 포커스 감지, 데이터 새로고침');
+      loadMonthData();
+    };
+
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
+  }, [loadMonthData]);
+
   // 월 변경 시 데이터 로드
   useEffect(() => {
-    if (userId) {
+    if (isAuthenticated) {
       loadMonthData();
     }
-  }, [loadMonthData, userId]);
+  }, [loadMonthData, isAuthenticated]);
+
+  // 인증 확인 완료 후 인증되지 않았을 때만 리다이렉트
+  if (!isAuthenticated || !user) {
+    return null; // router.push('/login')이 이미 실행됨
+  }
+
+  // 로딩 중일 때는 로딩 화면 표시
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background-primary flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-sage-500 mx-auto mb-4"></div>
+          <p className="text-text-secondary">인증 확인 중...</p>
+        </div>
+      </div>
+    );
+  }
 
   // 사용자 ID가 없으면 로딩 표시
-  if (!userId) {
+  if (!isAuthenticated) {
     return (
       <div className="min-h-screen bg-background-primary flex items-center justify-center">
         <div className="text-center">

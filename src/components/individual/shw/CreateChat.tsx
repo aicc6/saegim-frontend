@@ -130,7 +130,9 @@ export default function CreateChat() {
       addEntry(newEntry);
 
       // 생성된 엔트리의 편집 페이지로 이동
-      router.push(`/viewPost/${newEntry.id}`);
+      router.push(
+        `/viewPost/${newEntry.id}?from=${encodeURIComponent('/createChat')}`,
+      );
     },
     [addEntry, router],
   );

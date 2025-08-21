@@ -15,24 +15,32 @@ function AuthCallbackContent() {
         const error = searchParams.get('error');
         const message = searchParams.get('message');
         
+        console.log('🔍 콜백 파라미터:', { success, error, message });
+        
         // 로그인 실패 시
         if (error) {
           console.error('로그인 실패:', message);
+          setIsLoading(false);
           router.push('/login');
           return;
         }
         
         // 로그인 성공 시 메인 페이지로 리다이렉트
         if (success === 'true') {
+          console.log('✅ 로그인 성공 - 메인 페이지로 이동');
+          setIsLoading(false);
           // 백엔드에서 쿠키에 토큰을 설정했으므로 바로 메인 페이지로 리다이렉트
           router.push('/?success=true');
         } else {
+          console.log('❌ 잘못된 접근 - 로그인 페이지로 이동');
+          setIsLoading(false);
           // 잘못된 접근
           router.push('/login');
         }
         
       } catch (err) {
         console.error('콜백 처리 실패:', err);
+        setIsLoading(false);
         router.push('/login');
       }
     };
