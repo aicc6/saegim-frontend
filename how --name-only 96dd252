@@ -1,0 +1,10 @@
+[33m877b62b[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mdevelop[m[33m, [m[1;31morigin/develop[m[33m)[m Merge branch 'develop' of https://github.com/aicc6/saegim-frontend into develop
+[33m96dd252[m "로그아웃 및 인증 상태 관련 기능 추가"
+[33mcc7aa9d[m feat: Dockerfile에 환경변수 파일 복사 추가
+[33m11f4501[m Merge branch 'develop' into feature/sy
+[33m584bf44[m feat: 다이어리 수정 기능 추가 및 캘린더 데이터 새로고침 로직 개선
+[33meb3b78b[m feat: 알림 기능 추가 및 AuthenticatedHeader 컴포넌트 리팩토링
+[33m50e1954[m Merge branch 'develop' of https://github.com/aicc6/saegim-frontend into develop
+[33m5b4d308[m feat: 필터링 검색기능 벡엔드와 연결, 객체명을 post에서 diary로 변경
+[33m2ab0d14[m feat: AuthCallback 컴포넌트에 Suspense 추가 및 로딩 상태 처리 컴포넌트 구현
+[33m9772667[m style: PageHeader 및 Sidebar 컴포넌트의 레이아웃 수정 및 스타일 일관성 향상

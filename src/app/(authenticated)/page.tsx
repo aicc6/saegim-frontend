@@ -35,21 +35,33 @@ function HomeContent() {
         // 항상 서버에서 인증 상태를 확인 (로그아웃 후 쿠키 삭제 반영)
         try {
           console.log('🔍 인증 상태 확인 중...');
-          const response = await fetch(`${API_BASE_URL}/api/auth/google/me`, {
+          
+          // Bearer 토큰 가져오기
+          const token = localStorage.getItem('access_token');
+          
+          const response = await fetch(`${API_BASE_URL}/api/auth/me`, {
             method: 'GET',
-            credentials: 'include', // 쿠키 포함 (필수)
+            credentials: 'include', // 쿠키 포함 (Google OAuth용)
             headers: {
               'Content-Type': 'application/json',
+              ...(token && { 'Authorization': `Bearer ${token}` }), // Bearer 토큰 포함 (이메일 로그인용)
             },
           });
 
           if (response.ok) {
             const userData = await response.json();
-            console.log('✅ 인증 성공:', userData.user.email);
-
-            // Zustand 스토어에 로그인 정보 저장 (쿠키는 백엔드에서 관리)
-            login(userData.user, 'cookie-based-auth');
-
+            console.log('✅ 인증 성공:', userData.data.email ? `${userData.data.email.substring(0, 3)}***@${userData.data.email.split('@')[1]}` : '사용자');
+            
+            // Zustand 스토어에 로그인 정보 저장
+            login({
+              id: userData.data.user_id,
+              email: userData.data.email,
+              name: userData.data.nickname,
+              profileImage: '',
+              provider: userData.data.provider || 'email',
+              createdAt: userData.data.created_at || new Date().toISOString(),
+            }, token || 'cookie-based-auth');
+            
             // URL 파라미터 제거
             if (success === 'true') {
               router.replace('/');
@@ -61,6 +73,8 @@ function HomeContent() {
             console.log('❌ 인증 실패:', response.status);
             // 인증 실패 시 클라이언트 상태 정리 후 로그인 페이지로 리다이렉트
             logout(); // 클라이언트 상태 정리
+            localStorage.removeItem('access_token'); // localStorage 토큰도 정리
+            localStorage.removeItem('refresh_token');
             setHasChecked(true);
             router.push('/login');
             return;
@@ -69,6 +83,8 @@ function HomeContent() {
           console.error('❌ 인증 상태 확인 실패:', err);
           // 에러 시에도 클라이언트 상태 정리 후 로그인 페이지로 리다이렉트
           logout(); // 클라이언트 상태 정리
+          localStorage.removeItem('access_token'); // localStorage 토큰도 정리
+          localStorage.removeItem('refresh_token');
           setHasChecked(true);
           router.push('/login');
           return;

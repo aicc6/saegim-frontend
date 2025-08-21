@@ -15,6 +15,15 @@ export interface ApiResponse<T> {
   request_id: string;
 }
 
+export interface LoginResponse {
+  user_id: string;
+  email: string;
+  nickname: string;
+  message: string;
+  access_token: string;
+  refresh_token: string;
+}
+
 export interface PaginationInfo {
   page: number;
   page_size: number;
@@ -37,16 +46,23 @@ class ApiClient {
   ): Promise<ApiResponse<T>> {
     const url = `${this.baseURL}${endpoint}`;
 
+    // JWT 토큰 가져오기 (localStorage)
+    const token = localStorage.getItem('access_token');
+    
     console.log('🌐 ApiClient: 요청 시작', {
       url,
       method: options.method || 'GET',
-      headers: options.headers,
+      hasAuthHeader: !!options.headers && 'Authorization' in options.headers,
+      hasToken: !!token,
     });
-
+    
     const defaultOptions: RequestInit = {
-      credentials: 'include', // 모든 API 호출에 쿠키 포함
+      credentials: 'include', // 모든 API 호출에 쿠키 포함 (Google OAuth용)
       headers: {
-        'Content-Type': 'application/json',
+        'Content-Type': 'application/json; charset=utf-8',
+        'Accept': 'application/json; charset=utf-8',
+        'Accept-Charset': 'utf-8',
+        ...(token && { 'Authorization': `Bearer ${token}` }), // Bearer 토큰 포함 (이메일 로그인용)
         ...options.headers,
       },
       ...options,
@@ -68,9 +84,9 @@ class ApiClient {
       const data = await response.json();
 
       console.log('📊 ApiClient: 응답 데이터', {
-        data,
-        dataType: typeof data,
         hasData: !!data,
+        dataType: typeof data,
+        success: data?.success,
       });
 
       return data;
@@ -134,12 +150,64 @@ export const authApi = {
     try {
       // 백엔드에 로그아웃 요청 (쿠키 기반 세션 정리)
       await apiClient.post('/api/auth/logout', {});
+      
+      // 클라이언트 측 토큰 정리
+      localStorage.removeItem('access_token');
+      localStorage.removeItem('refresh_token');
+      
       return { success: true };
     } catch (error) {
       console.error('로그아웃 API 호출 실패:', error);
       // API 호출이 실패해도 클라이언트 상태는 정리
+      localStorage.removeItem('access_token');
+      localStorage.removeItem('refresh_token');
       return { success: true };
     }
+  },
+
+  // 회원가입
+  signup: async (data: {
+    email: string;
+    password: string;
+    nickname: string;
+  }) => {
+    return apiClient.post('/api/auth/signup', data);
+  },
+
+  // 이메일 중복 확인
+  checkEmail: async (email: string) => {
+    return apiClient.get(`/api/auth/check-email/${email}`);
+  },
+
+  // 닉네임 중복 확인
+  checkNickname: async (nickname: string) => {
+    return apiClient.get(`/api/auth/check-nickname/${nickname}`);
+  },
+
+  // 이메일 로그인
+  login: async (data: {
+    email: string;
+    password: string;
+  }) => {
+    const response = await apiClient.post<LoginResponse>('/api/auth/login', data);
+    
+    // JWT 토큰 저장
+    if (response.data && response.data.access_token) {
+      localStorage.setItem('access_token', response.data.access_token);
+      localStorage.setItem('refresh_token', response.data.refresh_token);
+    }
+    
+    return response;
+  },
+
+  // 이메일 인증 코드 발송
+  sendVerificationEmail: async (data: { email: string }) => {
+    return apiClient.post('/api/auth/send-verification-email', data);
+  },
+
+  // 이메일 인증 코드 확인
+  verifyEmail: async (data: { email: string; verification_code: string }) => {
+    return apiClient.post('/api/auth/verify-email', data);
   },
 };
 
