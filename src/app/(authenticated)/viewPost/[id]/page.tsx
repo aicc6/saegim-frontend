@@ -57,8 +57,9 @@ export default function ViewPostPage() {
 
     if (fromParam) {
       // 쿼리 파라미터에서 온 경우
-      setPreviousPath(decodeURIComponent(fromParam));
-      console.log('🔍 쿼리 파라미터에서 이전 경로 확인:', fromParam);
+      const decodedPath = decodeURIComponent(fromParam);
+      setPreviousPath(decodedPath);
+      console.log('🔍 쿼리 파라미터에서 이전 경로 확인:', decodedPath);
     } else {
       // 2. document.referrer 사용 (폴백)
       const referrer = document.referrer;
@@ -246,18 +247,43 @@ export default function ViewPostPage() {
   const handleNavigate = (direction: 'prev' | 'next') => {
     if (direction === 'prev' && currentIndex > 0) {
       const prevEntry = sameDateEntries[currentIndex - 1];
-      router.push(`/viewPost/${prevEntry.id}`);
+      // 현재 from 파라미터 유지
+      const currentFrom = new URLSearchParams(window.location.search).get(
+        'from',
+      );
+      const fromParam = currentFrom
+        ? `?from=${encodeURIComponent(currentFrom)}`
+        : '';
+      router.push(`/viewPost/${prevEntry.id}${fromParam}`);
     } else if (
       direction === 'next' &&
       currentIndex < sameDateEntries.length - 1
     ) {
       const nextEntry = sameDateEntries[currentIndex + 1];
-      router.push(`/viewPost/${nextEntry.id}`);
+      // 현재 from 파라미터 유지
+      const currentFrom = new URLSearchParams(window.location.search).get(
+        'from',
+      );
+      const fromParam = currentFrom
+        ? `?from=${encodeURIComponent(currentFrom)}`
+        : '';
+      router.push(`/viewPost/${nextEntry.id}${fromParam}`);
     }
   };
 
   const handleBack = () => {
-    // 추적된 이전 경로가 있고, 유효한 경로인 경우 해당 경로로 이동
+    // 1. URL 파라미터로 전달된 from 경로가 있는 경우 해당 경로로 이동
+    const urlParams = new URLSearchParams(window.location.search);
+    const fromParam = urlParams.get('from');
+
+    if (fromParam) {
+      const targetPath = decodeURIComponent(fromParam);
+      console.log('🔙 URL 파라미터의 from 경로로 이동:', targetPath);
+      router.push(targetPath);
+      return;
+    }
+
+    // 2. 추적된 이전 경로가 있고, 유효한 경로인 경우 해당 경로로 이동
     if (
       previousPath &&
       previousPath !== '/viewPost' &&
@@ -265,15 +291,19 @@ export default function ViewPostPage() {
     ) {
       console.log('🔙 추적된 이전 경로로 이동:', previousPath);
       router.push(previousPath);
-    } else if (window.history.length > 1) {
-      // 추적된 경로가 없거나 유효하지 않은 경우 브라우저 히스토리 사용
+      return;
+    }
+
+    // 3. 브라우저 히스토리가 있는 경우 뒤로가기
+    if (window.history.length > 1) {
       console.log('🔙 브라우저 히스토리로 뒤로가기');
       router.back();
-    } else {
-      // 히스토리가 없는 경우 기본값으로 캘린더로 이동
-      console.log('🔙 기본 경로(캘린더)로 이동');
-      router.push('/calendar');
+      return;
     }
+
+    // 4. 모든 방법이 실패한 경우 기본값으로 캘린더로 이동
+    console.log('🔙 기본 경로(캘린더)로 이동');
+    router.push('/calendar');
   };
 
   if (!entry) {
