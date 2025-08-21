@@ -28,6 +28,16 @@ interface DiaryState {
     userId: string,
     dateRange: CalendarDateRange,
   ) => Promise<void>;
+  updateDiary: (
+    id: string,
+    data: {
+      title?: string;
+      content?: string;
+      user_emotion?: string;
+      is_public?: boolean;
+      keywords?: string[];
+    },
+  ) => Promise<void>;
   clearError: () => void;
   setPage: (page: number) => void;
   setPageSize: (size: number) => void;
@@ -159,6 +169,32 @@ export const useDiaryStore = create<DiaryState>((set, get) => ({
           error instanceof Error
             ? error.message
             : '캘린더 다이어리를 불러오는데 실패했습니다.',
+        isLoading: false,
+      });
+    }
+  },
+
+  // 다이어리 수정
+  updateDiary: async (
+    id: string,
+    data: {
+      title?: string;
+      content?: string;
+      user_emotion?: string;
+      is_public?: boolean;
+      keywords?: string[];
+    },
+  ) => {
+    try {
+      set({ isLoading: true, error: null });
+      const response = await diaryApi.updateDiary(id, data);
+      set({ currentDiary: response.data, isLoading: false, error: null });
+    } catch (error) {
+      set({
+        error:
+          error instanceof Error
+            ? error.message
+            : '다이어리를 수정하는데 실패했습니다.',
         isLoading: false,
       });
     }

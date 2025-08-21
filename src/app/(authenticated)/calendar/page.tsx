@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { Calendar } from '@/components/calendar';
 import { EmotionPieChart } from '@/components/charts/EmotionPieChart';
@@ -18,12 +18,77 @@ import { cn } from '@/lib/utils';
 
 export default function CalendarPage() {
   const router = useRouter();
-  const { diaries, fetchDiaries } = useDiaryStore();
+  const { diaries, fetchDiaries, fetchCalendarDiaries } = useDiaryStore();
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [viewDate, setViewDate] = useState(new Date());
 
   // 실제 사용자 ID (데이터베이스에 존재하는 UUID 사용)
   const userId = '2fb9da3c-f58d-45d9-af8d-7031dd27d3b4'; // 실제 UUID 형식 사용
+
+  // 날짜 범위 계산 - useMemo로 최적화하여 불필요한 재계산 방지
+  const dateRange = useMemo(() => {
+    const year = viewDate.getFullYear();
+    const month = viewDate.getMonth() + 1;
+
+    const startDate = new Date(year, month - 1, 1);
+    const endDate = new Date(year, month, 0);
+
+    const startDateStr = startDate.toISOString().split('T')[0];
+    const endDateStr = endDate.toISOString().split('T')[0];
+
+    return { startDate: startDateStr, endDate: endDateStr };
+  }, [viewDate.getFullYear(), viewDate.getMonth()]);
+
+  // 페이지 포커스 시 데이터 새로고침 (다이어리 수정 후 돌아왔을 때)
+  useEffect(() => {
+    const handleFocus = () => {
+      console.log('📅 CalendarPage: 페이지 포커스 감지, 데이터 새로고침');
+      loadMonthData();
+    };
+
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
+  }, []);
+
+  // 월별 데이터 로딩 함수
+  const loadMonthData = useCallback(async () => {
+    try {
+      console.log('📅 CalendarPage: 월별 데이터 로딩', {
+        year: viewDate.getFullYear(),
+        month: viewDate.getMonth() + 1,
+        startDate: dateRange.startDate,
+        endDate: dateRange.endDate,
+      });
+
+      // 실제 백엔드 API 호출
+      const apiBaseUrl =
+        process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000';
+      const response = await fetch(
+        `${apiBaseUrl}/api/diary/?start_date=${dateRange.startDate}&end_date=${dateRange.endDate}`,
+      );
+
+      if (response.ok) {
+        const result = await response.json();
+        console.log('📡 CalendarPage: 직접 API 호출 결과', result);
+
+        // 스토어 상태 업데이트
+        if (result.data && Array.isArray(result.data)) {
+          useDiaryStore.setState({
+            diaries: result.data,
+            totalCount: result.data.length,
+            isLoading: false,
+            error: null,
+          });
+        }
+      }
+    } catch (error) {
+      console.error('❌ CalendarPage: API 호출 실패', error);
+      useDiaryStore.setState({
+        error: '월별 데이터를 불러오는데 실패했습니다.',
+        isLoading: false,
+      });
+    }
+  }, [viewDate, dateRange]);
 
   // 현재 보고 있는 월의 데이터
   const currentMonthData = useMemo(() => {
@@ -104,63 +169,10 @@ export default function CalendarPage() {
     return diaries.filter((diary) => diary.created_at.startsWith(selectedDate));
   }, [selectedDate, diaries]);
 
-  // 날짜 범위 계산 - useMemo로 최적화하여 불필요한 재계산 방지
-  const dateRange = useMemo(() => {
-    const year = viewDate.getFullYear();
-    const month = viewDate.getMonth() + 1;
-
-    const startDate = new Date(year, month - 1, 1);
-    const endDate = new Date(year, month, 0);
-
-    const startDateStr = startDate.toISOString().split('T')[0];
-    const endDateStr = endDate.toISOString().split('T')[0];
-
-    return { startDate: startDateStr, endDate: endDateStr };
-  }, [viewDate.getFullYear(), viewDate.getMonth()]);
-
   // 월별 데이터 로딩 - 의존성 배열 최적화
   useEffect(() => {
-    console.log('📅 CalendarPage: 월별 데이터 로딩', {
-      year: viewDate.getFullYear(),
-      month: viewDate.getMonth() + 1,
-      startDate: dateRange.startDate,
-      endDate: dateRange.endDate,
-    });
-
-    // 실제 백엔드 API 호출 - 함수 참조 대신 직접 호출
-    const loadMonthData = async () => {
-      try {
-        const apiBaseUrl =
-          process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000';
-        const response = await fetch(
-          `${apiBaseUrl}/api/diary/?start_date=${dateRange.startDate}&end_date=${dateRange.endDate}`,
-        );
-
-        if (response.ok) {
-          const result = await response.json();
-          console.log('📡 CalendarPage: 직접 API 호출 결과', result);
-
-          // 스토어 상태 업데이트
-          if (result.data && Array.isArray(result.data)) {
-            useDiaryStore.setState({
-              diaries: result.data,
-              totalCount: result.data.length,
-              isLoading: false,
-              error: null,
-            });
-          }
-        }
-      } catch (error) {
-        console.error('❌ CalendarPage: API 호출 실패', error);
-        useDiaryStore.setState({
-          error: '월별 데이터를 불러오는데 실패했습니다.',
-          isLoading: false,
-        });
-      }
-    };
-
     loadMonthData();
-  }, [viewDate.getFullYear(), viewDate.getMonth()]); // dateRange 제거하고 year, month만 의존성으로 설정
+  }, [loadMonthData]); // loadMonthData 함수가 변경될 때마다 실행
 
   const handleDateSelect = (date: string) => {
     setSelectedDate(date);
@@ -247,8 +259,15 @@ export default function CalendarPage() {
                             )}
                           </div>
 
-                          {/* ai_generated_text 표시 */}
-                          {entry.ai_generated_text && (
+                          {/* 수정된 본문 내용 표시 (content) - 우선 표시 */}
+                          {entry.content && (
+                            <p className="text-body-small text-text-primary mb-3 line-clamp-3 font-medium">
+                              {entry.content}
+                            </p>
+                          )}
+
+                          {/* AI 생성 텍스트 표시 (content가 없을 때만) */}
+                          {!entry.content && entry.ai_generated_text && (
                             <p className="text-body-small text-text-secondary mb-3 line-clamp-2">
                               {entry.ai_generated_text}
                             </p>
