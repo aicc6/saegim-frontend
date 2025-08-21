@@ -24,10 +24,7 @@ interface DiaryState {
   // 액션
   fetchDiaries: (filters?: DiaryFilters) => Promise<void>;
   fetchDiary: (id: string) => Promise<void>;
-  fetchCalendarDiaries: (
-    userId: string,
-    dateRange: CalendarDateRange,
-  ) => Promise<void>;
+  fetchCalendarDiaries: (dateRange: CalendarDateRange) => Promise<void>;
   updateDiary: (
     id: string,
     data: {
@@ -123,20 +120,15 @@ export const useDiaryStore = create<DiaryState>((set, get) => ({
   },
 
   // 캘린더용 다이어리 조회
-  fetchCalendarDiaries: async (
-    userId: string,
-    dateRange: CalendarDateRange,
-  ) => {
+  fetchCalendarDiaries: async (dateRange: CalendarDateRange) => {
     try {
       console.log('🚀 DiaryStore: 캘린더 다이어리 조회 시작', {
-        userId,
         dateRange,
       });
 
       set({ isLoading: true, error: null });
 
       const response = await diaryApi.getCalendarDiaries(
-        userId,
         dateRange.startDate,
         dateRange.endDate,
       );
