@@ -9,6 +9,8 @@ import { useEmotionStore } from '@/stores/emotion';
 // 초기 입력 화면 전용 컴포넌트
 
 export default function CreateAi() {
+  console.log('🎨 CreateAi 컴포넌트 마운트');
+  
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [selectedImages, setSelectedImages] = useState<File[]>([]);
@@ -114,6 +116,8 @@ export default function CreateAi() {
   // (실제로는 페이지 라우팅으로 처리될 예정)
 
   // 초기 화면
+  console.log('🎨 CreateAi 컴포넌트 렌더링:', { prompt, style, length, emotion });
+  
   return (
     <div className="rounded-3xl bg-ivory-cream shadow-card relative p-6 sm:p-8">
       <h1 className="text-4xl font-poetic font-bold text-[#3F764A] text-center">

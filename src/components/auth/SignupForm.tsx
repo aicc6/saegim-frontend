@@ -27,15 +27,15 @@ export default function SignupForm() {
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
 
-    // 닉네임 필드인 경우 한글과 영어만 허용
+    // 닉네임 필드인 경우 실시간 검사 제거하고 모든 입력 허용
     if (name === 'nickname') {
-      // 한글과 영어만 허용하는 정규식
-      const koreanEnglishOnly = /^[가-힣a-zA-Z]*$/;
-      if (value === '' || koreanEnglishOnly.test(value)) {
-        setFormData((prev) => ({
-          ...prev,
-          [name]: value,
-        }));
+      setFormData((prev) => ({
+        ...prev,
+        [name]: value,
+      }));
+      // 중복 확인 상태 초기화 (닉네임이 변경되면 다시 확인 필요)
+      if (nicknameChecked) {
+        setNicknameChecked(false);
       }
     } else {
       setFormData((prev) => ({
@@ -52,6 +52,17 @@ export default function SignupForm() {
       toast({
         title: '입력 확인 필요',
         description: '이메일 인증과 닉네임 중복 확인을 완료해주세요.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    // 닉네임 유효성 검사 (한글과 영문만 허용)
+    const koreanEnglishOnly = /^[가-힣a-zA-Z]+$/;
+    if (!koreanEnglishOnly.test(formData.nickname)) {
+      toast({
+        title: '닉네임 형식 오류',
+        description: '닉네임은 한글과 영문만 사용 가능합니다.',
         variant: 'destructive',
       });
       return;
@@ -185,6 +196,17 @@ export default function SignupForm() {
       toast({
         title: '닉네임 입력 필요',
         description: '닉네임을 입력해주세요.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    // 닉네임 유효성 검사 (한글과 영문만 허용)
+    const koreanEnglishOnly = /^[가-힣a-zA-Z]+$/;
+    if (!koreanEnglishOnly.test(formData.nickname)) {
+      toast({
+        title: '닉네임 형식 오류',
+        description: '닉네임은 한글과 영문만 사용 가능합니다.',
         variant: 'destructive',
       });
       return;
