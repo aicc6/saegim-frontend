@@ -42,6 +42,9 @@ RUN npm install
 # 소스 코드 복사
 COPY . .
 
+# 환경변수 파일 복사
+COPY .env* ./
+
 # 환경변수 설정 (빌드 시점)
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_ENV=production
