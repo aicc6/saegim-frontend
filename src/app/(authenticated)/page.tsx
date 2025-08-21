@@ -3,7 +3,7 @@
 import { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuthStore } from '@/stores/auth';
-import { API_BASE_URL } from '@/lib/api';
+import { authApi } from '@/lib/api';
 import CreateAi from '@/components/individual/shw/CreateAi';
 
 function HomeContent() {
@@ -14,92 +14,109 @@ function HomeContent() {
   const [hasChecked, setHasChecked] = useState(false);
 
   useEffect(() => {
-    // 이미 체크했거나 로딩 중이 아니면 스킵
-    if (hasChecked) return;
+    console.log('🔄 useEffect 실행됨 - hasChecked:', hasChecked);
+    
+    // 이미 체크했으면 스킵
+    if (hasChecked) {
+      console.log('⏭️ 이미 체크됨 - 스킵');
+      return;
+    }
 
     const handleAuthCheck = async () => {
+      console.log('🚀 handleAuthCheck 시작');
       try {
         // URL 파라미터 확인 (로그인 성공 여부)
         const success = searchParams.get('success');
         const error = searchParams.get('error');
         const message = searchParams.get('message');
 
+        console.log('📋 URL 파라미터:', { success, error, message });
+
         // 로그인 실패 시
         if (error) {
           console.error('로그인 실패:', message);
           setHasChecked(true);
+          setIsLoading(false);
           router.push('/login');
           return;
         }
 
-        // 항상 서버에서 인증 상태를 확인 (로그아웃 후 쿠키 삭제 반영)
+        // 인증 상태 확인
+        console.log('🔍 인증 상태 확인:', { isAuthenticated, hasUser: !!user });
+        
+        // 이미 인증된 상태라면 스킵
+        if (isAuthenticated && user) {
+          console.log('✅ 이미 인증됨 - 스킵');
+          setIsLoading(false);
+          setHasChecked(true);
+          return;
+        }
+        
+        // 토큰 존재 여부 확인 (localStorage)
+        const token = localStorage.getItem('access_token');
+        
+        console.log('🔍 토큰 확인:', { hasToken: !!token });
+        
+        // 토큰이 없으면 서버 인증 시도 (쿠키 기반)
+        if (!token) {
+          console.log('🔍 토큰 없음 - 서버 인증 시도 (쿠키 기반)');
+        } else {
+          console.log('✅ 토큰 존재 - 서버 인증 확인 중');
+        }
+        
         try {
-          console.log('🔍 인증 상태 확인 중...');
+          console.log('🔍 서버 인증 확인 중...');
           
-          // Bearer 토큰 가져오기
-          const token = localStorage.getItem('access_token');
+          const response = await authApi.getCurrentUser();
+          const userData = response.data as any;
+          console.log('✅ 서버 인증 성공:', userData.email ? `${userData.email.substring(0, 3)}***@${userData.email.split('@')[1]}` : '사용자');
           
-          const response = await fetch(`${API_BASE_URL}/api/auth/me`, {
-            method: 'GET',
-            credentials: 'include', // 쿠키 포함 (Google OAuth용)
-            headers: {
-              'Content-Type': 'application/json',
-              ...(token && { 'Authorization': `Bearer ${token}` }), // Bearer 토큰 포함 (이메일 로그인용)
-            },
-          });
-
-          if (response.ok) {
-            const userData = await response.json();
-            console.log('✅ 인증 성공:', userData.data.email ? `${userData.data.email.substring(0, 3)}***@${userData.data.email.split('@')[1]}` : '사용자');
-            
-            // Zustand 스토어에 로그인 정보 저장
-            login({
-              id: userData.data.user_id,
-              email: userData.data.email,
-              name: userData.data.nickname,
-              profileImage: '',
-              provider: userData.data.provider || 'email',
-              createdAt: userData.data.created_at || new Date().toISOString(),
-            }, token || 'cookie-based-auth');
-            
-            // URL 파라미터 제거
-            if (success === 'true') {
-              router.replace('/');
-            }
-
-            setHasChecked(true);
-            setIsLoading(false);
-          } else {
-            console.log('❌ 인증 실패:', response.status);
-            // 인증 실패 시 클라이언트 상태 정리 후 로그인 페이지로 리다이렉트
-            logout(); // 클라이언트 상태 정리
-            localStorage.removeItem('access_token'); // localStorage 토큰도 정리
-            localStorage.removeItem('refresh_token');
-            setHasChecked(true);
-            router.push('/login');
-            return;
+          // Zustand 스토어에 로그인 정보 저장
+          login({
+            id: userData.user_id,
+            email: userData.email,
+            name: userData.nickname,
+            profileImage: '',
+            provider: userData.provider || 'email',
+            createdAt: userData.created_at || new Date().toISOString(),
+          }, 'cookie-based-auth'); // 쿠키 기반 인증이므로 실제 토큰 대신 식별자 사용
+          
+          // 로딩 완료
+          setIsLoading(false);
+          setHasChecked(true);
+          
+          // URL 파라미터 제거
+          if (success === 'true') {
+            router.replace('/');
           }
         } catch (err) {
-          console.error('❌ 인증 상태 확인 실패:', err);
-          // 에러 시에도 클라이언트 상태 정리 후 로그인 페이지로 리다이렉트
-          logout(); // 클라이언트 상태 정리
-          localStorage.removeItem('access_token'); // localStorage 토큰도 정리
-          localStorage.removeItem('refresh_token');
+          console.error('❌ 서버 인증 확인 실패:', err);
+          // 에러 발생 시 로그인 페이지로 이동
           setHasChecked(true);
+          setIsLoading(false);
           router.push('/login');
-          return;
         }
       } catch (err) {
         console.error('❌ 인증 체크 실패:', err);
         setHasChecked(true);
+        setIsLoading(false);
         router.push('/login');
       }
     };
 
-    handleAuthCheck();
-  }, [searchParams, router, login, logout, hasChecked]);
+    // 약간의 지연을 두어 페이지 로딩 완료 후 인증 확인
+    const timer = setTimeout(() => {
+      console.log('⏰ 타이머 실행 - 인증 확인 시작');
+      handleAuthCheck();
+    }, 100);
 
-  // 로딩 중
+    return () => {
+      console.log('🧹 useEffect 정리 - 타이머 취소');
+      clearTimeout(timer);
+    };
+  }, []); // 의존성 배열을 비워서 컴포넌트 마운트 시에만 실행
+
+  // 로딩 중일 때는 로딩 화면 표시
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-sage-20">
@@ -111,12 +128,14 @@ function HomeContent() {
     );
   }
 
-  // 인증되지 않은 상태 (리다이렉트 중)
+  // 인증 확인 완료 후 인증되지 않았을 때만 리다이렉트
   if (!isAuthenticated || !user) {
-    return null;
+    return null; // router.push('/login')이 이미 실행됨
   }
 
-  // 인증된 상태 - 메인 콘텐츠 표시
+  // 토큰이 있으면 메인 콘텐츠 표시 (서버 인증 결과와 관계없이)
+  console.log('🎨 CreateAi 컴포넌트 렌더링 시작');
+  
   return (
     <div>
       <div className="bg-sage-20 flex items-center justify-center">
@@ -129,6 +148,8 @@ function HomeContent() {
 }
 
 export default function Home() {
+  console.log('🏠 Home 컴포넌트 렌더링');
+  
   return (
     <Suspense
       fallback={
@@ -136,6 +157,7 @@ export default function Home() {
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-sage-50 mx-auto mb-4"></div>
             <p className="text-sage-80 dark:text-gray-300">로딩 중...</p>
+            <p className="text-sm text-gray-500 mt-2">Suspense fallback 실행 중</p>
           </div>
         </div>
       }

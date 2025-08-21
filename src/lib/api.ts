@@ -209,6 +209,11 @@ export const authApi = {
   verifyEmail: async (data: { email: string; verification_code: string }) => {
     return apiClient.post('/api/auth/verify-email', data);
   },
+
+  // 현재 사용자 정보 조회
+  getCurrentUser: async () => {
+    return apiClient.get('/api/auth/me');
+  },
 };
 
 // 다이어리 API 엔드포인트
