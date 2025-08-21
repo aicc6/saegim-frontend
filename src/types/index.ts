@@ -12,7 +12,7 @@ export interface User {
   email: string;
   name: string;
   profileImage?: string;
-  provider: 'google' | 'kakao' | 'naver';
+  provider: 'google' | 'kakao' | 'naver' | 'email';
   createdAt: string;
 }
 

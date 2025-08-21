@@ -4,13 +4,19 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import GoogleLoginButton from '@/components/ui/custom/GoogleLoginButton';
 import { authApi } from '@/lib/api';
+import { useToast } from '@/hooks/use-toast';
+import { useAuthStore } from '@/stores/auth';
 
 export default function LoginForm() {
   const router = useRouter();
+  const { toast } = useToast();
+  const { login } = useAuthStore();
+  
   const [formData, setFormData] = useState({
     email: '',
     password: '',
   });
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -26,19 +32,55 @@ export default function LoginForm() {
     password: 'saegim2024',
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // 데모 계정 로그인 체크
+    
+    // 데모 계정 로그인 체크 (기존 기능 유지)
     if (
       formData.email === DEMO_ACCOUNT.email &&
       formData.password === DEMO_ACCOUNT.password
     ) {
       localStorage.setItem('isLoggedIn', 'true');
       router.push('/');
-    } else {
-      alert(
-        '데모 계정 정보가 일치하지 않습니다.\n이메일: demo@saegim.com\n비밀번호: saegim2024',
-      );
+      return;
+    }
+    
+    setIsLoading(true);
+    
+    try {
+      const response = await authApi.login({
+        email: formData.email,
+        password: formData.password,
+      });
+      
+      // 로그인 성공 시 사용자 정보를 스토어에 저장
+      const userData = (response.data as any);
+      login({
+        id: userData.user_id,
+        email: userData.email,
+        name: userData.nickname, // 백엔드에서는 nickname, 프론트엔드에서는 name
+        profileImage: '',
+        provider: 'email',
+        createdAt: new Date().toISOString(),
+      }, 'email-login');
+      
+      toast({
+        title: '로그인 성공',
+        description: '새김에 오신 것을 환영합니다!',
+        variant: 'default',
+      });
+      
+      router.push('/');
+      
+    } catch (error: any) {
+      console.error('로그인 실패:', error);
+      toast({
+        title: '로그인 실패',
+        description: error.response?.data?.detail || '로그인 중 오류가 발생했습니다.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -111,9 +153,10 @@ export default function LoginForm() {
         {/* 로그인하기 버튼 */}
         <button
           type="submit"
-          className="w-full saegim-button saegim-button-large"
+          disabled={isLoading}
+          className="w-full saegim-button saegim-button-large disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          로그인하기
+          {isLoading ? '로그인 중...' : '로그인하기'}
         </button>
 
         {/* 구글 로그인 버튼 */}
