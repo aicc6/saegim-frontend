@@ -47,6 +47,33 @@ export default function ViewPostPage() {
 
   const entryId = params.id as string;
 
+  // 이전 페이지 경로 추적 (쿼리 파라미터 우선, referrer 폴백)
+  const [previousPath, setPreviousPath] = useState<string>('/calendar');
+
+  useEffect(() => {
+    // 1. URL 쿼리 파라미터에서 from 경로 확인
+    const urlParams = new URLSearchParams(window.location.search);
+    const fromParam = urlParams.get('from');
+
+    if (fromParam) {
+      // 쿼리 파라미터에서 온 경우
+      setPreviousPath(decodeURIComponent(fromParam));
+      console.log('🔍 쿼리 파라미터에서 이전 경로 확인:', fromParam);
+    } else {
+      // 2. document.referrer 사용 (폴백)
+      const referrer = document.referrer;
+      const currentOrigin = window.location.origin;
+
+      if (referrer && referrer.startsWith(currentOrigin)) {
+        const referrerPath = new URL(referrer).pathname;
+        if (referrerPath !== window.location.pathname) {
+          setPreviousPath(referrerPath);
+          console.log('🔍 referrer에서 이전 경로 확인:', referrerPath);
+        }
+      }
+    }
+  }, []);
+
   useEffect(() => {
     // 현재 엔트리를 diaries에서 찾기 (목록용 데이터)
     const foundEntry = diaries.find((e: DiaryListEntry) => e.id === entryId);
@@ -230,7 +257,23 @@ export default function ViewPostPage() {
   };
 
   const handleBack = () => {
-    router.push('/calendar');
+    // 추적된 이전 경로가 있고, 유효한 경로인 경우 해당 경로로 이동
+    if (
+      previousPath &&
+      previousPath !== '/viewPost' &&
+      previousPath !== window.location.pathname
+    ) {
+      console.log('🔙 추적된 이전 경로로 이동:', previousPath);
+      router.push(previousPath);
+    } else if (window.history.length > 1) {
+      // 추적된 경로가 없거나 유효하지 않은 경우 브라우저 히스토리 사용
+      console.log('🔙 브라우저 히스토리로 뒤로가기');
+      router.back();
+    } else {
+      // 히스토리가 없는 경우 기본값으로 캘린더로 이동
+      console.log('🔙 기본 경로(캘린더)로 이동');
+      router.push('/calendar');
+    }
   };
 
   if (!entry) {
