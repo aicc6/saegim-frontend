@@ -168,6 +168,18 @@ export const diaryApi = {
   // 특정 다이어리 조회
   getDiary: (id: string) => apiClient.get(`/api/diary/${id}`),
 
+  // 다이어리 수정
+  updateDiary: (
+    id: string,
+    data: {
+      title?: string;
+      content?: string;
+      user_emotion?: string;
+      is_public?: boolean;
+      keywords?: string[];
+    },
+  ) => apiClient.put(`/api/diary/${id}`, data),
+
   // 캘린더용 다이어리 조회
   getCalendarDiaries: (userId: string, startDate: string, endDate: string) =>
     apiClient.get(`/api/diary/calendar/${userId}`, {
