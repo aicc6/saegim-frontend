@@ -45,39 +45,51 @@ export default function CalendarPage() {
 
   // 월별 데이터 로딩 함수
   const loadMonthData = useCallback(async () => {
-    if (!userId) {
+    if (!isAuthenticated) {
       console.log(
-        '❌ CalendarPage: 사용자 ID가 없어 데이터를 로드할 수 없습니다.',
+        '❌ CalendarPage: 인증되지 않아 데이터를 로드할 수 없습니다.',
       );
       return;
     }
 
     try {
       console.log('📅 CalendarPage: 월별 데이터 로딩', {
-        userId,
         year: viewDate.getFullYear(),
         month: viewDate.getMonth() + 1,
         startDate: dateRange.startDate,
         endDate: dateRange.endDate,
       });
 
-      // 실제 백엔드 API 호출 (user_id 파라미터 추가)
+      // JWT 기반 API 호출 (user_id 파라미터 제거)
       const apiBaseUrl =
         process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000';
 
       const params = new URLSearchParams({
-        user_id: userId,
         start_date: dateRange.startDate,
         end_date: dateRange.endDate,
       });
 
+      // JWT 토큰 가져오기
+      const token = localStorage.getItem('access_token');
+
+      if (!token) {
+        console.log('❌ CalendarPage: JWT 토큰이 없습니다.');
+        return;
+      }
+
       const response = await fetch(
-        `${apiBaseUrl}/api/diary/?${params.toString()}`,
+        `${apiBaseUrl}/api/diary/calendar?${params.toString()}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        },
       );
 
       if (response.ok) {
         const result = await response.json();
-        console.log('📡 CalendarPage: 직접 API 호출 결과', result);
+        console.log('📡 CalendarPage: JWT 기반 API 호출 결과', result);
 
         // 스토어 상태 업데이트
         if (result.data && Array.isArray(result.data)) {
@@ -88,6 +100,10 @@ export default function CalendarPage() {
             error: null,
           });
         }
+      } else if (response.status === 401) {
+        console.log('❌ CalendarPage: JWT 토큰이 유효하지 않습니다.');
+        // 인증 실패 시 로그인 페이지로 리다이렉트
+        router.push('/login');
       }
     } catch (error) {
       console.error('❌ CalendarPage: API 호출 실패', error);
@@ -96,7 +112,7 @@ export default function CalendarPage() {
         isLoading: false,
       });
     }
-  }, [userId, viewDate, dateRange]);
+  }, [isAuthenticated, viewDate, dateRange, router]);
 
   // 현재 보고 있는 월의 데이터
   const currentMonthData = useMemo(() => {
@@ -300,10 +316,10 @@ export default function CalendarPage() {
 
   // 월 변경 시 데이터 로드
   useEffect(() => {
-    if (userId) {
+    if (isAuthenticated) {
       loadMonthData();
     }
-  }, [loadMonthData, userId]);
+  }, [loadMonthData, isAuthenticated]);
 
   // 인증 확인 완료 후 인증되지 않았을 때만 리다이렉트
   if (!isAuthenticated || !user) {
@@ -323,7 +339,7 @@ export default function CalendarPage() {
   }
 
   // 사용자 ID가 없으면 로딩 표시
-  if (!userId) {
+  if (!isAuthenticated) {
     return (
       <div className="min-h-screen bg-background-primary flex items-center justify-center">
         <div className="text-center">
