@@ -11,6 +11,11 @@ import type {
 } from '../types/fcm';
 import type { EmotionType } from '../types';
 import { requestFCMToken, onMessageListener } from '../lib/firebase';
+import { 
+  fcmApi, 
+  type FCMTokenRegisterRequest,
+  type NotificationSettingsUpdate 
+} from '../lib/fcm-api';
 
 // 기본 알림 설정
 const DEFAULT_SETTINGS: NotificationSettings = {
@@ -95,17 +100,32 @@ export const useFCMStore = create<FCMState>()(
         const token = await requestFCMToken();
 
         if (token) {
-          set((state) => {
-            state.token = token;
-            state.isTokenRegistered = true;
-            state.isLoading = false;
-          });
+          // 백엔드 API를 통해 토큰 등록
+          const tokenData: FCMTokenRegisterRequest = {
+            token,
+            device_type: 'web',
+            device_info: {
+              userAgent: navigator.userAgent,
+              platform: navigator.platform,
+            }
+          };
 
-          // 토큰을 서버에 전송
-          await sendTokenToServer(token);
+          const response = await fcmApi.registerToken(tokenData);
+          
+          if (response.success) {
+            set((state) => {
+              state.token = token;
+              state.isTokenRegistered = true;
+              state.isLoading = false;
+            });
 
-          // 포그라운드 메시지 리스너 설정
-          setupForegroundListener();
+            // 포그라운드 메시지 리스너 설정
+            setupForegroundListener();
+            
+            console.log('FCM 토큰 등록 성공:', response.data);
+          } else {
+            throw new Error(response.message || 'FCM 토큰 등록에 실패했습니다.');
+          }
         } else {
           throw new Error('FCM 토큰 생성에 실패했습니다.');
         }
@@ -122,13 +142,44 @@ export const useFCMStore = create<FCMState>()(
     },
 
     // 알림 설정 업데이트
-    updateSettings: (newSettings) => {
+    updateSettings: async (newSettings) => {
       set((state) => {
-        state.settings = { ...state.settings, ...newSettings };
+        state.isLoading = true;
+        state.error = null;
       });
 
-      // 서버에 설정 동기화
-      syncSettingsToServer(get().settings);
+      try {
+        // 백엔드 API 스키마에 맞게 설정 변환
+        const backendSettings: NotificationSettingsUpdate = {
+          diary_reminder: newSettings.diaryReminder,
+          ai_content_ready: newSettings.aiContentReady,
+          weekly_report: newSettings.emotionTrend, // 임시 매핑
+          marketing: newSettings.friendShare, // 임시 매핑
+          quiet_hours_start: newSettings.quietHours?.enabled ? newSettings.quietHours.startTime : null,
+          quiet_hours_end: newSettings.quietHours?.enabled ? newSettings.quietHours.endTime : null,
+        };
+
+        const response = await fcmApi.updateNotificationSettings(backendSettings);
+        
+        if (response.success) {
+          set((state) => {
+            state.settings = { ...state.settings, ...newSettings };
+            state.isLoading = false;
+          });
+          
+          console.log('알림 설정 업데이트 성공:', response.data);
+        } else {
+          throw new Error(response.message || '알림 설정 업데이트에 실패했습니다.');
+        }
+      } catch (error) {
+        console.error('알림 설정 업데이트 실패:', error);
+        set((state) => {
+          state.error = error instanceof Error 
+            ? error.message 
+            : '알림 설정 업데이트에 실패했습니다.';
+          state.isLoading = false;
+        });
+      }
     },
 
     // 알림을 읽음으로 표시
@@ -168,34 +219,37 @@ export const useFCMStore = create<FCMState>()(
   })),
 );
 
-// 토큰을 서버에 전송하는 함수
-const sendTokenToServer = async (token: string): Promise<void> => {
+// 백엔드에서 알림 설정을 가져와 프론트엔드 설정과 동기화하는 함수
+const syncSettingsFromServer = async (): Promise<NotificationSettings | null> => {
   try {
-    const response = await fetch(
-      `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/fcm/token`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          // TODO: 실제 인증 토큰 추가
-          // 'Authorization': `Bearer ${authToken}`,
+    const response = await fcmApi.getNotificationSettings();
+    
+    if (response.success && response.data) {
+      const serverSettings = response.data;
+      
+      // 백엔드 스키마를 프론트엔드 스키마로 변환
+      const frontendSettings: NotificationSettings = {
+        enabled: true, // 기본적으로 활성화
+        diaryReminder: serverSettings.diary_reminder,
+        aiContentReady: serverSettings.ai_content_ready,
+        emotionTrend: serverSettings.weekly_report, // 임시 매핑
+        anniversary: true, // 백엔드에 없는 필드, 기본값
+        friendShare: serverSettings.marketing, // 임시 매핑
+        quietHours: {
+          enabled: !!(serverSettings.quiet_hours_start && serverSettings.quiet_hours_end),
+          startTime: serverSettings.quiet_hours_start || '22:00',
+          endTime: serverSettings.quiet_hours_end || '08:00',
         },
-        body: JSON.stringify({
-          token,
-          deviceType: 'web',
-          userAgent: navigator.userAgent,
-        }),
-      },
-    );
-
-    if (!response.ok) {
-      throw new Error('토큰 서버 전송 실패');
+        frequency: 'immediate', // 백엔드에 없는 필드, 기본값
+      };
+      
+      return frontendSettings;
     }
-
-    console.log('FCM 토큰 서버 등록 성공');
+    
+    return null;
   } catch (error) {
-    console.error('토큰 서버 전송 실패:', error);
-    throw error;
+    console.error('서버에서 알림 설정 조회 실패:', error);
+    return null;
   }
 };
 
@@ -280,31 +334,46 @@ const showInAppNotification = (notification: NotificationHistory): void => {
   showBrowserNotification(notification);
 };
 
-// 서버에 설정 동기화
-const syncSettingsToServer = async (
-  settings: NotificationSettings,
-): Promise<void> => {
+// 사용자 토큰 목록 조회 함수
+const getUserTokens = async () => {
   try {
-    const response = await fetch(
-      `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/fcm/settings`,
-      {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          // TODO: 실제 인증 토큰 추가
-          // 'Authorization': `Bearer ${authToken}`,
-        },
-        body: JSON.stringify(settings),
-      },
-    );
-
-    if (!response.ok) {
-      throw new Error('설정 동기화 실패');
+    const response = await fcmApi.getTokens();
+    if (response.success) {
+      return response.data;
     }
-
-    console.log('알림 설정 서버 동기화 완료');
+    return [];
   } catch (error) {
-    console.error('설정 동기화 실패:', error);
+    console.error('사용자 토큰 목록 조회 실패:', error);
+    return [];
+  }
+};
+
+// 토큰 삭제 함수
+const deleteUserToken = async (tokenId: string) => {
+  try {
+    const response = await fcmApi.deleteToken(tokenId);
+    if (response.success) {
+      console.log('토큰 삭제 성공:', tokenId);
+      return true;
+    }
+    return false;
+  } catch (error) {
+    console.error('토큰 삭제 실패:', error);
+    return false;
+  }
+};
+
+// 알림 히스토리 조회 함수
+const getNotificationHistory = async (limit: number = 20, offset: number = 0) => {
+  try {
+    const response = await fcmApi.getNotificationHistory(limit, offset);
+    if (response.success) {
+      return response.data;
+    }
+    return [];
+  } catch (error) {
+    console.error('알림 히스토리 조회 실패:', error);
+    return [];
   }
 };
 
@@ -320,6 +389,12 @@ export const initializeFCM = async (): Promise<void> => {
     const permission = Notification.permission as NotificationPermission;
     useFCMStore.setState({ permission });
 
+    // 백엔드에서 알림 설정 동기화
+    const serverSettings = await syncSettingsFromServer();
+    if (serverSettings) {
+      useFCMStore.setState({ settings: serverSettings });
+    }
+
     // 이미 권한이 있으면 토큰 등록
     if (permission === 'granted') {
       await store.registerToken();
@@ -331,6 +406,7 @@ export const initializeFCM = async (): Promise<void> => {
 };
 
 // 스토어에 알림 추가 액션 (동적으로 추가)
+// 스토어에 추가 액션들을 동적으로 추가
 useFCMStore.setState((state) => ({
   ...state,
   addNotification: (notification: NotificationHistory) => {
@@ -347,6 +423,24 @@ useFCMStore.setState((state) => ({
           : n,
       ),
     }));
+  },
+  
+  // 토큰 관리 관련 추가 액션들
+  getUserTokens,
+  deleteToken: deleteUserToken,
+  
+  // 알림 히스토리 관련 액션들
+  loadNotificationHistory: getNotificationHistory,
+  
+  // FCM 서비스 상태 확인
+  checkFCMHealth: async () => {
+    try {
+      const response = await fcmApi.checkHealth();
+      return response.success;
+    } catch (error) {
+      console.error('FCM 서비스 상태 확인 실패:', error);
+      return false;
+    }
   },
 }));
 

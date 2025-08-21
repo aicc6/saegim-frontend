@@ -2,7 +2,7 @@
 // 개발 환경에서 FCM 기능을 테스트할 수 있는 페이지
 
 import type { Metadata } from 'next';
-import FCMManager from '../../../components/notifications/fcm-manager';
+import { FCMManager, FCMTestPanel } from '../../../components/dev';
 
 export const metadata: Metadata = {
   title: 'FCM 푸시 알림 테스트 | 새김',
@@ -23,8 +23,13 @@ export default function FCMTestPage() {
         </p>
       </div>
 
-      {/* FCM 관리 컴포넌트 */}
-      <FCMManager />
+      {/* FCM API 연동 테스트 패널 */}
+      <FCMTestPanel />
+      
+      {/* 기존 FCM 관리 컴포넌트 */}
+      <div className="mt-8">
+        <FCMManager />
+      </div>
 
       {/* 사용법 안내 */}
       <div className="mt-12 max-w-4xl mx-auto">
