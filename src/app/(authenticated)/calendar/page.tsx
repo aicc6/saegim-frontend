@@ -187,7 +187,9 @@ export default function CalendarPage() {
   };
 
   const handleEntryClick = (entryId: string) => {
-    router.push(`/viewPost/${entryId}`);
+    // 현재 페이지 경로를 쿼리 파라미터로 전달
+    const currentPath = window.location.pathname;
+    router.push(`/viewPost/${entryId}?from=${encodeURIComponent(currentPath)}`);
   };
 
   return (
