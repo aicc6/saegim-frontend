@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft } from 'lucide-react';
-import { DiaryEntry, DiaryListEntry } from '@/types/diary';
+import { ArrowLeft, X, Plus } from 'lucide-react';
+import { DiaryEntry, DiaryListEntry, EmotionType } from '@/types/diary';
 import { useDiaryStore } from '@/stores/diary';
 import PageHeader from '@/components/common/PageHeader';
 import { Button } from '@/components/ui/custom/Button';
@@ -16,6 +16,14 @@ const emotionLabels = {
   unrest: { emoji: '😰', name: '불안', color: 'text-emotion-unrest' },
 };
 
+const emotionOptions: EmotionType[] = [
+  'happy',
+  'sad',
+  'angry',
+  'peaceful',
+  'unrest',
+];
+
 export default function ViewPostPage() {
   const params = useParams();
   const router = useRouter();
@@ -25,8 +33,17 @@ export default function ViewPostPage() {
   const [isEditing, setIsEditing] = useState(false);
   const [editedTitle, setEditedTitle] = useState('');
   const [editedContent, setEditedContent] = useState('');
+  const [editedUserEmotion, setEditedUserEmotion] = useState<string>('');
+  const [editedKeywords, setEditedKeywords] = useState<string[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [sameDateEntries, setSameDateEntries] = useState<DiaryListEntry[]>([]);
+
+  // 감정 선택 관련 상태
+  const [showEmotionSelector, setShowEmotionSelector] = useState(false);
+
+  // 키워드 입력 관련 상태
+  const [newKeyword, setNewKeyword] = useState('');
+  const [showKeywordInput, setShowKeywordInput] = useState(false);
 
   const entryId = params.id as string;
 
@@ -61,22 +78,61 @@ export default function ViewPostPage() {
   useEffect(() => {
     if (currentDiary) {
       setEntry(currentDiary);
-      setEditedTitle(currentDiary.title);
-      setEditedContent(currentDiary.content);
+      // 편집 모드가 아닐 때만 초기값으로 설정
+      if (!isEditing) {
+        setEditedTitle(currentDiary.title);
+        setEditedContent(currentDiary.content);
+        setEditedUserEmotion(currentDiary.user_emotion || '');
+        setEditedKeywords(currentDiary.keywords || []);
+      }
     }
-  }, [currentDiary]);
+  }, [currentDiary, isEditing]);
+
+  // 편집 모드 시작 시 초기값 설정
+  useEffect(() => {
+    if (isEditing && entry) {
+      setEditedTitle(entry.title);
+      setEditedContent(entry.content);
+      setEditedUserEmotion(entry.user_emotion || '');
+      setEditedKeywords(entry.keywords || []);
+    }
+  }, [isEditing, entry]);
+
+  // editedUserEmotion 상태 변화 추적
+  useEffect(() => {
+    console.log('🔍 editedUserEmotion 상태 변화:', {
+      현재_감정: editedUserEmotion,
+      감정_라벨: editedUserEmotion
+        ? emotionLabels[editedUserEmotion as keyof typeof emotionLabels]
+        : null,
+    });
+  }, [editedUserEmotion]);
 
   const handleEdit = async () => {
     if (isEditing && entry) {
       try {
+        console.log('🔍 다이어리 수정 시작:', {
+          제목: editedTitle,
+          내용: editedContent,
+          사용자_감정: editedUserEmotion,
+          키워드: editedKeywords,
+          원본_감정: entry.user_emotion,
+        });
+
         // 백엔드 API 호출하여 다이어리 수정
         await updateDiary(entry.id, {
           title: editedTitle,
           content: editedContent,
+          user_emotion: editedUserEmotion,
+          keywords: editedKeywords,
         });
+
+        console.log('✅ 다이어리 수정 완료');
 
         // 수정 완료 후 편집 모드 종료
         setIsEditing(false);
+        setShowEmotionSelector(false);
+        setShowKeywordInput(false);
         console.log('📝 ViewPost: 편집 완료');
 
         // 로컬 상태 즉시 업데이트 (UI 반응성 향상)
@@ -84,33 +140,15 @@ export default function ViewPostPage() {
           ...entry,
           title: editedTitle,
           content: editedContent,
+          user_emotion: editedUserEmotion,
+          keywords: editedKeywords,
         };
         setEntry(updatedEntry);
-
-        // DB에서 최신 데이터 가져오기 (데이터 동기화)
-        await fetchDiary(entryId);
-
-        // 캘린더 데이터도 새로고침 (수정된 내용이 캘린더에 반영되도록)
-        const currentDate = new Date(entry.created_at);
-        const year = currentDate.getFullYear();
-        const month = currentDate.getMonth() + 1;
-        const startDate = new Date(year, month - 1, 1);
-        const endDate = new Date(year, month, 0);
-
-        const startDateStr = startDate.toISOString().split('T')[0];
-        const endDateStr = endDate.toISOString().split('T')[0];
-
-        // 캘린더용 다이어리 새로고침
-        const { fetchCalendarDiaries } = useDiaryStore.getState();
-        await fetchCalendarDiaries(entry.user_id, {
-          startDate: startDateStr,
-          endDate: endDateStr,
-        });
 
         // 성공 메시지 표시
         alert('다이어리가 성공적으로 수정되었습니다.');
       } catch (error) {
-        console.error('📝 ViewPost: 편집 실패', error);
+        console.error('❌ 다이어리 수정 실패:', error);
         alert('다이어리 수정에 실패했습니다. 다시 시도해주세요.');
       }
     } else {
@@ -137,7 +175,45 @@ export default function ViewPostPage() {
       setIsEditing(false);
       setEditedTitle(entry.title);
       setEditedContent(entry.content);
+      setEditedUserEmotion(entry.user_emotion || '');
+      setEditedKeywords(entry.keywords || []);
+      setShowEmotionSelector(false);
+      setShowKeywordInput(false);
     }
+  };
+
+  // 감정 선택 처리
+  const handleEmotionSelect = (emotion: EmotionType) => {
+    console.log('🔍 감정 선택:', {
+      선택된_감정: emotion,
+      감정_타입: typeof emotion,
+      이전_감정: editedUserEmotion,
+      감정_라벨: emotionLabels[emotion],
+    });
+
+    setEditedUserEmotion(emotion);
+    setShowEmotionSelector(false);
+
+    console.log('🔍 감정 상태 업데이트 완료:', {
+      선택된_감정: emotion,
+      감정_라벨: emotionLabels[emotion],
+    });
+  };
+
+  // 키워드 추가 처리
+  const handleAddKeyword = () => {
+    if (newKeyword.trim() && !editedKeywords.includes(newKeyword.trim())) {
+      setEditedKeywords([...editedKeywords, newKeyword.trim()]);
+      setNewKeyword('');
+      setShowKeywordInput(false);
+    }
+  };
+
+  // 키워드 삭제 처리
+  const handleRemoveKeyword = (keywordToRemove: string) => {
+    setEditedKeywords(
+      editedKeywords.filter((keyword) => keyword !== keywordToRemove),
+    );
   };
 
   const handleNavigate = (direction: 'prev' | 'next') => {
@@ -175,6 +251,8 @@ export default function ViewPostPage() {
 
   const emotion =
     emotionLabels[entry.user_emotion as keyof typeof emotionLabels];
+  const aiEmotion =
+    emotionLabels[entry.ai_emotion as keyof typeof emotionLabels];
 
   return (
     <div className="min-h-screen bg-background-primary flex flex-col">
@@ -203,18 +281,99 @@ export default function ViewPostPage() {
             <div className="flex gap-8 mb-6">
               {/* 감정 섹션 */}
               <div className="bg-sage-10 rounded-lg p-4 border border-sage-30 flex-1">
-                <div className="flex items-center space-x-3">
-                  <span className="text-lg">감정 :</span>
-                  <div className="flex items-center space-x-2">
-                    <span className="text-2xl">{emotion?.emoji}</span>
-                    <span className="text-sage-100 font-medium">
-                      {emotion?.name} / 80%
+                <div className="space-y-3">
+                  {/* 사용자 감정 (수정 가능) */}
+                  <div className="flex items-center space-x-3">
+                    <span className="text-lg font-medium text-sage-100">
+                      사용자 감정 :
                     </span>
-                    <span className="text-2xl">😨</span>
-                    <span className="text-sage-100 font-medium">
-                      불안 / 20%
-                    </span>
+                    {isEditing ? (
+                      <div className="relative">
+                        <button
+                          onClick={() =>
+                            setShowEmotionSelector(!showEmotionSelector)
+                          }
+                          className="flex items-center space-x-2 px-3 py-1 bg-white border border-sage-30 rounded-md hover:bg-sage-20"
+                        >
+                          <span className="text-2xl">
+                            {editedUserEmotion
+                              ? emotionLabels[
+                                  editedUserEmotion as keyof typeof emotionLabels
+                                ]?.emoji
+                              : '😐'}
+                          </span>
+                          <span className="text-sage-100 font-medium">
+                            {editedUserEmotion
+                              ? emotionLabels[
+                                  editedUserEmotion as keyof typeof emotionLabels
+                                ]?.name
+                              : '선택하세요'}
+                          </span>
+                        </button>
+
+                        {/* 감정 선택 드롭다운 */}
+                        {showEmotionSelector && (
+                          <div className="absolute top-full left-0 mt-1 bg-white border border-sage-30 rounded-md shadow-lg z-10 min-w-[200px]">
+                            {emotionOptions.map((emotionOption) => (
+                              <button
+                                key={emotionOption}
+                                onClick={() =>
+                                  handleEmotionSelect(emotionOption)
+                                }
+                                className="w-full flex items-center space-x-3 px-4 py-2 hover:bg-sage-20 text-left"
+                              >
+                                <span className="text-xl">
+                                  {emotionLabels[emotionOption].emoji}
+                                </span>
+                                <span className="text-sage-100">
+                                  {emotionLabels[emotionOption].name}
+                                </span>
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="flex items-center space-x-2">
+                        {entry.user_emotion ? (
+                          <>
+                            <span className="text-2xl">{emotion?.emoji}</span>
+                            <span className="text-sage-100 font-medium">
+                              {emotion?.name}
+                            </span>
+                          </>
+                        ) : (
+                          <span className="text-sage-100 font-medium text-gray-500">
+                            설정되지 않음
+                          </span>
+                        )}
+                      </div>
+                    )}
                   </div>
+
+                  {/* AI 감정 (읽기 전용) */}
+                  {entry.ai_emotion && (
+                    <div className="flex items-center space-x-3">
+                      <span className="text-lg font-medium text-sage-100">
+                        AI 분석 감정 :
+                      </span>
+                      <div className="flex items-center space-x-2">
+                        <span className="text-2xl">{aiEmotion?.emoji}</span>
+                        <span className="text-sage-100 font-medium">
+                          {aiEmotion?.name}
+                          {entry.ai_emotion_confidence &&
+                            ` (${Math.round(entry.ai_emotion_confidence * 100)}%)`}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 감정이 모두 없는 경우 */}
+                  {!entry.user_emotion && !entry.ai_emotion && (
+                    <div className="text-sage-100 font-medium text-gray-500">
+                      감정 정보가 없습니다
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -222,20 +381,85 @@ export default function ViewPostPage() {
               <div className="bg-sage-10 rounded-lg p-4 border border-sage-30 flex-1">
                 <div className="flex items-center space-x-3">
                   <span className="text-lg">키워드 :</span>
-                  <div className="flex flex-wrap gap-2">
-                    {entry.keywords && entry.keywords.length > 0 ? (
-                      entry.keywords.map((keyword, index) => (
-                        <span key={index} className="text-sage-100 font-medium">
-                          #{keyword}
-                        </span>
-                      ))
+                  <div className="flex-1">
+                    {isEditing ? (
+                      <div className="space-y-2">
+                        {/* 기존 키워드 표시 및 삭제 */}
+                        <div className="flex flex-wrap gap-2">
+                          {editedKeywords.map((keyword, index) => (
+                            <span
+                              key={index}
+                              className="inline-flex items-center space-x-1 px-2 py-1 bg-sage-20 text-sage-100 rounded-full text-sm"
+                            >
+                              <span>#{keyword}</span>
+                              <button
+                                onClick={() => handleRemoveKeyword(keyword)}
+                                className="ml-1 text-sage-60 hover:text-sage-80"
+                              >
+                                <X className="h-3 w-3" />
+                              </button>
+                            </span>
+                          ))}
+                        </div>
+
+                        {/* 새 키워드 입력 */}
+                        {showKeywordInput ? (
+                          <div className="flex space-x-2">
+                            <input
+                              type="text"
+                              value={newKeyword}
+                              onChange={(e) => setNewKeyword(e.target.value)}
+                              onKeyPress={(e) =>
+                                e.key === 'Enter' && handleAddKeyword()
+                              }
+                              placeholder="새 키워드 입력"
+                              className="flex-1 px-2 py-1 text-sm border border-sage-30 rounded focus:outline-none focus:border-sage-70"
+                            />
+                            <button
+                              onClick={handleAddKeyword}
+                              className="px-2 py-1 bg-sage-50 text-white rounded text-sm hover:bg-sage-60"
+                            >
+                              추가
+                            </button>
+                            <button
+                              onClick={() => setShowKeywordInput(false)}
+                              className="px-2 py-1 bg-gray-200 text-gray-700 rounded text-sm hover:bg-gray-300"
+                            >
+                              취소
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => setShowKeywordInput(true)}
+                            className="flex items-center space-x-1 text-sage-60 hover:text-sage-80 text-sm"
+                          >
+                            <Plus className="h-4 w-4" />
+                            <span>키워드 추가</span>
+                          </button>
+                        )}
+                      </div>
                     ) : (
-                      <>
-                        <span className="text-sage-100 font-medium">#소풍</span>
-                        <span className="text-sage-100 font-medium">
-                          #데이트
-                        </span>
-                      </>
+                      <div className="flex flex-wrap gap-2">
+                        {entry.keywords && entry.keywords.length > 0 ? (
+                          entry.keywords.map((keyword, index) => (
+                            <span
+                              key={index}
+                              className="text-sage-100 font-medium"
+                            >
+                              #{keyword}
+                            </span>
+                          ))
+                        ) : (
+                          <>
+                            <span className="text-sage-100 font-medium">
+                              #소풍
+                            </span>
+                            <span className="text-sage-100 font-medium">
+                              #데이트
+                            </span>
+                          </>
+                        )}
+                      </div>
                     )}
                   </div>
                 </div>
