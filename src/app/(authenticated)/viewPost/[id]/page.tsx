@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, X, Plus } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import { DiaryEntry, DiaryListEntry, EmotionType } from '@/types/diary';
 import { useDiaryStore } from '@/stores/diary';
 import PageHeader from '@/components/common/PageHeader';
@@ -57,8 +57,9 @@ export default function ViewPostPage() {
 
     if (fromParam) {
       // 쿼리 파라미터에서 온 경우
-      setPreviousPath(decodeURIComponent(fromParam));
-      console.log('🔍 쿼리 파라미터에서 이전 경로 확인:', fromParam);
+      const decodedPath = decodeURIComponent(fromParam);
+      setPreviousPath(decodedPath);
+      console.log('🔍 쿼리 파라미터에서 이전 경로 확인:', decodedPath);
     } else {
       // 2. document.referrer 사용 (폴백)
       const referrer = document.referrer;
@@ -246,18 +247,43 @@ export default function ViewPostPage() {
   const handleNavigate = (direction: 'prev' | 'next') => {
     if (direction === 'prev' && currentIndex > 0) {
       const prevEntry = sameDateEntries[currentIndex - 1];
-      router.push(`/viewPost/${prevEntry.id}`);
+      // 현재 from 파라미터 유지
+      const currentFrom = new URLSearchParams(window.location.search).get(
+        'from',
+      );
+      const fromParam = currentFrom
+        ? `?from=${encodeURIComponent(currentFrom)}`
+        : '';
+      router.push(`/viewPost/${prevEntry.id}${fromParam}`);
     } else if (
       direction === 'next' &&
       currentIndex < sameDateEntries.length - 1
     ) {
       const nextEntry = sameDateEntries[currentIndex + 1];
-      router.push(`/viewPost/${nextEntry.id}`);
+      // 현재 from 파라미터 유지
+      const currentFrom = new URLSearchParams(window.location.search).get(
+        'from',
+      );
+      const fromParam = currentFrom
+        ? `?from=${encodeURIComponent(currentFrom)}`
+        : '';
+      router.push(`/viewPost/${nextEntry.id}${fromParam}`);
     }
   };
 
   const handleBack = () => {
-    // 추적된 이전 경로가 있고, 유효한 경로인 경우 해당 경로로 이동
+    // 1. URL 파라미터로 전달된 from 경로가 있는 경우 해당 경로로 이동
+    const urlParams = new URLSearchParams(window.location.search);
+    const fromParam = urlParams.get('from');
+
+    if (fromParam) {
+      const targetPath = decodeURIComponent(fromParam);
+      console.log('🔙 URL 파라미터의 from 경로로 이동:', targetPath);
+      router.push(targetPath);
+      return;
+    }
+
+    // 2. 추적된 이전 경로가 있고, 유효한 경로인 경우 해당 경로로 이동
     if (
       previousPath &&
       previousPath !== '/viewPost' &&
@@ -265,15 +291,19 @@ export default function ViewPostPage() {
     ) {
       console.log('🔙 추적된 이전 경로로 이동:', previousPath);
       router.push(previousPath);
-    } else if (window.history.length > 1) {
-      // 추적된 경로가 없거나 유효하지 않은 경우 브라우저 히스토리 사용
+      return;
+    }
+
+    // 3. 브라우저 히스토리가 있는 경우 뒤로가기
+    if (window.history.length > 1) {
       console.log('🔙 브라우저 히스토리로 뒤로가기');
       router.back();
-    } else {
-      // 히스토리가 없는 경우 기본값으로 캘린더로 이동
-      console.log('🔙 기본 경로(캘린더)로 이동');
-      router.push('/calendar');
+      return;
     }
+
+    // 4. 모든 방법이 실패한 경우 기본값으로 캘린더로 이동
+    console.log('🔙 기본 경로(캘린더)로 이동');
+    router.push('/calendar');
   };
 
   if (!entry) {
@@ -301,7 +331,7 @@ export default function ViewPostPage() {
     <div className="min-h-screen bg-background-primary flex flex-col">
       {/* 페이지 헤더 */}
       <PageHeader
-        title={'글 편집 / 저장'}
+        title={entry?.title || '제목 없음'}
         subtitle={`${new Date(entry.created_at).getMonth() + 1}월 ${new Date(entry.created_at).getDate()}일`}
         actions={
           <Button
@@ -401,12 +431,21 @@ export default function ViewPostPage() {
                         AI 분석 감정 :
                       </span>
                       <div className="flex items-center space-x-2">
-                        <span className="text-2xl">{aiEmotion?.emoji}</span>
-                        <span className="text-sage-100 font-medium">
-                          {aiEmotion?.name}
-                          {entry.ai_emotion_confidence &&
-                            ` (${Math.round(entry.ai_emotion_confidence * 100)}%)`}
+                        <span className="text-2xl">
+                          {emotionLabels[
+                            entry.ai_emotion as keyof typeof emotionLabels
+                          ]?.emoji || '😐'}
                         </span>
+                        <span className="text-sage-100 font-medium">
+                          {emotionLabels[
+                            entry.ai_emotion as keyof typeof emotionLabels
+                          ]?.name || '알 수 없음'}
+                        </span>
+                        {entry.ai_emotion_confidence && (
+                          <span className="text-sm text-sage-70">
+                            ({Math.round(entry.ai_emotion_confidence * 100)}%)
+                          </span>
+                        )}
                       </div>
                     </div>
                   )}
@@ -422,64 +461,52 @@ export default function ViewPostPage() {
 
               {/* 키워드 섹션 */}
               <div className="bg-sage-10 rounded-lg p-4 border border-sage-30 flex-1">
-                <div className="flex items-center space-x-3">
-                  <span className="text-lg">키워드 :</span>
-                  <div className="flex-1">
+                <div className="space-y-3">
+                  <div className="flex items-center space-x-3">
+                    <span className="text-lg font-medium text-sage-100">
+                      키워드 :
+                    </span>
                     {isEditing ? (
-                      <div className="space-y-2">
+                      <div className="flex-1">
                         {/* 기존 키워드 표시 및 삭제 */}
-                        <div className="flex flex-wrap gap-2">
+                        <div className="flex flex-wrap gap-2 mb-2">
                           {editedKeywords.map((keyword, index) => (
-                            <span
+                            <div
                               key={index}
-                              className="inline-flex items-center space-x-1 px-2 py-1 bg-sage-20 text-sage-100 rounded-full text-sm"
+                              className="flex items-center space-x-1 bg-sage-20 text-sage-100 px-2 py-1 rounded-md"
                             >
-                              <span>#{keyword}</span>
+                              <span className="text-sm">#{keyword}</span>
                               <button
                                 onClick={() => handleRemoveKeyword(keyword)}
-                                className="ml-1 text-sage-60 hover:text-sage-80"
+                                className="text-sage-70 hover:text-sage-100 text-xs"
                               >
-                                <X className="h-3 w-3" />
+                                ×
                               </button>
-                            </span>
+                            </div>
                           ))}
                         </div>
 
-                        {/* 새 키워드 입력 */}
-                        {showKeywordInput ? (
-                          <div className="flex space-x-2">
-                            <input
-                              type="text"
-                              value={newKeyword}
-                              onChange={(e) => setNewKeyword(e.target.value)}
-                              onKeyPress={(e) =>
-                                e.key === 'Enter' && handleAddKeyword()
+                        {/* 새 키워드 추가 */}
+                        <div className="flex space-x-2">
+                          <input
+                            type="text"
+                            value={newKeyword}
+                            onChange={(e) => setNewKeyword(e.target.value)}
+                            onKeyPress={(e) => {
+                              if (e.key === 'Enter') {
+                                handleAddKeyword();
                               }
-                              placeholder="새 키워드 입력"
-                              className="flex-1 px-2 py-1 text-sm border border-sage-30 rounded focus:outline-none focus:border-sage-70"
-                            />
-                            <button
-                              onClick={handleAddKeyword}
-                              className="px-2 py-1 bg-sage-50 text-white rounded text-sm hover:bg-sage-60"
-                            >
-                              추가
-                            </button>
-                            <button
-                              onClick={() => setShowKeywordInput(false)}
-                              className="px-2 py-1 bg-gray-200 text-gray-700 rounded text-sm hover:bg-gray-300"
-                            >
-                              취소
-                            </button>
-                          </div>
-                        ) : (
+                            }}
+                            placeholder="새 키워드 입력"
+                            className="flex-1 px-2 py-1 border border-sage-30 rounded-md text-sm focus:outline-none focus:border-sage-70"
+                          />
                           <button
-                            onClick={() => setShowKeywordInput(true)}
-                            className="flex items-center space-x-1 text-sage-60 hover:text-sage-80 text-sm"
+                            onClick={handleAddKeyword}
+                            className="px-3 py-1 bg-sage-50 text-white text-sm rounded-md hover:bg-sage-60 transition-colors"
                           >
-                            <Plus className="h-4 w-4" />
-                            <span>키워드 추가</span>
+                            추가
                           </button>
-                        )}
+                        </div>
                       </div>
                     ) : (
                       <div className="flex flex-wrap gap-2">
@@ -487,46 +514,21 @@ export default function ViewPostPage() {
                           entry.keywords.map((keyword, index) => (
                             <span
                               key={index}
-                              className="text-sage-100 font-medium"
+                              className="bg-sage-20 text-sage-100 px-2 py-1 rounded-md text-sm"
                             >
                               #{keyword}
                             </span>
                           ))
                         ) : (
-                          <>
-                            <span className="text-sage-100 font-medium">
-                              #소풍
-                            </span>
-                            <span className="text-sage-100 font-medium">
-                              #데이트
-                            </span>
-                          </>
+                          <span className="text-sage-100 font-medium text-gray-500">
+                            설정되지 않음
+                          </span>
                         )}
                       </div>
                     )}
                   </div>
                 </div>
               </div>
-            </div>
-
-            {/* 제목 섹션 */}
-            <div className="mb-6">
-              <div className="block text-lg text-sage-100 mb-2">
-                제목(Title) :
-              </div>
-              {isEditing ? (
-                <input
-                  type="text"
-                  value={editedTitle}
-                  onChange={(e) => setEditedTitle(e.target.value)}
-                  className="w-full text-lg text-sage-100 bg-transparent border-0 border-b-2 border-sage-100 focus:outline-none focus:border-sage-70 pb-2"
-                  placeholder="제목을 입력하세요"
-                />
-              ) : (
-                <div className="w-full text-lg text-sage-100 border-b-2 border-sage-100 pb-2">
-                  {entry.title || ''}
-                </div>
-              )}
             </div>
 
             {/* 본문 영역 */}
@@ -553,9 +555,9 @@ export default function ViewPostPage() {
               <button
                 onClick={() => handleNavigate('prev')}
                 disabled={currentIndex === 0}
-                className={`w-12 h-12 rounded-full border-2 border-sage-30 bg-sage-10 flex items-center justify-center transition-all ${
+                className={`w-12 h-12 rounded-full border-2 border-sage-30 bg-sage-10 flex items-center justify-center transition-all duration-200 ${
                   currentIndex > 0
-                    ? 'hover:bg-sage-20 text-sage-100'
+                    ? 'hover:bg-sage-20 hover:border-sage-50 text-sage-100 hover:scale-105 shadow-md'
                     : 'text-sage-50 cursor-not-allowed opacity-50'
                 }`}
               >
@@ -568,30 +570,94 @@ export default function ViewPostPage() {
                   <>
                     <button
                       onClick={handleEdit}
-                      className="px-6 py-2 bg-sage-50 hover:bg-sage-60 text-white rounded-lg border-2 border-sage-60 transition-colors"
+                      className="group relative px-8 py-3 bg-gradient-to-r from-sage-60 to-sage-70 hover:from-sage-70 hover:to-sage-80 text-white rounded-xl border-0 transition-all duration-300 transform hover:scale-105 hover:shadow-lg shadow-md font-medium text-base"
                     >
-                      저장
+                      <span className="relative z-10 flex items-center space-x-2">
+                        <svg
+                          className="w-5 h-5"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M5 13l4 4L19 7"
+                          />
+                        </svg>
+                        <span>저장</span>
+                      </span>
+                      <div className="absolute inset-0 bg-gradient-to-r from-sage-70 to-sage-80 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                     </button>
                     <button
                       onClick={handleCancelEdit}
-                      className="px-6 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg border-2 border-gray-300 transition-colors"
+                      className="group relative px-8 py-3 bg-gradient-to-r from-gray-100 to-gray-200 hover:from-gray-200 hover:to-gray-300 text-gray-700 rounded-xl border-0 transition-all duration-300 transform hover:scale-105 hover:shadow-lg shadow-md font-medium text-base"
                     >
-                      취소
+                      <span className="relative z-10 flex items-center space-x-2">
+                        <svg
+                          className="w-5 h-5"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M6 18L18 6M6 6l12 12"
+                          />
+                        </svg>
+                        <span>취소</span>
+                      </span>
+                      <div className="absolute inset-0 bg-gradient-to-r from-gray-200 to-gray-300 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                     </button>
                   </>
                 ) : (
                   <>
                     <button
                       onClick={handleEdit}
-                      className="px-6 py-2 bg-sage-50 hover:bg-sage-60 text-white rounded-lg border-2 border-sage-60 transition-colors"
+                      className="group relative px-8 py-3 bg-gradient-to-r from-sage-50 to-sage-60 hover:from-sage-60 hover:to-sage-70 text-white rounded-xl border-0 transition-all duration-300 transform hover:scale-105 hover:shadow-lg shadow-md font-medium text-base"
                     >
-                      수정
+                      <span className="relative z-10 flex items-center space-x-2">
+                        <svg
+                          className="w-5 h-5"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                          />
+                        </svg>
+                        <span>수정</span>
+                      </span>
+                      <div className="absolute inset-0 bg-gradient-to-r from-sage-60 to-sage-70 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                     </button>
                     <button
                       onClick={handleDelete}
-                      className="px-6 py-2 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg border-2 border-red-200 transition-colors"
+                      className="group relative px-8 py-3 bg-gradient-to-r from-red-400 to-red-500 hover:from-red-500 hover:to-red-600 text-white rounded-xl border-0 transition-all duration-300 transform hover:scale-105 hover:shadow-lg shadow-md font-medium text-base"
                     >
-                      삭제
+                      <span className="relative z-10 flex items-center space-x-2">
+                        <svg
+                          className="w-5 h-5"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                          />
+                        </svg>
+                        <span>삭제</span>
+                      </span>
+                      <div className="absolute inset-0 bg-gradient-to-r from-red-500 to-red-600 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                     </button>
                   </>
                 )}
@@ -601,9 +667,9 @@ export default function ViewPostPage() {
               <button
                 onClick={() => handleNavigate('next')}
                 disabled={currentIndex === sameDateEntries.length - 1}
-                className={`w-12 h-12 rounded-full border-2 border-sage-30 bg-sage-10 flex items-center justify-center transition-all ${
+                className={`w-12 h-12 rounded-full border-2 border-sage-30 bg-sage-10 flex items-center justify-center transition-all duration-200 ${
                   currentIndex < sameDateEntries.length - 1
-                    ? 'hover:bg-sage-20 text-sage-100'
+                    ? 'hover:bg-sage-20 hover:border-sage-50 text-sage-100 hover:scale-105 shadow-md'
                     : 'text-sage-50 cursor-not-allowed opacity-50'
                 }`}
               >

@@ -2,13 +2,13 @@
   "name": "saegim-frontend",
   "version": "0.1.0",
   "private": true,
-  "packageManager": "npm@latest",
+  "packageManager": "npm@10.0.0",
   "engines": {
     "node": ">=18.0.0",
     "npm": ">=8.0.0"
   },
   "scripts": {
-    "dev": "next dev --turbopack",
+    "dev": "next dev",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
@@ -50,6 +50,7 @@
     "clsx": "^2.1.1",
     "cmdk": "1.0.4",
     "embla-carousel-react": "8.5.1",
+    "firebase": "^12.1.0",
     "immer": "^10.1.1",
     "input-otp": "1.4.1",
     "lucide-react": "^0.539.0",

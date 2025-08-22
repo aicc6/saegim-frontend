@@ -136,7 +136,11 @@ export default function DiaryListView() {
   // 카드 클릭 핸들러
   const handleCardClick = useCallback(
     (diaryId: string) => {
-      router.push(`/viewPost/${diaryId}`);
+      // 현재 페이지 경로를 from 파라미터로 전달
+      const currentPath = '/list';
+      router.push(
+        `/viewPost/${diaryId}?from=${encodeURIComponent(currentPath)}`,
+      );
     },
     [router],
   );
