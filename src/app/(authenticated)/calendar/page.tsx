@@ -401,7 +401,6 @@ export default function CalendarPage() {
                 onDateSelect={handleDateSelect}
                 onDateChange={handleDateChange}
                 className="h-fit"
-                userId={userId}
               />
 
               {/* 선택된 날짜 정보 */}
