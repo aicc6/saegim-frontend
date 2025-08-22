@@ -2,7 +2,13 @@
 
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
@@ -58,11 +64,11 @@ export default function FCMTestPanel() {
   const testFCMHealth = async () => {
     try {
       const response = await fcmApi.checkHealth();
-      setTestResults(prev => ({ ...prev, health: response.success }));
+      setTestResults((prev) => ({ ...prev, health: response.success }));
       return response.success;
     } catch (error) {
       console.error('FCM 헬스 체크 실패:', error);
-      setTestResults(prev => ({ ...prev, health: false }));
+      setTestResults((prev) => ({ ...prev, health: false }));
       return false;
     }
   };
@@ -72,11 +78,11 @@ export default function FCMTestPanel() {
     try {
       await registerToken();
       const success = isTokenRegistered && !!token;
-      setTestResults(prev => ({ ...prev, tokenRegistration: success }));
+      setTestResults((prev) => ({ ...prev, tokenRegistration: success }));
       return success;
     } catch (error) {
       console.error('토큰 등록 테스트 실패:', error);
-      setTestResults(prev => ({ ...prev, tokenRegistration: false }));
+      setTestResults((prev) => ({ ...prev, tokenRegistration: false }));
       return false;
     }
   };
@@ -88,8 +94,8 @@ export default function FCMTestPanel() {
         ...settings,
         diaryReminder: !settings.diaryReminder, // 값을 토글하여 변경 확인
       });
-      setTestResults(prev => ({ ...prev, settingsSync: true }));
-      
+      setTestResults((prev) => ({ ...prev, settingsSync: true }));
+
       // 원래 값으로 되돌리기
       setTimeout(() => {
         updateSettings({
@@ -97,11 +103,11 @@ export default function FCMTestPanel() {
           diaryReminder: !settings.diaryReminder,
         });
       }, 1000);
-      
+
       return true;
     } catch (error) {
       console.error('설정 동기화 테스트 실패:', error);
-      setTestResults(prev => ({ ...prev, settingsSync: false }));
+      setTestResults((prev) => ({ ...prev, settingsSync: false }));
       return false;
     }
   };
@@ -114,24 +120,29 @@ export default function FCMTestPanel() {
     }
 
     try {
-      // 다이어리 알림 테스트 (실제 사용자 ID가 필요하므로 임시로 하드코딩)
-      // 실제 구현에서는 현재 로그인된 사용자 ID를 사용해야 함
-      const testUserId = 'test-user-id'; // 임시 사용자 ID
-      
-      const response = await fcmApi.sendDiaryReminder(testUserId);
-      setTestResults(prev => ({ ...prev, notificationSend: response.success }));
+      // 다이어리 알림 테스트 - 현재 인증된 사용자에게 전송
+      const response = await fcmApi.sendDiaryReminder();
+      setTestResults((prev) => ({
+        ...prev,
+        notificationSend: response.success,
+      }));
       return response.success;
     } catch (error) {
       console.error('테스트 알림 전송 실패:', error);
-      setTestResults(prev => ({ ...prev, notificationSend: false }));
+      setTestResults((prev) => ({ ...prev, notificationSend: false }));
       return false;
     }
   };
 
   // 전체 테스트 실행
   const runAllTests = async () => {
-    setTestResults({ health: null, tokenRegistration: null, settingsSync: null, notificationSend: null });
-    
+    setTestResults({
+      health: null,
+      tokenRegistration: null,
+      settingsSync: null,
+      notificationSend: null,
+    });
+
     const health = await testFCMHealth();
     if (health && permission === 'granted') {
       await testTokenRegistration();
@@ -145,7 +156,11 @@ export default function FCMTestPanel() {
 
   const getStatusBadge = (result: boolean | null) => {
     if (result === null) return <Badge variant="secondary">대기중</Badge>;
-    return result ? <Badge variant="default">성공</Badge> : <Badge variant="destructive">실패</Badge>;
+    return result ? (
+      <Badge variant="default">성공</Badge>
+    ) : (
+      <Badge variant="destructive">실패</Badge>
+    );
   };
 
   if (!isInitialized) {
@@ -176,13 +191,15 @@ export default function FCMTestPanel() {
                 {isSupported ? '✅ 지원됨' : '❌ 지원되지 않음'}
               </p>
             </div>
-            
+
             <div className="space-y-2">
               <h4 className="font-medium">알림 권한</h4>
               <p className="text-sm text-muted-foreground">
-                {permission === 'granted' ? '✅ 허용됨' : 
-                 permission === 'denied' ? '❌ 거부됨' : 
-                 '⏳ 요청 전'}
+                {permission === 'granted'
+                  ? '✅ 허용됨'
+                  : permission === 'denied'
+                    ? '❌ 거부됨'
+                    : '⏳ 요청 전'}
               </p>
             </div>
           </div>
@@ -201,19 +218,23 @@ export default function FCMTestPanel() {
           {/* 현재 상태 */}
           <div className="space-y-4">
             <h3 className="text-lg font-semibold">현재 상태</h3>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <h4 className="font-medium">FCM 토큰</h4>
                 <p className="text-sm text-muted-foreground">
-                  {token ? `등록됨: ${token.substring(0, 20)}...` : '등록되지 않음'}
+                  {token
+                    ? `등록됨: ${token.substring(0, 20)}...`
+                    : '등록되지 않음'}
                 </p>
               </div>
-              
+
               <div className="space-y-2">
                 <h4 className="font-medium">토큰 등록 상태</h4>
                 <p className="text-sm text-muted-foreground">
-                  {isTokenRegistered ? '✅ 서버에 등록됨' : '❌ 서버에 등록되지 않음'}
+                  {isTokenRegistered
+                    ? '✅ 서버에 등록됨'
+                    : '❌ 서버에 등록되지 않음'}
                 </p>
               </div>
             </div>
@@ -223,18 +244,22 @@ export default function FCMTestPanel() {
               <h4 className="font-medium">알림 설정</h4>
               <div className="grid grid-cols-2 gap-3">
                 <div className="flex items-center space-x-2">
-                  <Switch 
-                    checked={settings.diaryReminder} 
-                    onCheckedChange={(checked) => updateSettings({ ...settings, diaryReminder: checked })}
+                  <Switch
+                    checked={settings.diaryReminder}
+                    onCheckedChange={(checked) =>
+                      updateSettings({ ...settings, diaryReminder: checked })
+                    }
                     disabled={isLoading}
                   />
                   <span className="text-sm">다이어리 알림</span>
                 </div>
-                
+
                 <div className="flex items-center space-x-2">
-                  <Switch 
-                    checked={settings.aiContentReady} 
-                    onCheckedChange={(checked) => updateSettings({ ...settings, aiContentReady: checked })}
+                  <Switch
+                    checked={settings.aiContentReady}
+                    onCheckedChange={(checked) =>
+                      updateSettings({ ...settings, aiContentReady: checked })
+                    }
                     disabled={isLoading}
                   />
                   <span className="text-sm">AI 콘텐츠 알림</span>
@@ -269,9 +294,9 @@ export default function FCMTestPanel() {
                 <span className="font-medium">토큰 등록</span>
                 <div className="flex items-center gap-2">
                   {getStatusBadge(testResults.tokenRegistration)}
-                  <Button 
-                    size="sm" 
-                    variant="outline" 
+                  <Button
+                    size="sm"
+                    variant="outline"
                     onClick={testTokenRegistration}
                     disabled={permission !== 'granted'}
                   >
@@ -284,9 +309,9 @@ export default function FCMTestPanel() {
                 <span className="font-medium">설정 동기화</span>
                 <div className="flex items-center gap-2">
                   {getStatusBadge(testResults.settingsSync)}
-                  <Button 
-                    size="sm" 
-                    variant="outline" 
+                  <Button
+                    size="sm"
+                    variant="outline"
                     onClick={testSettingsSync}
                     disabled={!isTokenRegistered}
                   >
@@ -299,9 +324,9 @@ export default function FCMTestPanel() {
                 <span className="font-medium">알림 전송</span>
                 <div className="flex items-center gap-2">
                   {getStatusBadge(testResults.notificationSend)}
-                  <Button 
-                    size="sm" 
-                    variant="outline" 
+                  <Button
+                    size="sm"
+                    variant="outline"
                     onClick={testNotificationSend}
                     disabled={!isTokenRegistered}
                   >

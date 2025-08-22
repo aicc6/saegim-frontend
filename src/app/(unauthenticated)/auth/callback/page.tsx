@@ -3,6 +3,9 @@
 import { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 
+// 동적 렌더링 강제
+export const dynamic = 'force-dynamic';
+
 function AuthCallbackContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -14,9 +17,9 @@ function AuthCallbackContent() {
         const success = searchParams.get('success');
         const error = searchParams.get('error');
         const message = searchParams.get('message');
-        
+
         console.log('🔍 콜백 파라미터:', { success, error, message });
-        
+
         // 로그인 실패 시
         if (error) {
           console.error('로그인 실패:', message);
@@ -24,7 +27,7 @@ function AuthCallbackContent() {
           router.push('/login');
           return;
         }
-        
+
         // 로그인 성공 시 메인 페이지로 리다이렉트
         if (success === 'true') {
           console.log('✅ 로그인 성공 - 메인 페이지로 이동');
@@ -37,7 +40,6 @@ function AuthCallbackContent() {
           // 잘못된 접근
           router.push('/login');
         }
-        
       } catch (err) {
         console.error('콜백 처리 실패:', err);
         setIsLoading(false);
