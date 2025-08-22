@@ -15,6 +15,14 @@ export interface ApiResponse<T> {
   request_id: string;
 }
 
+export interface PasswordResetEmailResponse {
+  success: boolean;
+  message: string;
+  is_social_account?: boolean;
+  email_sent?: boolean;
+  redirect_to_error_page?: boolean;
+}
+
 export interface LoginResponse {
   user_id: string;
   email: string;
@@ -113,11 +121,14 @@ class ApiClient {
         }
       }
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
       const data = await response.json();
+
+      if (!response.ok) {
+        // 에러 응답을 포함한 에러 객체 생성
+        const error = new Error(`HTTP error! status: ${response.status}`);
+        (error as any).response = { data, status: response.status };
+        throw error;
+      }
 
       console.log('📊 ApiClient: 응답 데이터', {
         hasData: !!data,
@@ -305,6 +316,28 @@ export const authApi = {
   // 현재 사용자 정보 조회
   getCurrentUser: async () => {
     return apiClient.get('/api/auth/me');
+  },
+
+  // 비밀번호 재설정 이메일 발송
+  sendPasswordResetEmail: async (data: { email: string }) => {
+    return apiClient.post<PasswordResetEmailResponse>('/api/auth/forgot-password', data);
+  },
+
+  // 비밀번호 재설정 인증코드 확인
+  verifyPasswordResetCode: async (data: { 
+    email: string; 
+    verification_code: string 
+  }) => {
+    return apiClient.post('/api/auth/forgot-password/verify', data);
+  },
+
+  // 비밀번호 재설정
+  resetPassword: async (data: { 
+    email: string; 
+    verification_code: string; 
+    new_password: string 
+  }) => {
+    return apiClient.post('/api/auth/forgot-password/reset', data);
   },
 };
 

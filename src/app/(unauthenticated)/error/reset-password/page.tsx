@@ -1,9 +1,9 @@
 'use client';
 
 import { useTheme } from 'next-themes';
-import ResetPasswordForm from '@/components/auth/ResetPasswordForm';
+import ResetPasswordErrorForm from '@/components/auth/ResetPasswordErrorForm';
 
-export default function ResetPasswordPage() {
+export default function ResetPasswordErrorPage() {
   const { resolvedTheme } = useTheme();
   const isDark = resolvedTheme === 'dark';
 
@@ -12,7 +12,7 @@ export default function ResetPasswordPage() {
       <main className="container mx-auto px-4 py-16">
         <div className="max-w-md mx-auto">
           <div className="bg-background-primary dark:bg-background-dark-secondary rounded-2xl shadow-2xl p-10 border border-border-subtle dark:border-border-dark transition-colors">
-            <ResetPasswordForm />
+            <ResetPasswordErrorForm />
           </div>
         </div>
       </main>
