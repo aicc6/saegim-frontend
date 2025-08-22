@@ -25,14 +25,12 @@ interface CalendarProps {
   className?: string;
   onDateSelect?: (date: string) => void;
   onDateChange?: (date: Date) => void;
-  userId?: string; // 사용자 ID (UUID)
 }
 
 export function Calendar({
   className,
   onDateSelect,
   onDateChange,
-  userId = '1', // 임시로 기본값 설정
 }: CalendarProps) {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
@@ -68,18 +66,31 @@ export function Calendar({
   // 월이 변경될 때마다 해당 월의 다이어리 데이터 가져오기 - 의존성 배열 최적화
   useEffect(() => {
     console.log('🔍 Calendar: API 호출 시작', {
-      userId,
       startDate: dateRange.startDate,
       endDate: dateRange.endDate,
     });
 
-    // 실제 백엔드 API 호출 - 함수 참조 대신 직접 호출
+    // 실제 백엔드 API 호출 - JWT 토큰 기반으로 사용자 식별
     const loadCalendarData = async () => {
       try {
         const apiBaseUrl =
           process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000';
+
+        // JWT 토큰 가져오기
+        const token = localStorage.getItem('access_token');
+        if (!token) {
+          console.error('❌ Calendar: JWT 토큰이 없습니다.');
+          return;
+        }
+
         const response = await fetch(
-          `${apiBaseUrl}/api/diary/calendar/${userId}?start_date=${dateRange.startDate}&end_date=${dateRange.endDate}`,
+          `${apiBaseUrl}/api/diary/calendar?start_date=${dateRange.startDate}&end_date=${dateRange.endDate}`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              'Content-Type': 'application/json',
+            },
+          },
         );
 
         if (response.ok) {
@@ -107,7 +118,7 @@ export function Calendar({
     };
 
     loadCalendarData();
-  }, [year, month, userId]); // dateRange 제거하고 year, month, userId만 의존성으로 설정
+  }, [year, month]); // dateRange 제거하고 year, month만 의존성으로 설정
 
   // 데이터 로딩 상태 디버깅
   useEffect(() => {
