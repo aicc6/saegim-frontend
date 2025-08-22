@@ -437,6 +437,11 @@ export default function ProfileForm() {
                </label>
                <p className="text-xs text-text-secondary dark:text-text-dark-secondary mb-2">
                  로그인 및 알림에 사용되는 이메일입니다. (보안상 일부가 마스킹됩니다)
+                 {profileData.accountType === 'social' && (
+                   <span className="block mt-1 text-orange-600 dark:text-orange-400">
+                     ⚠️ 소셜 계정은 이메일 변경이 불가능합니다. {profileData.provider}에서 직접 변경해주세요.
+                   </span>
+                 )}
                </p>
                <div className="flex gap-2">
                  <input
@@ -448,13 +453,23 @@ export default function ProfileForm() {
                    className="flex-1 px-4 py-3 bg-gray-100 dark:bg-background-dark-secondary border border-gray-300 dark:border-border-dark-subtle rounded-lg text-gray-600 dark:text-text-dark-secondary cursor-not-allowed"
                    placeholder="현재 이메일"
                  />
-                 <button
-                   onClick={handleEmailChange}
-                   className="saegim-button saegim-button-small"
-                   disabled={isUpdating}
-                 >
-                   이메일 변경
-                 </button>
+                 {profileData.accountType === 'email' ? (
+                   <button
+                     onClick={handleEmailChange}
+                     className="saegim-button saegim-button-small"
+                     disabled={isUpdating}
+                   >
+                     이메일 변경
+                   </button>
+                 ) : (
+                   <button
+                     className="px-4 py-3 bg-gray-300 dark:bg-gray-600 text-gray-500 dark:text-gray-400 rounded-lg cursor-not-allowed"
+                     disabled
+                     title="소셜 계정은 이메일 변경이 불가능합니다"
+                   >
+                     변경 불가
+                   </button>
+                 )}
                </div>
              </div>
           </div>
@@ -479,13 +494,28 @@ export default function ProfileForm() {
         </h2>
         <p className="text-sm text-text-secondary dark:text-text-dark-secondary mb-4">
           계정 보안을 위한 설정을 관리합니다.
+          {profileData.accountType === 'social' && (
+            <span className="block mt-2 text-orange-600 dark:text-orange-400">
+              ⚠️ 소셜 계정은 비밀번호 변경이 불가능합니다. {profileData.provider}에서 직접 관리해주세요.
+            </span>
+          )}
         </p>
-        <button
-          onClick={handlePasswordChange}
-          className="saegim-button saegim-button-medium"
-        >
-          비밀번호 변경
-        </button>
+        {profileData.accountType === 'email' ? (
+          <button
+            onClick={handlePasswordChange}
+            className="saegim-button saegim-button-medium"
+          >
+            비밀번호 변경
+          </button>
+        ) : (
+          <button
+            className="px-6 py-3 bg-gray-300 dark:bg-gray-600 text-gray-500 dark:text-gray-400 rounded-lg cursor-not-allowed"
+            disabled
+            title="소셜 계정은 비밀번호 변경이 불가능합니다"
+          >
+            변경 불가 (소셜 계정)
+          </button>
+        )}
       </div>
 
       {/* 계정 설정 섹션 */}

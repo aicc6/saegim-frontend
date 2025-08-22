@@ -74,6 +74,12 @@ export default function LoginForm() {
       
     } catch (error: any) {
       console.error('로그인 실패:', error);
+      console.error('에러 상세 정보:', {
+        message: error.message,
+        status: error.status,
+        response: error.response,
+        stack: error.stack
+      });
       
       // 상세한 에러 메시지 처리
       let errorTitle = '로그인 실패';
