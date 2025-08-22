@@ -74,9 +74,48 @@ export default function LoginForm() {
       
     } catch (error: any) {
       console.error('로그인 실패:', error);
+      
+      // 상세한 에러 메시지 처리
+      let errorTitle = '로그인 실패';
+      let errorDescription = '로그인 중 오류가 발생했습니다.';
+      
+      if (error.message) {
+        const errorMessage = error.message.toLowerCase();
+        
+        if (errorMessage.includes('401') || errorMessage.includes('unauthorized')) {
+          errorTitle = '인증 실패';
+          errorDescription = '이메일 또는 비밀번호가 올바르지 않습니다.';
+        } else if (errorMessage.includes('password')) {
+          errorTitle = '비밀번호 오류';
+          errorDescription = '비밀번호가 변경되었을 수 있습니다. 비밀번호 찾기를 이용해주세요.';
+        } else if (errorMessage.includes('email') || errorMessage.includes('user')) {
+          errorTitle = '계정 오류';
+          errorDescription = '존재하지 않는 이메일 주소입니다. 회원가입을 먼저 진행해주세요.';
+        } else if (errorMessage.includes('network') || errorMessage.includes('fetch')) {
+          errorTitle = '네트워크 오류';
+          errorDescription = '서버에 연결할 수 없습니다. 인터넷 연결을 확인해주세요.';
+        } else if (errorMessage.includes('timeout')) {
+          errorTitle = '시간 초과';
+          errorDescription = '요청 시간이 초과되었습니다. 잠시 후 다시 시도해주세요.';
+        }
+      }
+      
+      // 백엔드에서 전달된 상세 에러 메시지가 있으면 우선 사용
+      if (error.response?.data?.detail) {
+        const backendError = error.response.data.detail;
+        
+        // 비밀번호 변경 관련 특별 처리
+        if (backendError.includes('비밀번호') || backendError.includes('password')) {
+          errorTitle = '비밀번호 변경됨';
+          errorDescription = '비밀번호가 변경되었습니다. 비밀번호 찾기를 이용해 새로운 비밀번호를 설정해주세요.';
+        } else {
+          errorDescription = backendError;
+        }
+      }
+      
       toast({
-        title: '로그인 실패',
-        description: error.response?.data?.detail || '로그인 중 오류가 발생했습니다.',
+        title: errorTitle,
+        description: errorDescription,
         variant: 'destructive',
       });
     } finally {

@@ -4,12 +4,21 @@ import { useEffect, useState } from 'react';
 import Image from 'next/image';
 import { useTheme } from 'next-themes';
 import { useNotifications } from '@/hooks/use-notifications';
+import { authApi } from '@/lib/api';
 import ThemeToggle from '../ui/custom/ThemeToggle';
 import NotificationPopover from './NotificationPopover';
+
+interface UserInfo {
+  email: string;
+  nickname: string;
+  account_type: string;
+}
 
 export default function AuthenticatedHeader() {
   const { resolvedTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
+  const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   const { notifications, markAsRead, markAllAsRead, deleteNotification } =
     useNotifications();
@@ -18,6 +27,26 @@ export default function AuthenticatedHeader() {
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  // 사용자 정보 가져오기
+  useEffect(() => {
+    const fetchUserInfo = async () => {
+      try {
+        const response = await authApi.getCurrentUser();
+        if (response.data) {
+          setUserInfo(response.data as UserInfo);
+        }
+      } catch (error) {
+        console.error('사용자 정보 가져오기 실패:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    if (mounted) {
+      fetchUserInfo();
+    }
+  }, [mounted]);
 
   if (!mounted) {
     return null;
@@ -52,8 +81,8 @@ export default function AuthenticatedHeader() {
           </h1>
         </div>
 
-        {/* 우측: 알림 및 테마 토글 버튼 */}
-        <div className="flex items-center space-x-2">
+        {/* 우측: 알림, 테마 토글, 프로필 */}
+        <div className="flex items-center space-x-4">
           <NotificationPopover
             notifications={notifications}
             onMarkAsRead={markAsRead}
@@ -62,6 +91,33 @@ export default function AuthenticatedHeader() {
           />
 
           <ThemeToggle />
+
+          {/* 프로필 영역 */}
+          {!isLoading && userInfo && (
+            <div className="flex items-center space-x-2">
+              <div className="flex flex-col items-end">
+                <span
+                  className={`text-sm font-medium ${
+                    isDark ? 'text-white' : 'text-sage-100'
+                  }`}
+                >
+                  {userInfo.nickname}
+                </span>
+                <span
+                  className={`text-xs ${
+                    isDark ? 'text-gray-400' : 'text-gray-600'
+                  }`}
+                >
+                  {userInfo.email}
+                </span>
+              </div>
+              <div className="w-8 h-8 rounded-full bg-sage-100 flex items-center justify-center">
+                <span className="text-sm font-medium text-white">
+                  {userInfo.nickname.charAt(0).toUpperCase()}
+                </span>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
