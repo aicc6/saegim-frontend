@@ -10,8 +10,6 @@ import Select from '../../ui/custom/Select';
 // 초기 입력 화면 전용 컴포넌트
 
 export default function CreateAi() {
-  console.log('🎨 CreateAi 컴포넌트 마운트');
-
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [selectedImages, setSelectedImages] = useState<File[]>([]);
@@ -22,10 +20,12 @@ export default function CreateAi() {
     style,
     length,
     isGenerating,
+    error,
     setPrompt,
     setStyle,
     setLength,
     generateText,
+    clearError,
   } = useCreateStore();
 
   const {
@@ -33,6 +33,16 @@ export default function CreateAi() {
     emotions: emotionConfigs,
     setSelectedEmotion: setEmotion,
   } = useEmotionStore();
+
+  // 에러가 있으면 자동으로 5초 후 제거
+  useEffect(() => {
+    if (error) {
+      const timer = setTimeout(() => {
+        clearError();
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [error, clearError]);
 
   // 이미지 파일 선택 핸들러
   const handleImageSelect = useCallback(
@@ -116,14 +126,6 @@ export default function CreateAi() {
   // 결과가 있으면 CreateChat 컴포넌트를 사용하도록 안내
   // (실제로는 페이지 라우팅으로 처리될 예정)
 
-  // 초기 화면
-  console.log('🎨 CreateAi 컴포넌트 렌더링:', {
-    prompt,
-    style,
-    length,
-    emotion,
-  });
-
   return (
     <div className="rounded-3xl bg-ivory-cream shadow-card relative p-6 sm:p-8">
       <h1 className="text-4xl font-poetic font-bold text-[#3F764A] text-center">
@@ -136,6 +138,47 @@ export default function CreateAi() {
       <p className="mt-2 text-body text-text-primary text-center">
         키워드나 짧은 글을 입력하면 AI가 감정적인 글을 생성해 드립니다
       </p>
+
+      {/* 에러 메시지 표시 */}
+      {error && (
+        <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-xl">
+          <div className="flex items-center gap-2">
+            <svg
+              className="w-5 h-5 text-red-500 flex-shrink-0"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
+            </svg>
+            <p className="text-red-700 text-sm font-medium">{error}</p>
+            <button
+              onClick={clearError}
+              className="ml-auto text-red-400 hover:text-red-600 transition-colors"
+              aria-label="에러 메시지 닫기"
+            >
+              <svg
+                className="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M6 18L18 6M6 6l12 12"
+                />
+              </svg>
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* 선택된 이미지들 미리보기 */}
       {selectedImages.length > 0 && (

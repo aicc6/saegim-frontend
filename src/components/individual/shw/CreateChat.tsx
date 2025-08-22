@@ -10,7 +10,6 @@ import {
   useEmotionStore,
   EmotionConfig,
 } from '@/stores/emotion';
-import { useDiaryStore } from '@/stores/diary';
 
 export default function CreateChat() {
   const [showToast, setShowToast] = useState(false);
@@ -20,23 +19,21 @@ export default function CreateChat() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
 
+  // create.ts store에서 필요한 상태와 함수만 가져오기
   const {
     config,
     prompt,
     style,
     length,
     isGenerating,
-    // chatMessages, // 사용하지 않으므로 주석 처리
-    generateInSession,
-    regenerateText,
-    // deleteMessage, // 사용하지 않으므로 주석 처리
-    navigateRegenerationHistory,
+    generatedText,
+    generatedKeywords,
     setPrompt,
     setStyle,
     setLength,
+    generateText,
     getStyleDisplayName,
     getLengthDisplayName,
-    getAIMessages,
   } = useCreateStore();
 
   const {
@@ -46,7 +43,38 @@ export default function CreateChat() {
     getEmotionConfig,
   } = useEmotionStore();
 
-  const { addEntry } = useDiaryStore();
+  // 재생성 횟수 상태 추가
+  const [regenerationCount, setRegenerationCount] = useState(1);
+
+  // 재생성 핸들러
+  const handleRegenerate = useCallback(async () => {
+    if (!prompt.trim() || isGenerating) return;
+
+    try {
+      // 재생성 횟수 증가
+      const newCount = regenerationCount + 1;
+      setRegenerationCount(newCount);
+
+      console.log(`재생성 시작 (${newCount}번째):`, { prompt, emotion });
+
+      // 기존 API 재사용 (regeneration_count는 백엔드에서 자동 처리)
+      await generateText(emotion);
+
+      console.log(`재생성 완료 (${newCount}번째)`);
+    } catch (error) {
+      console.error('재생성 실패:', error);
+    }
+  }, [prompt, emotion, isGenerating, generateText, regenerationCount]);
+
+  // 다이어리로 이동 핸들러 (간단한 alert로 처리)
+  const handleMoveToDiary = useCallback(
+    (messageContent: string, messageEmotion?: string) => {
+      alert(
+        `다이어리로 이동 기능은 아직 구현되지 않았습니다.\n\n생성된 텍스트: ${messageContent.substring(0, 100)}...`,
+      );
+    },
+    [],
+  );
 
   // 스크롤을 최하단으로 이동
   const scrollToBottom = useCallback(() => {
@@ -107,48 +135,18 @@ export default function CreateChat() {
     fileInputRef.current?.click();
   }, []);
 
-  // 다이어리로 이동 핸들러
-  const handleMoveToDiary = useCallback(
-    (messageContent: string, messageEmotion?: string) => {
-      // 새 다이어리 엔트리 생성
-      const newEntry = {
-        id: Date.now().toString(),
-        title: '', // 제목은 비워두고 사용자가 입력하도록
-        content: messageContent,
-        user_emotion: messageEmotion || null, // 감정 정보 전달
-        ai_generated_text: messageContent,
-        user_id: 'current_user', // TODO: 실제 사용자 ID로 교체
-        ai_emotion: null,
-        ai_emotion_confidence: null,
-        updated_at: null,
-        keywords: null, // 키워드는 비워둠
-        is_public: false, // 기본적으로 비공개
-        created_at: new Date().toISOString(),
-      };
-
-      // 다이어리 스토어에 엔트리 추가
-      addEntry(newEntry);
-
-      // 생성된 엔트리의 편집 페이지로 이동
-      router.push(
-        `/viewPost/${newEntry.id}?from=${encodeURIComponent('/createChat')}`,
-      );
-    },
-    [addEntry, router],
-  );
-
   // 엔터키 핸들링
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
       if (e.key === 'Enter' && !e.shiftKey && !isGenerating && prompt.trim()) {
         e.preventDefault();
-        generateInSession(emotion);
+        generateText(emotion);
         // 메시지 전송 후 이미지 초기화 및 스크롤
         setSelectedImages([]);
         setTimeout(scrollToBottom, 200);
       }
     },
-    [isGenerating, prompt, emotion, generateInSession, scrollToBottom],
+    [isGenerating, prompt, emotion, generateText, scrollToBottom],
   );
 
   // Effects
@@ -175,9 +173,10 @@ export default function CreateChat() {
       {/* 결과 영역 */}
       <div className="flex-1 overflow-y-auto p-4 pb-8">
         <div className="mx-auto max-w-2xl space-y-4">
-          {getAIMessages().map((message) => (
+          {/* AI 생성 결과 표시 */}
+          {generatedText && (
             <div
-              key={message.id}
+              key={Date.now()} // 새로운 메시지가 추가될 때마다 키 변경
               className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm"
             >
               {/* 헤더 */}
@@ -186,11 +185,9 @@ export default function CreateChat() {
                   <span className="text-sm text-gray-500">생성된 글</span>
                 </div>
                 <div className="flex gap-2">
-                  {message.metadata?.emotion &&
+                  {emotion &&
                     (() => {
-                      const emotionConfig = getEmotionConfig(
-                        message.metadata.emotion as EmotionOption,
-                      );
+                      const emotionConfig = getEmotionConfig(emotion);
                       return (
                         <span
                           className={`rounded-full px-2 py-1 text-xs ${
@@ -200,118 +197,68 @@ export default function CreateChat() {
                           }`}
                         >
                           {emotionConfig?.emoji}{' '}
-                          {emotionConfig?.label || message.metadata.emotion}
+                          {emotionConfig?.label || emotion}
                         </span>
                       );
                     })()}
                   <span className="rounded-full bg-sage-30 px-2 py-1 text-xs text-gray-600">
-                    {getLengthDisplayName(message.metadata?.length || '단문')}
+                    {getLengthDisplayName(length)}
                   </span>
                   <span className="rounded-full bg-sage-30 px-2 py-1 text-xs text-gray-600">
-                    {getStyleDisplayName(message.metadata?.style || '시')}
+                    {getStyleDisplayName(style)}
                   </span>
                 </div>
               </div>
 
               {/* 내용 */}
               <div className="space-y-2 text-gray-800 leading-relaxed">
-                {message.metadata?.style === '시'
-                  ? message.content
+                {style === '시'
+                  ? generatedText
                       .split('\n')
                       .map((line, idx) => <div key={idx}>{line}</div>)
-                  : message.content}
+                  : generatedText}
               </div>
+
+              {/* 키워드 표시 */}
+              {generatedKeywords && generatedKeywords.length > 0 && (
+                <div className="mt-4 pt-4 border-t border-gray-100">
+                  <p className="text-sm text-gray-600 mb-2">추출된 키워드:</p>
+                  <div className="flex flex-wrap gap-2">
+                    {generatedKeywords.map((keyword, index) => (
+                      <span
+                        key={index}
+                        className="px-2 py-1 bg-sage-20 text-sage-80 text-xs rounded-full"
+                      >
+                        {keyword}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* 액션 버튼들 */}
               <div className="mt-6 flex gap-2">
                 <ActionButton
-                  onClick={() => copyToClipboard(message.content)}
+                  onClick={() => copyToClipboard(generatedText)}
                   disabled={isGenerating}
                   text="복사하기"
                 />
 
                 <ActionButton
-                  onClick={() =>
-                    handleMoveToDiary(
-                      message.content,
-                      message.metadata?.emotion,
-                    )
-                  }
+                  onClick={() => handleMoveToDiary(generatedText, emotion)}
                   disabled={isGenerating}
                   text="다이어리로 이동"
                 />
 
-                {/* 재생성 버튼 그룹 */}
-                <div className="flex items-center gap-1">
-                  {/* 재생성 */}
-                  <ActionButton
-                    onClick={() => regenerateText(message.id)}
-                    disabled={
-                      isGenerating ||
-                      (message.regeneration_history &&
-                        message.regeneration_history.length >=
-                          (message.max_regenerations || 5))
-                    }
-                    text={
-                      message.regeneration_history &&
-                      message.regeneration_history.length > 0
-                        ? `다시 생성 (${message.regeneration_history.length}/${message.max_regenerations || 5})`
-                        : '다시 생성'
-                    }
-                  />
-
-                  {/* 네비게이션 버튼들 */}
-                  {message.regeneration_history &&
-                    message.regeneration_history.length > 1 && (
-                      <>
-                        <button
-                          onClick={() =>
-                            navigateRegenerationHistory(message.id, 'prev')
-                          }
-                          disabled={
-                            !message.current_version ||
-                            message.current_version <= 0
-                          }
-                          className={`w-8 h-8 flex items-center justify-center text-lg transition-all ${
-                            !message.current_version ||
-                            message.current_version <= 0
-                              ? 'text-gray-300 cursor-not-allowed'
-                              : 'text-gray-600 hover:text-sage-100 hover:bg-gray-100 rounded'
-                          }`}
-                          title="이전 버전"
-                        >
-                          ‹
-                        </button>
-                        <span className="text-xs text-gray-500 px-1">
-                          {(message.current_version || 0) + 1}/
-                          {message.regeneration_history.length}
-                        </span>
-                        <button
-                          onClick={() =>
-                            navigateRegenerationHistory(message.id, 'next')
-                          }
-                          disabled={
-                            !message.regeneration_history ||
-                            (message.current_version || 0) >=
-                              message.regeneration_history.length - 1
-                          }
-                          className={`w-8 h-8 flex items-center justify-center text-lg transition-all ${
-                            !message.regeneration_history ||
-                            (message.current_version || 0) >=
-                              message.regeneration_history.length - 1
-                              ? 'text-gray-300 cursor-not-allowed'
-                              : 'text-gray-600 hover:text-sage-100 hover:bg-gray-100 rounded'
-                          }`}
-                          title="다음 버전"
-                        >
-                          ›
-                        </button>
-                      </>
-                    )}
-                </div>
+                {/* 재생성 버튼 */}
+                <ActionButton
+                  onClick={handleRegenerate}
+                  disabled={isGenerating}
+                  text={`다시 생성 (${regenerationCount}번)`}
+                />
               </div>
             </div>
-          ))}
+          )}
 
           {/* 로딩 상태 */}
           {isGenerating && (
@@ -408,7 +355,7 @@ export default function CreateChat() {
                         strokeLinecap="round"
                         strokeLinejoin="round"
                         strokeWidth={2}
-                        d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.5~86-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                        d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 002 2v12a2 2 0 002 2z"
                       />
                     </svg>
                   </button>
@@ -416,7 +363,7 @@ export default function CreateChat() {
               </div>
               <button
                 onClick={() => {
-                  generateInSession(emotion);
+                  generateText(emotion);
                   // 메시지 전송 후 이미지 초기화 및 스크롤
                   setSelectedImages([]);
                   setTimeout(scrollToBottom, 200);
