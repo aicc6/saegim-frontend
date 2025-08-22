@@ -52,17 +52,8 @@ function HomeContent() {
           return;
         }
         
-        // 토큰 존재 여부 확인 (localStorage)
-        const token = localStorage.getItem('access_token');
-        
-        console.log('🔍 토큰 확인:', { hasToken: !!token });
-        
-        // 토큰이 없으면 서버 인증 시도 (쿠키 기반)
-        if (!token) {
-          console.log('🔍 토큰 없음 - 서버 인증 시도 (쿠키 기반)');
-        } else {
-          console.log('✅ 토큰 존재 - 서버 인증 확인 중');
-        }
+        // 쿠키 기반 인증 확인 (localStorage 토큰 불필요)
+        console.log('🔍 쿠키 기반 인증 확인 중');
         
         try {
           console.log('🔍 서버 인증 확인 중...');
@@ -79,7 +70,7 @@ function HomeContent() {
             profileImage: '',
             provider: userData.provider || 'email',
             createdAt: userData.created_at || new Date().toISOString(),
-          }, 'cookie-based-auth'); // 쿠키 기반 인증이므로 실제 토큰 대신 식별자 사용
+          });
           
           // 로딩 완료
           setIsLoading(false);
@@ -92,9 +83,8 @@ function HomeContent() {
         } catch (err) {
           console.error('❌ 서버 인증 확인 실패:', err);
           
-          // 토큰 정리
-          localStorage.removeItem('access_token');
-          localStorage.removeItem('refresh_token');
+          // 쿠키 기반 인증이므로 localStorage 정리 불필요
+          console.log('🧹 쿠키 기반 인증이므로 localStorage 정리 불필요');
           
           // Zustand 스토어 정리
           logout();

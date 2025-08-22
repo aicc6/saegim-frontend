@@ -70,24 +70,17 @@ export function Calendar({
       endDate: dateRange.endDate,
     });
 
-    // 실제 백엔드 API 호출 - JWT 토큰 기반으로 사용자 식별
+    // 실제 백엔드 API 호출 - 쿠키 기반 인증 사용
     const loadCalendarData = async () => {
       try {
         const apiBaseUrl =
           process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000';
 
-        // JWT 토큰 가져오기
-        const token = localStorage.getItem('access_token');
-        if (!token) {
-          console.error('❌ Calendar: JWT 토큰이 없습니다.');
-          return;
-        }
-
         const response = await fetch(
           `${apiBaseUrl}/api/diary/calendar?start_date=${dateRange.startDate}&end_date=${dateRange.endDate}`,
           {
+            credentials: 'include', // 쿠키 기반 인증
             headers: {
-              Authorization: `Bearer ${token}`,
               'Content-Type': 'application/json',
             },
           },
@@ -95,7 +88,7 @@ export function Calendar({
 
         if (response.ok) {
           const result = await response.json();
-          console.log('📡 Calendar: 직접 API 호출 결과', result);
+          console.log('📡 Calendar: 쿠키 기반 API 호출 결과', result);
 
           // 스토어 상태 업데이트
           if (result.data && Array.isArray(result.data)) {
@@ -107,6 +100,9 @@ export function Calendar({
               error: null,
             });
           }
+        } else if (response.status === 401) {
+          console.log('❌ Calendar: 인증 실패, 로그인 페이지로 리다이렉트');
+          window.location.href = '/login';
         }
       } catch (error) {
         console.error('❌ Calendar: API 호출 실패', error);

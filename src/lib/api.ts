@@ -28,8 +28,7 @@ export interface LoginResponse {
   email: string;
   nickname: string;
   message: string;
-  access_token: string;
-  refresh_token: string;
+  // 쿠키 기반 인증이므로 토큰은 응답에 포함되지 않음
 }
 
 export interface PaginationInfo {
@@ -54,23 +53,18 @@ class ApiClient {
   ): Promise<ApiResponse<T>> {
     const url = `${this.baseURL}${endpoint}`;
 
-    // JWT 토큰 가져오기 (localStorage)
-    const token = localStorage.getItem('access_token');
-
     console.log('🌐 ApiClient: 요청 시작', {
       url,
       method: options.method || 'GET',
       hasAuthHeader: !!options.headers && 'Authorization' in options.headers,
-      hasToken: !!token,
     });
 
     const defaultOptions: RequestInit = {
-      credentials: 'include', // 모든 API 호출에 쿠키 포함 (Google OAuth용)
+      credentials: 'include', // 모든 API 호출에 쿠키 포함 (통일된 인증 방식)
       headers: {
         'Content-Type': 'application/json; charset=utf-8',
         Accept: 'application/json; charset=utf-8',
         'Accept-Charset': 'utf-8',
-        ...(token && { Authorization: `Bearer ${token}` }), // Bearer 토큰 포함 (이메일 로그인용)
         ...options.headers,
       },
       ...options,
@@ -94,23 +88,14 @@ class ApiClient {
         url: response.url,
       });
 
-      // 401 에러 시 토큰 갱신 시도
-      if (response.status === 401 && token) {
+      // 401 에러 시 토큰 갱신 시도 (쿠키 기반)
+      if (response.status === 401) {
         console.log('🔄 토큰 만료, 갱신 시도...');
         const refreshed = await this.refreshToken();
         
         if (refreshed) {
-          // 새로운 토큰으로 재시도
-          const newToken = localStorage.getItem('access_token');
-          const retryOptions: RequestInit = {
-            ...defaultOptions,
-            headers: {
-              ...defaultOptions.headers,
-              Authorization: `Bearer ${newToken}`,
-            },
-          };
-          
-          const retryResponse = await fetch(url, retryOptions);
+          // 새로운 토큰으로 재시도 (쿠키가 자동으로 전송됨)
+          const retryResponse = await fetch(url, defaultOptions);
           
           if (!retryResponse.ok) {
             throw new Error(`HTTP error! status: ${retryResponse.status}`);
@@ -151,21 +136,15 @@ class ApiClient {
 
   private async refreshToken(): Promise<boolean> {
     try {
-      const refreshToken = localStorage.getItem('refresh_token');
-      if (!refreshToken) {
-        console.log('❌ Refresh token이 없습니다.');
-        return false;
-      }
-
       // 토큰 갱신에도 타임아웃 설정 (5초)
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 5000);
       
       const response = await fetch(`${this.baseURL}/api/auth/refresh`, {
         method: 'POST',
+        credentials: 'include', // 쿠키에서 refresh_token 자동 전송
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${refreshToken}`,
         },
         signal: controller.signal
       });
@@ -173,21 +152,11 @@ class ApiClient {
       clearTimeout(timeoutId);
 
       if (response.ok) {
-        const data = await response.json();
-        
-        // 새로운 토큰 저장
-        localStorage.setItem('access_token', data.data.access_token);
-        localStorage.setItem('refresh_token', data.data.refresh_token);
-        
         console.log('✅ 토큰 갱신 성공');
         return true;
       } else {
         console.log('❌ 토큰 갱신 실패');
-        // 갱신 실패 시 로그아웃 처리
-        localStorage.removeItem('access_token');
-        localStorage.removeItem('refresh_token');
-        
-        // 로그인 페이지로 리다이렉트
+        // 갱신 실패 시 로그인 페이지로 리다이렉트
         if (typeof window !== 'undefined') {
           window.location.href = '/login';
         }
@@ -254,16 +223,11 @@ export const authApi = {
       // 백엔드에 로그아웃 요청 (쿠키 기반 세션 정리)
       await apiClient.post('/api/auth/logout', {});
 
-      // 클라이언트 측 토큰 정리
-      localStorage.removeItem('access_token');
-      localStorage.removeItem('refresh_token');
-
+      // 쿠키가 자동으로 삭제되므로 localStorage 정리 불필요
       return { success: true };
     } catch (error) {
       console.error('로그아웃 API 호출 실패:', error);
-      // API 호출이 실패해도 클라이언트 상태는 정리
-      localStorage.removeItem('access_token');
-      localStorage.removeItem('refresh_token');
+      // API 호출이 실패해도 쿠키는 자동으로 정리됨
       return { success: true };
     }
   },
@@ -294,12 +258,7 @@ export const authApi = {
       data,
     );
 
-    // JWT 토큰 저장
-    if (response.data && response.data.access_token) {
-      localStorage.setItem('access_token', response.data.access_token);
-      localStorage.setItem('refresh_token', response.data.refresh_token);
-    }
-
+    // 쿠키에 토큰이 자동으로 설정되므로 localStorage 저장 불필요
     return response;
   },
 

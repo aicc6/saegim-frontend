@@ -60,7 +60,7 @@ export default function CalendarPage() {
         endDate: dateRange.endDate,
       });
 
-      // JWT 기반 API 호출 (user_id 파라미터 제거)
+      // 쿠키 기반 API 호출
       const apiBaseUrl =
         process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000';
 
@@ -69,19 +69,11 @@ export default function CalendarPage() {
         end_date: dateRange.endDate,
       });
 
-      // JWT 토큰 가져오기
-      const token = localStorage.getItem('access_token');
-
-      if (!token) {
-        console.log('❌ CalendarPage: JWT 토큰이 없습니다.');
-        return;
-      }
-
       const response = await fetch(
         `${apiBaseUrl}/api/diary/calendar?${params.toString()}`,
         {
+          credentials: 'include', // 쿠키 기반 인증
           headers: {
-            Authorization: `Bearer ${token}`,
             'Content-Type': 'application/json',
           },
         },
@@ -89,7 +81,7 @@ export default function CalendarPage() {
 
       if (response.ok) {
         const result = await response.json();
-        console.log('📡 CalendarPage: JWT 기반 API 호출 결과', result);
+        console.log('📡 CalendarPage: 쿠키 기반 API 호출 결과', result);
 
         // 스토어 상태 업데이트
         if (result.data && Array.isArray(result.data)) {
@@ -101,7 +93,7 @@ export default function CalendarPage() {
           });
         }
       } else if (response.status === 401) {
-        console.log('❌ CalendarPage: JWT 토큰이 유효하지 않습니다.');
+        console.log('❌ CalendarPage: 인증 실패, 로그인 페이지로 리다이렉트');
         // 인증 실패 시 로그인 페이지로 리다이렉트
         router.push('/login');
       }
@@ -228,20 +220,8 @@ export default function CalendarPage() {
           return;
         }
 
-        // 토큰 존재 여부 확인 (localStorage)
-        const token =
-          typeof window !== 'undefined'
-            ? localStorage.getItem('access_token')
-            : null;
-
-        console.log('🔍 CalendarPage 토큰 확인:', { hasToken: !!token });
-
-        // 토큰이 없으면 서버 인증 시도 (쿠키 기반)
-        if (!token) {
-          console.log('🔍 CalendarPage 토큰 없음 - 서버 인증 시도 (쿠키 기반)');
-        } else {
-          console.log('✅ CalendarPage 토큰 존재 - 서버 인증 확인 중');
-        }
+        // 쿠키 기반 인증 확인 (localStorage 토큰 불필요)
+        console.log('🔍 CalendarPage 쿠키 기반 인증 확인 중');
 
         try {
           console.log('🔍 CalendarPage 서버 인증 확인 중...');
@@ -254,7 +234,6 @@ export default function CalendarPage() {
             credentials: 'include',
             headers: {
               'Content-Type': 'application/json',
-              ...(token && { Authorization: `Bearer ${token}` }),
             },
           });
 
@@ -269,17 +248,14 @@ export default function CalendarPage() {
 
             // Zustand 스토어에 로그인 정보 저장
             const { login } = useAuthStore.getState();
-            login(
-              {
-                id: userData.data.user_id,
-                email: userData.data.email,
-                name: userData.data.nickname,
-                profileImage: '',
-                provider: userData.data.provider || 'email',
-                createdAt: userData.data.created_at || new Date().toISOString(),
-              },
-              'cookie-based-auth',
-            );
+            login({
+              id: userData.data.user_id,
+              email: userData.data.email,
+              name: userData.data.nickname,
+              profileImage: '',
+              provider: userData.data.provider || 'email',
+              createdAt: userData.data.created_at || new Date().toISOString(),
+            });
 
             // 로딩 완료
             setIsLoading(false);

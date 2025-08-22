@@ -101,9 +101,8 @@ export default function ChangePasswordForm() {
       // 7. 로그아웃 처리
       await apiClient.post('/api/auth/logout', {});
 
-      // 8. 클라이언트 상태 정리
-      localStorage.removeItem('access_token');
-      localStorage.removeItem('refresh_token');
+      // 8. 클라이언트 상태 정리 (쿠키 기반 인증이므로 localStorage 정리 불필요)
+      console.log('🧹 쿠키 기반 인증이므로 localStorage 정리 불필요');
 
       // 9. 로그인 페이지로 리다이렉트
       setTimeout(() => {

@@ -35,14 +35,13 @@ export default function LoginForm() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // 데모 계정 로그인 체크 (기존 기능 유지)
+    // 데모 계정 로그인 체크 (쿠키 기반 인증으로 변경)
     if (
       formData.email === DEMO_ACCOUNT.email &&
       formData.password === DEMO_ACCOUNT.password
     ) {
-      localStorage.setItem('isLoggedIn', 'true');
-      router.push('/');
-      return;
+      // 데모 계정도 실제 API를 통해 로그인 처리
+      console.log('🔍 데모 계정 로그인 시도');
     }
     
     setIsLoading(true);
@@ -62,7 +61,7 @@ export default function LoginForm() {
         profileImage: '',
         provider: 'email',
         createdAt: new Date().toISOString(),
-      }, 'email-login');
+      });
       
       toast({
         title: '로그인 성공',
