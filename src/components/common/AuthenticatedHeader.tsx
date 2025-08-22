@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Image from 'next/image';
+import { useRouter } from 'next/navigation';
 import { useTheme } from 'next-themes';
 import { useNotifications } from '@/hooks/use-notifications';
 import { authApi } from '@/lib/api';
@@ -15,6 +16,7 @@ interface UserInfo {
 }
 
 export default function AuthenticatedHeader() {
+  const router = useRouter();
   const { resolvedTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
   const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
@@ -54,6 +56,10 @@ export default function AuthenticatedHeader() {
 
   const isDark = resolvedTheme === 'dark';
 
+  const handleProfileClick = () => {
+    router.push('/profile');
+  };
+
   return (
     <div
       className={`border-b h-18 px-12 w-full flex items-center ${
@@ -91,33 +97,6 @@ export default function AuthenticatedHeader() {
           />
 
           <ThemeToggle />
-
-          {/* 프로필 영역 */}
-          {!isLoading && userInfo && (
-            <div className="flex items-center space-x-2">
-              <div className="flex flex-col items-end">
-                <span
-                  className={`text-sm font-medium ${
-                    isDark ? 'text-white' : 'text-sage-100'
-                  }`}
-                >
-                  {userInfo.nickname}
-                </span>
-                <span
-                  className={`text-xs ${
-                    isDark ? 'text-gray-400' : 'text-gray-600'
-                  }`}
-                >
-                  {userInfo.email}
-                </span>
-              </div>
-              <div className="w-8 h-8 rounded-full bg-sage-100 flex items-center justify-center">
-                <span className="text-sm font-medium text-white">
-                  {userInfo.nickname.charAt(0).toUpperCase()}
-                </span>
-              </div>
-            </div>
-          )}
         </div>
       </div>
     </div>

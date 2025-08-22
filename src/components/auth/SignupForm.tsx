@@ -377,8 +377,9 @@ export default function SignupForm() {
               name="nickname"
               value={formData.nickname}
               onChange={handleInputChange}
+              maxLength={10}
               className="flex-1 px-4 py-3 border border-gray-300 dark:border-border-dark-subtle rounded-lg focus:outline-none focus:ring-2 focus:ring-sage-50 dark:focus:ring-border-dark-focus focus:border-sage-50 dark:focus:border-border-dark-focus bg-gray-50 dark:bg-background-dark-tertiary text-gray-900 dark:text-text-dark-primary placeholder-gray-500 dark:placeholder-text-dark-placeholder transition-all duration-200 text-base font-light tracking-wide"
-              placeholder="닉네임 입력 (한글, 영문만 가능)"
+              placeholder="닉네임 입력 (2-10자, 한글/영문만)"
               required
               disabled={nicknameChecked}
             />

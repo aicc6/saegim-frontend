@@ -15,6 +15,8 @@ export default function ProfileForm() {
     nickname: '',
     email: '',
     profileImage: '',
+    accountType: '',
+    provider: '',
   });
   const [originalNickname, setOriginalNickname] = useState('');
   const [isLoading, setIsLoading] = useState(true);
@@ -87,6 +89,7 @@ export default function ProfileForm() {
         email: string;
         user_id: string;
         account_type: string;
+        provider?: string;
         is_active: boolean;
       };
       
@@ -94,6 +97,8 @@ export default function ProfileForm() {
         nickname: profile.nickname,
         email: profile.email,
         profileImage: '',
+        accountType: profile.account_type,
+        provider: profile.provider || '',
       });
       setOriginalNickname(profile.nickname);
     } catch (error) {
@@ -409,8 +414,9 @@ export default function ProfileForm() {
                   name="nickname"
                   value={profileData.nickname}
                   onChange={handleInputChange}
+                  maxLength={10}
                   className="flex-1 px-4 py-3 bg-gray-50 dark:bg-background-dark-tertiary border border-gray-300 dark:border-border-dark-subtle rounded-lg focus:outline-none focus:ring-2 focus:ring-sage-50 dark:focus:ring-border-dark-focus focus:border-sage-50 dark:focus:border-border-dark-focus text-gray-900 dark:text-text-dark-primary placeholder-gray-500 dark:placeholder-text-dark-placeholder transition-all duration-200"
-                  placeholder="닉네임을 입력하세요"
+                  placeholder="닉네임을 입력하세요 (2-10자)"
                 />
                 <button
                   onClick={handleNicknameCheck}
