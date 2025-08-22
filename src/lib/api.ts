@@ -69,13 +69,49 @@ class ApiClient {
     };
 
     try {
-      const response = await fetch(url, defaultOptions);
+      // 타임아웃 설정 (10초)
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000);
+      
+      const response = await fetch(url, {
+        ...defaultOptions,
+        signal: controller.signal
+      });
+      
+      clearTimeout(timeoutId);
 
       console.log('📡 ApiClient: 응답 받음', {
         status: response.status,
         ok: response.ok,
         url: response.url,
       });
+
+      // 401 에러 시 토큰 갱신 시도
+      if (response.status === 401 && token) {
+        console.log('🔄 토큰 만료, 갱신 시도...');
+        const refreshed = await this.refreshToken();
+        
+        if (refreshed) {
+          // 새로운 토큰으로 재시도
+          const newToken = localStorage.getItem('access_token');
+          const retryOptions: RequestInit = {
+            ...defaultOptions,
+            headers: {
+              ...defaultOptions.headers,
+              Authorization: `Bearer ${newToken}`,
+            },
+          };
+          
+          const retryResponse = await fetch(url, retryOptions);
+          
+          if (!retryResponse.ok) {
+            throw new Error(`HTTP error! status: ${retryResponse.status}`);
+          }
+          
+          const retryData = await retryResponse.json();
+          return retryData;
+        }
+      }
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -90,9 +126,65 @@ class ApiClient {
       });
 
       return data;
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('❌ ApiClient: 요청 실패', error);
+      
+      // 타임아웃 에러 처리
+      if (error instanceof Error && error.name === 'AbortError') {
+        throw new Error('요청 시간이 초과되었습니다. 잠시 후 다시 시도해주세요.');
+      }
+      
       throw error;
+    }
+  }
+
+  private async refreshToken(): Promise<boolean> {
+    try {
+      const refreshToken = localStorage.getItem('refresh_token');
+      if (!refreshToken) {
+        console.log('❌ Refresh token이 없습니다.');
+        return false;
+      }
+
+      // 토큰 갱신에도 타임아웃 설정 (5초)
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000);
+      
+      const response = await fetch(`${this.baseURL}/api/auth/refresh`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${refreshToken}`,
+        },
+        signal: controller.signal
+      });
+      
+      clearTimeout(timeoutId);
+
+      if (response.ok) {
+        const data = await response.json();
+        
+        // 새로운 토큰 저장
+        localStorage.setItem('access_token', data.data.access_token);
+        localStorage.setItem('refresh_token', data.data.refresh_token);
+        
+        console.log('✅ 토큰 갱신 성공');
+        return true;
+      } else {
+        console.log('❌ 토큰 갱신 실패');
+        // 갱신 실패 시 로그아웃 처리
+        localStorage.removeItem('access_token');
+        localStorage.removeItem('refresh_token');
+        
+        // 로그인 페이지로 리다이렉트
+        if (typeof window !== 'undefined') {
+          window.location.href = '/login';
+        }
+        return false;
+      }
+    } catch (error) {
+      console.error('❌ 토큰 갱신 중 오류:', error);
+      return false;
     }
   }
 

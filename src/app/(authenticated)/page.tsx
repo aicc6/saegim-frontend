@@ -91,6 +91,14 @@ function HomeContent() {
           }
         } catch (err) {
           console.error('❌ 서버 인증 확인 실패:', err);
+          
+          // 토큰 정리
+          localStorage.removeItem('access_token');
+          localStorage.removeItem('refresh_token');
+          
+          // Zustand 스토어 정리
+          logout();
+          
           // 에러 발생 시 로그인 페이지로 이동
           setHasChecked(true);
           setIsLoading(false);
