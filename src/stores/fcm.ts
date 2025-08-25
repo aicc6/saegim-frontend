@@ -381,28 +381,50 @@ const getNotificationHistory = async (limit: number = 20, offset: number = 0) =>
 export const initializeFCM = async (): Promise<void> => {
   const store = useFCMStore.getState();
 
+  console.log('FCM 스토어 초기화 시작...');
+
   // 브라우저 지원 확인
   if ('Notification' in window && 'serviceWorker' in navigator) {
+    console.log('브라우저가 FCM을 지원합니다.');
     useFCMStore.setState({ isSupported: true });
+
+    // Service Worker 등록 확인
+    try {
+      const registration = await navigator.serviceWorker.getRegistration('/firebase-messaging-sw.js');
+      if (!registration) {
+        console.log('Service Worker를 등록합니다...');
+        await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+        console.log('Service Worker 등록 완료');
+      } else {
+        console.log('Service Worker가 이미 등록되어 있습니다.');
+      }
+    } catch (error) {
+      console.error('Service Worker 등록 실패:', error);
+    }
 
     // 현재 권한 상태 확인
     const permission = Notification.permission as NotificationPermission;
     useFCMStore.setState({ permission });
+    console.log('현재 알림 권한 상태:', permission);
 
     // 백엔드에서 알림 설정 동기화
     const serverSettings = await syncSettingsFromServer();
     if (serverSettings) {
       useFCMStore.setState({ settings: serverSettings });
+      console.log('서버 알림 설정 동기화 완료');
     }
 
     // 이미 권한이 있으면 토큰 등록
     if (permission === 'granted') {
+      console.log('알림 권한이 이미 허용되어 있어 토큰 등록을 시도합니다.');
       await store.registerToken();
     }
   } else {
     console.warn('FCM이 지원되지 않는 브라우저입니다.');
     useFCMStore.setState({ isSupported: false });
   }
+
+  console.log('FCM 스토어 초기화 완료');
 };
 
 // 스토어에 알림 추가 액션 (동적으로 추가)
