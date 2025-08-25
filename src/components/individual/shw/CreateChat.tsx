@@ -2,7 +2,6 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { CiLocationArrow1 } from 'react-icons/ci';
-import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { useCreateStore, WritingStyle, LengthOption } from '@/stores/create';
 import {
@@ -11,13 +10,20 @@ import {
   EmotionConfig,
 } from '@/stores/emotion';
 
-export default function CreateChat() {
+// CreateChat 컴포넌트에 sessionId prop 추가
+interface CreateChatProps {
+  sessionId: string;
+}
+
+export default function CreateChat({ sessionId }: CreateChatProps) {
   const [showToast, setShowToast] = useState(false);
   const [selectedImages, setSelectedImages] = useState<File[]>([]);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const router = useRouter();
+
+  // sessionId를 사용할 수 있습니다
+  console.log('현재 세션 ID:', sessionId);
 
   // create.ts store에서 필요한 상태와 함수만 가져오기
   const {

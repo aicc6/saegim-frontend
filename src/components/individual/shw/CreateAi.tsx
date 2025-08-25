@@ -26,6 +26,7 @@ export default function CreateAi() {
     setLength,
     generateText,
     clearError,
+    sessionId,
   } = useCreateStore();
 
   const {
@@ -95,14 +96,11 @@ export default function CreateAi() {
       console.log('글 생성 완료'); // 디버그 로그
 
       // 생성된 세션 ID 가져오기
-      const { currentSessionId } = useCreateStore.getState();
+      const { sessionId } = useCreateStore.getState();
 
-      console.log('현재 세션 ID:', currentSessionId); // 디버그 로그
-
-      if (currentSessionId) {
-        console.log('리다이렉트 시작:', `/${currentSessionId}`); // 디버그 로그
+      if (sessionId) {
         // 세션 ID로 리다이렉트
-        router.push(`/${currentSessionId}`);
+        router.push(`/${sessionId}`);
       } else {
         console.error('세션 ID가 생성되지 않았습니다.');
       }
