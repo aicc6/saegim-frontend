@@ -166,10 +166,25 @@ export default function NotificationPopover({
                 className={`w-12 h-12 mx-auto mb-2 ${isDark ? 'text-gray-600' : 'text-gray-300'}`}
               />
               <p
-                className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}
+                className={`text-sm mb-4 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}
               >
                 새로운 알림이 없습니다.
               </p>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setIsOpen(false);
+                  router.push('/notifications');
+                }}
+                className={`text-xs ${
+                  isDark
+                    ? 'text-gray-300 hover:text-white hover:bg-gray-700'
+                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                }`}
+              >
+                전체 알림 보기
+              </Button>
             </div>
           ) : (
             <div className="divide-y divide-gray-200 dark:divide-gray-600">
