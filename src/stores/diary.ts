@@ -1,317 +1,205 @@
+/**
+ * 다이어리 상태 관리 스토어
+ */
+
 import { create } from 'zustand';
-import { DiaryEntry, EmotionType, CalendarDay, MonthlyReport } from '@/types';
+import { diaryApi } from '@/lib/api';
+import {
+  DiaryEntry,
+  DiaryListEntry,
+  DiaryFilters,
+  CalendarDateRange,
+} from '@/types/diary';
 
 interface DiaryState {
-  entries: DiaryEntry[];
-  currentEntry: DiaryEntry | null;
-  monthlyReport: MonthlyReport | null;
-  calendarData: CalendarDay[];
+  // 상태
+  diaries: DiaryListEntry[];
+  currentDiary: DiaryEntry | null;
   isLoading: boolean;
   error: string | null;
-  // 페이지네이션 관련 상태 추가
+  totalCount: number;
   currentPage: number;
-  hasMore: boolean;
-  allEntries: DiaryEntry[]; // 전체 데이터를 저장하는 배열
+  pageSize: number;
 
-  // Actions
-  setEntries: (entries: DiaryEntry[]) => void;
-  addEntry: (entry: DiaryEntry) => void;
-  updateEntry: (id: string, entry: Partial<DiaryEntry>) => void;
-  deleteEntry: (id: string) => void;
-  setCurrentEntry: (entry: DiaryEntry | null) => void;
-  setMonthlyReport: (report: MonthlyReport) => void;
-  setCalendarData: (data: CalendarDay[]) => void;
-  setLoading: (loading: boolean) => void;
-  setError: (error: string | null) => void;
-
-  // 페이지네이션 액션 추가
-  fetchPosts: () => Promise<void>;
-  loadMorePosts: (page: number) => Promise<DiaryEntry[]>;
-  resetPagination: () => void;
-
-  // 유틸리티 함수들
-  getEntriesByDate: (date: string) => DiaryEntry[];
-  getEmotionDistribution: (
-    year: number,
-    month: number,
-  ) => Record<EmotionType, number>;
-  getKeywordDistribution: (
-    year: number,
-    month: number,
-  ) => { word: string; count: number }[];
-  getKeywordWithEmotionDistribution: (
-    year: number,
-    month: number,
-  ) => { word: string; count: number; emotion: EmotionType }[];
+  // 액션
+  fetchDiaries: (filters?: DiaryFilters) => Promise<void>;
+  fetchDiary: (id: string) => Promise<void>;
+  fetchCalendarDiaries: (dateRange: CalendarDateRange) => Promise<void>;
+  updateDiary: (
+    id: string,
+    data: {
+      title?: string;
+      content?: string;
+      user_emotion?: string;
+      is_public?: boolean;
+      keywords?: string[];
+    },
+  ) => Promise<void>;
+  clearError: () => void;
+  setPage: (page: number) => void;
+  setPageSize: (size: number) => void;
 }
 
-// 더미 데이터 생성 함수 (더 많은 데이터 생성)
-const generateDummyEntries = (count: number = 100): DiaryEntry[] => {
-  const emotions: EmotionType[] = [
-    'happy',
-    'sad',
-    'angry',
-    'peaceful',
-    'unrest',
-  ];
-  const entries: DiaryEntry[] = [];
+export const useDiaryStore = create<DiaryState>((set, get) => ({
+  // 초기 상태
+  diaries: [],
+  currentDiary: null,
+  isLoading: false,
+  error: null,
+  totalCount: 0,
+  currentPage: 1,
+  pageSize: 20,
 
-  // 더 많은 더미 데이터 생성 (count개)
-  for (let i = 0; i < count; i++) {
-    const date = new Date();
-    date.setDate(date.getDate() - i);
-
-    // 로컬 시간대 기준으로 YYYY-MM-DD 형식 생성
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    const dateString = `${year}-${month}-${day}`;
-
-    const emotion = emotions[Math.floor(Math.random() * emotions.length)];
-
-    // 시간 정보 추가
-    const entryDate = new Date(date);
-    entryDate.setHours(9 + (i % 12), 0, 0, 0);
-    const entryDateTime = entryDate.toISOString();
-
-    entries.push({
-      id: `entry-${i}`,
-      title: `${i + 1}번째 일기 - ${emotion}한 하루`,
-      content: `오늘의 감정을 기록합니다. ${emotion} 한 하루였습니다. 이는 ${i + 1}번째 기록입니다.`,
-      userEmotion: emotion,
-      aiEmotion: emotion,
-      aiEmotionConfidence: 0.7 + Math.random() * 0.3,
-      aiGeneratedText: generateAIText(emotion),
-      images: [],
-      keywords: generateKeywords(emotion),
-      isPublic: false,
-      createdAt: dateString,
-      updatedAt: entryDateTime,
-    });
-  }
-
-  return entries.sort(
-    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
-  );
-};
-
-const generateAIText = (emotion: EmotionType): string => {
-  const texts = {
-    happy:
-      '따스한 햇살처럼 밝은 하루,\n마음에 피어나는 행복의 꽃잎이\n바람에 흩날리며 춤을 춘다.',
-    sad: '회색 구름 사이로 스며드는\n작은 빛줄기를 바라보며\n마음의 비가 그칠 때를 기다린다.',
-    angry:
-      '거센 바람처럼 휘몰아치는 마음,\n잔잔한 호수가 되기까지\n시간이 필요한 오늘이다.',
-    peaceful:
-      '고요한 숲속에서 듣는\n새들의 지저귐처럼\n마음에도 평화가 찾아왔다.',
-    unrest:
-      '안개 낀 새벽길을 걷듯\n불안한 마음이지만\n해가 뜨면 길이 보일 것이다.',
-  };
-  return texts[emotion];
-};
-
-const generateKeywords = (emotion: EmotionType): string[] => {
-  const keywords = {
-    happy: ['기쁨', '행복', '즐거움', '만족', '웃음'],
-    sad: ['슬픔', '우울', '외로움', '아쉬움', '그리움'],
-    angry: ['화남', '짜증', '분노', '스트레스', '답답함'],
-    peaceful: ['평온', '차분', '안정', '여유', '힐링'],
-    unrest: ['불안', '걱정', '망설임', '두려움', '혼란'],
-  };
-  return keywords[emotion].slice(0, 2 + Math.floor(Math.random() * 3));
-};
-
-const PAGE_SIZE = 8; // 한 페이지당 보여줄 항목 수
-
-export const useDiaryStore = create<DiaryState>((set, get) => {
-  const allDummyEntries = generateDummyEntries(100);
-
-  return {
-    entries: allDummyEntries.slice(0, PAGE_SIZE), // 처음에는 첫 페이지만 로드
-    allEntries: allDummyEntries, // 전체 데이터 저장
-    currentEntry: null,
-    monthlyReport: null,
-    calendarData: [],
-    isLoading: false,
-    error: null,
-    currentPage: 1,
-    hasMore: true,
-
-    setEntries: (entries) => set({ entries }),
-
-    addEntry: (entry) =>
-      set((state) => ({
-        entries: [entry, ...state.entries],
-        allEntries: [entry, ...state.allEntries],
-      })),
-
-    updateEntry: (id, updatedEntry) =>
-      set((state) => ({
-        entries: state.entries.map((entry) =>
-          entry.id === id ? { ...entry, ...updatedEntry } : entry,
-        ),
-        allEntries: state.allEntries.map((entry) =>
-          entry.id === id ? { ...entry, ...updatedEntry } : entry,
-        ),
-      })),
-
-    deleteEntry: (id) =>
-      set((state) => ({
-        entries: state.entries.filter((entry) => entry.id !== id),
-        allEntries: state.allEntries.filter((entry) => entry.id !== id),
-      })),
-
-    setCurrentEntry: (entry) => set({ currentEntry: entry }),
-
-    setMonthlyReport: (report) => set({ monthlyReport: report }),
-
-    setCalendarData: (data) => set({ calendarData: data }),
-
-    setLoading: (loading) => set({ isLoading: loading }),
-
-    setError: (error) => set({ error }),
-
-    // 초기 데이터 로드
-    fetchPosts: async () => {
+  // 다이어리 목록 조회
+  fetchDiaries: async (filters?: DiaryFilters) => {
+    try {
       set({ isLoading: true, error: null });
 
-      try {
-        // API 호출 시뮬레이션
-        await new Promise((resolve) => setTimeout(resolve, 1000));
-
-        const { allEntries } = get();
-        const firstPageEntries = allEntries.slice(0, PAGE_SIZE);
-
-        set({
-          entries: firstPageEntries,
-          currentPage: 1,
-          hasMore: allEntries.length > PAGE_SIZE,
-          isLoading: false,
-        });
-      } catch (error) {
-        set({ error: '데이터를 불러오는데 실패했습니다.', isLoading: false });
-      }
-    },
-
-    // 더 많은 포스트 로드
-    loadMorePosts: async (page: number) => {
-      const { allEntries, entries } = get();
-
-      // API 호출 시뮬레이션
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-
-      const startIndex = (page - 1) * PAGE_SIZE;
-      const endIndex = startIndex + PAGE_SIZE;
-      const newEntries = allEntries.slice(startIndex, endIndex);
-
-      if (newEntries.length > 0) {
-        set((state) => ({
-          entries: [...state.entries, ...newEntries],
-          currentPage: page,
-          hasMore: endIndex < allEntries.length,
-        }));
-      }
-
-      return newEntries;
-    },
-
-    resetPagination: () => {
-      const { allEntries } = get();
-      set({
-        entries: allEntries.slice(0, PAGE_SIZE),
-        currentPage: 1,
-        hasMore: allEntries.length > PAGE_SIZE,
-      });
-    },
-
-    getEntriesByDate: (date) => {
-      const entries = get().allEntries;
-      return entries.filter((entry) => entry.createdAt.startsWith(date));
-    },
-
-    getEmotionDistribution: (year, month) => {
-      const entries = get().allEntries;
-      const monthEntries = entries.filter((entry) => {
-        const entryDate = new Date(entry.createdAt);
-        return (
-          entryDate.getFullYear() === year && entryDate.getMonth() === month - 1
-        );
-      });
-
-      const distribution: Record<EmotionType, number> = {
-        happy: 0,
-        sad: 0,
-        angry: 0,
-        peaceful: 0,
-        unrest: 0,
+      const params: Record<string, string> = {
+        page: (filters?.page || get().currentPage).toString(),
+        page_size: (filters?.page_size || get().pageSize).toString(),
       };
 
-      monthEntries.forEach((entry) => {
-        if (entry.userEmotion) {
-          distribution[entry.userEmotion]++;
-        }
+      if (filters?.searchTerm) params.searchTerm = filters.searchTerm;
+      if (filters?.emotion) params.emotion = filters.emotion;
+      if (filters?.is_public !== undefined)
+        params.is_public = filters.is_public.toString();
+      if (filters?.start_date) params.start_date = filters.start_date;
+      if (filters?.end_date) params.end_date = filters.end_date;
+      if (filters?.sort_order) params.sort_order = filters.sort_order;
+
+      const response = await diaryApi.getDiaries(params);
+
+      // 백엔드 API 응답 구조에 맞게 처리
+      const diaries = Array.isArray(response.data) ? response.data : [];
+
+      set({
+        diaries,
+        totalCount: diaries.length,
+        isLoading: false,
+        error: null,
+      });
+    } catch (error) {
+      set({
+        error:
+          error instanceof Error
+            ? error.message
+            : '다이어리 목록을 불러오는데 실패했습니다.',
+        isLoading: false,
+      });
+    }
+  },
+
+  // 특정 다이어리 조회
+  fetchDiary: async (id: string) => {
+    try {
+      set({ isLoading: true, error: null });
+
+      const response = await diaryApi.getDiary(id);
+
+      // 타입 안전성 확보
+      const diary =
+        response.data &&
+        typeof response.data === 'object' &&
+        'id' in response.data
+          ? (response.data as DiaryEntry)
+          : null;
+
+      set({
+        currentDiary: diary,
+        isLoading: false,
+        error: null,
+      });
+    } catch (error) {
+      set({
+        error:
+          error instanceof Error
+            ? error.message
+            : '다이어리를 불러오는데 실패했습니다.',
+        isLoading: false,
+      });
+    }
+  },
+
+  // 캘린더용 다이어리 조회
+  fetchCalendarDiaries: async (dateRange: CalendarDateRange) => {
+    try {
+      console.log('🚀 DiaryStore: 캘린더 다이어리 조회 시작', {
+        dateRange,
       });
 
-      return distribution;
+      set({ isLoading: true, error: null });
+
+      const response = await diaryApi.getCalendarDiaries(
+        dateRange.startDate,
+        dateRange.endDate,
+      );
+
+      console.log('📡 DiaryStore: API 응답', {
+        response,
+        data: response.data,
+        dataType: typeof response.data,
+        isArray: Array.isArray(response.data),
+      });
+
+      // 백엔드 API 응답 구조에 맞게 처리
+      const diaries = Array.isArray(response.data) ? response.data : [];
+
+      console.log('✅ DiaryStore: 처리된 데이터', {
+        diariesCount: diaries.length,
+        diaries: diaries.slice(0, 3), // 처음 3개만 로그
+      });
+
+      set({
+        diaries,
+        totalCount: diaries.length,
+        isLoading: false,
+        error: null,
+      });
+    } catch (error) {
+      console.error('❌ DiaryStore: 에러 발생', error);
+      set({
+        error:
+          error instanceof Error
+            ? error.message
+            : '캘린더 다이어리를 불러오는데 실패했습니다.',
+        isLoading: false,
+      });
+    }
+  },
+
+  // 다이어리 수정
+  updateDiary: async (
+    id: string,
+    data: {
+      title?: string;
+      content?: string;
+      user_emotion?: string;
+      is_public?: boolean;
+      keywords?: string[];
     },
-
-    getKeywordDistribution: (year, month) => {
-      const entries = get().allEntries;
-      const monthEntries = entries.filter((entry) => {
-        const entryDate = new Date(entry.createdAt);
-        return (
-          entryDate.getFullYear() === year && entryDate.getMonth() === month - 1
-        );
+  ) => {
+    try {
+      set({ isLoading: true, error: null });
+      const response = await diaryApi.updateDiary(id, data);
+      set({ currentDiary: response.data, isLoading: false, error: null });
+    } catch (error) {
+      set({
+        error:
+          error instanceof Error
+            ? error.message
+            : '다이어리를 수정하는데 실패했습니다.',
+        isLoading: false,
       });
+    }
+  },
 
-      const keywordMap: Record<string, number> = {};
+  // 에러 초기화
+  clearError: () => set({ error: null }),
 
-      monthEntries.forEach((entry) => {
-        entry.keywords?.forEach((keyword) => {
-          keywordMap[keyword] = (keywordMap[keyword] || 0) + 1;
-        });
-      });
+  // 페이지 설정
+  setPage: (page: number) => set({ currentPage: page }),
 
-      return Object.entries(keywordMap)
-        .map(([word, count]) => ({ word, count }))
-        .sort((a, b) => b.count - a.count)
-        .slice(0, 10);
-    },
-
-    getKeywordWithEmotionDistribution: (year, month) => {
-      const entries = get().allEntries;
-      const monthEntries = entries.filter((entry) => {
-        const entryDate = new Date(entry.createdAt);
-        return (
-          entryDate.getFullYear() === year && entryDate.getMonth() === month - 1
-        );
-      });
-
-      const keywordMap: Record<
-        string,
-        { count: number; emotion: EmotionType }
-      > = {};
-
-      monthEntries.forEach((entry) => {
-        entry.keywords?.forEach((keyword) => {
-          if (!keywordMap[keyword]) {
-            keywordMap[keyword] = {
-              count: 0,
-              emotion: entry.userEmotion || 'happy',
-            };
-          }
-          keywordMap[keyword].count++;
-        });
-      });
-
-      return Object.entries(keywordMap)
-        .map(([word, data]) => ({
-          word,
-          count: data.count,
-          emotion: data.emotion,
-        }))
-        .sort((a, b) => b.count - a.count)
-        .slice(0, 10);
-    },
-  };
-});
+  // 페이지 크기 설정
+  setPageSize: (size: number) => set({ pageSize: size }),
+}));
