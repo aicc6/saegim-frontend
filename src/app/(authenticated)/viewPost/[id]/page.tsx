@@ -3,7 +3,12 @@
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { ArrowLeft } from 'lucide-react';
-import { DiaryEntry, DiaryListEntry, EmotionType } from '@/types/diary';
+import {
+  DiaryEntry,
+  DiaryListEntry,
+  EmotionType,
+  ImageInfo,
+} from '@/types/diary';
 import { useDiaryStore } from '@/stores/diary';
 import PageHeader from '@/components/common/PageHeader';
 import { Button } from '@/components/ui/custom/Button';
@@ -33,10 +38,15 @@ export default function ViewPostPage() {
   const [isEditing, setIsEditing] = useState(false);
   const [editedTitle, setEditedTitle] = useState('');
   const [editedContent, setEditedContent] = useState('');
-  const [editedUserEmotion, setEditedUserEmotion] = useState<string>('');
+  const [editedEmotion, setEditedEmotion] = useState('');
   const [editedKeywords, setEditedKeywords] = useState<string[]>([]);
+  const [editedIsPublic, setEditedIsPublic] = useState(false);
+  const [editedImages, setEditedImages] = useState<ImageInfo[]>([]);
+  const [showImageOptionsModal, setShowImageOptionsModal] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [sameDateEntries, setSameDateEntries] = useState<DiaryListEntry[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   // 감정 선택 관련 상태
   const [showEmotionSelector, setShowEmotionSelector] = useState(false);
@@ -110,7 +120,7 @@ export default function ViewPostPage() {
       if (!isEditing) {
         setEditedTitle(currentDiary.title);
         setEditedContent(currentDiary.content);
-        setEditedUserEmotion(currentDiary.user_emotion || '');
+        setEditedEmotion(currentDiary.user_emotion || '');
         setEditedKeywords(currentDiary.keywords || []);
       }
     }
@@ -121,7 +131,7 @@ export default function ViewPostPage() {
     if (isEditing && entry) {
       setEditedTitle(entry.title);
       setEditedContent(entry.content);
-      setEditedUserEmotion(entry.user_emotion || '');
+      setEditedEmotion(entry.user_emotion || '');
       setEditedKeywords(entry.keywords || []);
     }
   }, [isEditing, entry]);
@@ -129,20 +139,21 @@ export default function ViewPostPage() {
   // editedUserEmotion 상태 변화 추적
   useEffect(() => {
     console.log('🔍 editedUserEmotion 상태 변화:', {
-      현재_감정: editedUserEmotion,
-      감정_라벨: editedUserEmotion
-        ? emotionLabels[editedUserEmotion as keyof typeof emotionLabels]
+      현재_감정: editedEmotion,
+      감정_라벨: editedEmotion
+        ? emotionLabels[editedEmotion as keyof typeof emotionLabels]
         : null,
     });
-  }, [editedUserEmotion]);
+  }, [editedEmotion]);
 
   const handleEdit = async () => {
     if (isEditing && entry) {
+      // 수정 완료
       try {
-        console.log('🔍 다이어리 수정 시작:', {
+        console.log('📝 ViewPost: 수정 완료 시도', {
           제목: editedTitle,
           내용: editedContent,
-          사용자_감정: editedUserEmotion,
+          사용자_감정: editedEmotion,
           키워드: editedKeywords,
           원본_감정: entry.user_emotion,
         });
@@ -151,7 +162,7 @@ export default function ViewPostPage() {
         await updateDiary(entry.id, {
           title: editedTitle,
           content: editedContent,
-          user_emotion: editedUserEmotion,
+          user_emotion: editedEmotion,
           keywords: editedKeywords,
         });
 
@@ -164,24 +175,33 @@ export default function ViewPostPage() {
         console.log('📝 ViewPost: 편집 완료');
 
         // 로컬 상태 즉시 업데이트 (UI 반응성 향상)
-        const updatedEntry = {
+        const updatedEntry: DiaryEntry = {
           ...entry,
           title: editedTitle,
           content: editedContent,
-          user_emotion: editedUserEmotion,
+          user_emotion: editedEmotion,
           keywords: editedKeywords,
         };
         setEntry(updatedEntry);
 
         // 성공 메시지 표시
         alert('다이어리가 성공적으로 수정되었습니다.');
+
+        // 페이지 새로고침 없이 상태만 업데이트
+        // window.location.reload();
       } catch (error) {
         console.error('❌ 다이어리 수정 실패:', error);
         alert('다이어리 수정에 실패했습니다. 다시 시도해주세요.');
       }
-    } else {
+    } else if (!isEditing && entry) {
       // 수정 모드 시작
       setIsEditing(true);
+      // 수정 모드 시작 시 현재 상태를 편집 상태로 복사
+      setEditedTitle(entry.title);
+      setEditedContent(entry.content);
+      setEditedEmotion(entry.user_emotion || '');
+      setEditedKeywords(entry.keywords || []);
+      setEditedImages(entry.images || []);
     }
   };
 
@@ -203,8 +223,9 @@ export default function ViewPostPage() {
       setIsEditing(false);
       setEditedTitle(entry.title);
       setEditedContent(entry.content);
-      setEditedUserEmotion(entry.user_emotion || '');
+      setEditedEmotion(entry.user_emotion || '');
       setEditedKeywords(entry.keywords || []);
+      setEditedImages(entry.images || []);
       setShowEmotionSelector(false);
       setShowKeywordInput(false);
     }
@@ -215,11 +236,11 @@ export default function ViewPostPage() {
     console.log('🔍 감정 선택:', {
       선택된_감정: emotion,
       감정_타입: typeof emotion,
-      이전_감정: editedUserEmotion,
+      이전_감정: editedEmotion,
       감정_라벨: emotionLabels[emotion],
     });
 
-    setEditedUserEmotion(emotion);
+    setEditedEmotion(emotion);
     setShowEmotionSelector(false);
 
     console.log('🔍 감정 상태 업데이트 완료:', {
@@ -242,6 +263,191 @@ export default function ViewPostPage() {
     setEditedKeywords(
       editedKeywords.filter((keyword) => keyword !== keywordToRemove),
     );
+  };
+
+  const handleRemoveImage = async (imageId: string) => {
+    if (entry && entry.images) {
+      try {
+        // 백엔드에서 이미지 삭제
+        const apiBaseUrl =
+          process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000';
+        const response = await fetch(
+          `${apiBaseUrl}/api/diary/${entry.id}/images/${imageId}`,
+          {
+            method: 'DELETE',
+            credentials: 'include',
+          },
+        );
+
+        if (response.ok) {
+          // 로컬 상태에서 이미지 제거
+          const updatedImages = entry.images.filter(
+            (img: ImageInfo) => img.id !== imageId,
+          );
+          const updatedEntry = {
+            ...entry,
+            images: updatedImages,
+          };
+          setEntry(updatedEntry);
+
+          // 다이어리 스토어 상태도 업데이트하여 캘린더와 동기화
+          const currentDiaries = useDiaryStore.getState().diaries;
+          const updatedDiaries = currentDiaries.map((diary) =>
+            diary.id === entry.id ? { ...diary, images: updatedImages } : diary,
+          );
+          useDiaryStore.setState({ diaries: updatedDiaries });
+
+          console.log('✅ 이미지 삭제 완료 (백엔드 동기화 및 캘린더 동기화)');
+        } else {
+          throw new Error('이미지 삭제 실패');
+        }
+      } catch (error) {
+        console.error('❌ 이미지 삭제 실패:', error);
+        alert('이미지 삭제에 실패했습니다. 다시 시도해주세요.');
+      }
+    }
+  };
+
+  const handleImageUpload = async (file: File) => {
+    if (!file || !entry) return;
+
+    try {
+      const formData = new FormData();
+      formData.append('image', file);
+      formData.append('diary_id', entry.id);
+
+      const apiBaseUrl =
+        process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000';
+      const response = await fetch(
+        `${apiBaseUrl}/api/diary/${entry.id}/upload-image`,
+        {
+          method: 'POST',
+          credentials: 'include',
+          body: formData,
+        },
+      );
+
+      if (response.ok) {
+        const result = await response.json();
+        console.log('✅ 이미지 업로드 성공:', result);
+
+        // 업로드된 이미지 정보를 entry에 추가
+        const newImage: ImageInfo = {
+          id: result.data.id,
+          file_path: result.data.file_path,
+          thumbnail_path: result.data.thumbnail_path,
+          mime_type: result.data.mime_type,
+        };
+
+        const updatedImages = [...(entry.images || []), newImage];
+        const updatedEntry = {
+          ...entry,
+          images: updatedImages,
+        };
+        setEntry(updatedEntry);
+
+        // 다이어리 스토어 상태도 업데이트
+        const currentDiaries = useDiaryStore.getState().diaries;
+        const updatedDiaries = currentDiaries.map((diary) =>
+          diary.id === entry.id ? { ...diary, images: updatedImages } : diary,
+        );
+        useDiaryStore.setState({ diaries: updatedDiaries });
+
+        alert('이미지가 성공적으로 업로드되었습니다.');
+      } else {
+        throw new Error('이미지 업로드 실패');
+      }
+    } catch (error) {
+      console.error('❌ 이미지 업로드 실패:', error);
+      alert('이미지 업로드에 실패했습니다. 다시 시도해주세요.');
+    }
+  };
+
+  const handleLoadExistingImages = async () => {
+    if (!entry) return;
+
+    try {
+      const apiBaseUrl =
+        process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000';
+      const response = await fetch(
+        `${apiBaseUrl}/api/diary/${entry.id}/images`,
+        {
+          method: 'GET',
+          credentials: 'include',
+        },
+      );
+
+      if (response.ok) {
+        const result = await response.json();
+        if (result.data && result.data.length > 0) {
+          // 기존 이미지들을 entry에 추가
+          const existingImages = result.data.map((img: any) => ({
+            id: img.id,
+            file_path: img.file_path,
+            thumbnail_path: img.thumbnail_path,
+            mime_type: img.mime_type,
+            file_size: img.file_size,
+            created_at: img.created_at,
+          }));
+
+          const updatedEntry = {
+            ...entry,
+            images: existingImages,
+          };
+          setEntry(updatedEntry);
+
+          // 다이어리 스토어 상태도 업데이트
+          const currentDiaries = useDiaryStore.getState().diaries;
+          const updatedDiaries = currentDiaries.map((diary) =>
+            diary.id === entry.id
+              ? { ...diary, images: existingImages }
+              : diary,
+          );
+          useDiaryStore.setState({ diaries: updatedDiaries });
+
+          alert('기존 이미지를 성공적으로 불러왔습니다.');
+        } else {
+          alert('불러올 이미지가 없습니다.');
+        }
+      } else {
+        throw new Error('이미지 조회 실패');
+      }
+    } catch (error) {
+      console.error('❌ 기존 이미지 조회 실패:', error);
+      alert('기존 이미지 조회에 실패했습니다. 다시 시도해주세요.');
+    }
+  };
+
+  const handleUploadNewImage = () => {
+    // 파일 입력 요소를 클릭하여 파일 선택 다이얼로그 열기
+    const fileInput = document.createElement('input');
+    fileInput.type = 'file';
+    fileInput.accept = 'image/*';
+    fileInput.onchange = async (event) => {
+      const target = event.target as HTMLInputElement;
+      const file = target.files?.[0];
+      if (file) {
+        // 파일 검증
+        if (file.size > 10 * 1024 * 1024) {
+          alert('파일 크기는 10MB 이하여야 합니다.');
+          return;
+        }
+
+        if (!file.type.startsWith('image/')) {
+          alert('이미지 파일만 업로드 가능합니다.');
+          return;
+        }
+
+        // 파일을 선택한 후 자동으로 업로드
+        try {
+          await handleImageUpload(file);
+        } catch (error) {
+          console.error('❌ 이미지 업로드 실패:', error);
+          alert('이미지 업로드에 실패했습니다. 다시 시도해주세요.');
+        }
+      }
+    };
+    fileInput.click();
   };
 
   const handleNavigate = (direction: 'prev' | 'next') => {
@@ -351,13 +557,16 @@ export default function ViewPostPage() {
           {/* 메인 콘텐츠 영역 */}
           <div className="bg-white rounded-lg border-2 border-sage-30 p-8 shadow-sm">
             {/* 감정 및 키워드 섹션 - 수평 배치 */}
-            <div className="flex gap-8 mb-6">
-              {/* 감정 섹션 */}
-              <div className="bg-sage-10 rounded-lg p-4 border border-sage-30 flex-1">
+            <div className="flex gap-6 mb-6">
+              {/* 감정 섹션 - 크기 축소 */}
+              <div
+                className="bg-sage-10 rounded-lg p-4 border border-sage-30 flex-shrink-0"
+                style={{ minWidth: '200px' }}
+              >
                 <div className="space-y-3">
                   {/* 사용자 감정 (수정 가능) */}
                   <div className="flex items-center space-x-3">
-                    <span className="text-lg font-medium text-sage-100">
+                    <span className="text-base font-medium text-sage-100">
                       사용자 감정 :
                     </span>
                     {isEditing ? (
@@ -369,16 +578,16 @@ export default function ViewPostPage() {
                           className="flex items-center space-x-2 px-3 py-1 bg-white border border-sage-30 rounded-md hover:bg-sage-20"
                         >
                           <span className="text-2xl">
-                            {editedUserEmotion
+                            {editedEmotion
                               ? emotionLabels[
-                                  editedUserEmotion as keyof typeof emotionLabels
+                                  editedEmotion as keyof typeof emotionLabels
                                 ]?.emoji
                               : '😐'}
                           </span>
                           <span className="text-sage-100 font-medium">
-                            {editedUserEmotion
+                            {editedEmotion
                               ? emotionLabels[
-                                  editedUserEmotion as keyof typeof emotionLabels
+                                  editedEmotion as keyof typeof emotionLabels
                                 ]?.name
                               : '선택하세요'}
                           </span>
@@ -427,7 +636,7 @@ export default function ViewPostPage() {
                   {/* AI 감정 (읽기 전용) */}
                   {entry.ai_emotion && (
                     <div className="flex items-center space-x-3">
-                      <span className="text-lg font-medium text-sage-100">
+                      <span className="text-base font-medium text-sage-100">
                         AI 분석 감정 :
                       </span>
                       <div className="flex items-center space-x-2">
@@ -459,11 +668,11 @@ export default function ViewPostPage() {
                 </div>
               </div>
 
-              {/* 키워드 섹션 */}
+              {/* 키워드 섹션 - 한 줄로 표시 */}
               <div className="bg-sage-10 rounded-lg p-4 border border-sage-30 flex-1">
                 <div className="space-y-3">
                   <div className="flex items-center space-x-3">
-                    <span className="text-lg font-medium text-sage-100">
+                    <span className="text-base font-medium text-sage-100 flex-shrink-0">
                       키워드 :
                     </span>
                     {isEditing ? (
@@ -530,6 +739,78 @@ export default function ViewPostPage() {
                 </div>
               </div>
             </div>
+
+            {/* 썸네일 이미지 섹션 */}
+            {entry.images && entry.images.length > 0 && (
+              <div className="mb-6">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-base font-medium text-sage-100">
+                    이미지 :
+                  </span>
+                  {/* 수정 모드에서 이미지 업로드 버튼 표시 */}
+                  {isEditing && (
+                    <div className="flex items-center space-x-2">
+                      <button
+                        onClick={() => setShowImageOptionsModal(true)}
+                        className="px-3 py-1 bg-sage-50 hover:bg-sage-60 text-white text-sm rounded-md cursor-pointer transition-colors"
+                      >
+                        사진 불러오기
+                      </button>
+                    </div>
+                  )}
+                </div>
+                <div className="flex flex-wrap gap-4">
+                  {entry.images
+                    .filter((img) => img.thumbnail_path)
+                    .map((image, index) => (
+                      <div key={index} className="relative group">
+                        <img
+                          src={`${
+                            process.env.NEXT_PUBLIC_API_BASE_URL ||
+                            'http://localhost:8000'
+                          }${image.thumbnail_path}`}
+                          alt={`다이어리 이미지 ${index + 1}`}
+                          className="w-32 h-32 object-cover rounded-lg border border-sage-30 shadow-sm hover:shadow-md transition-shadow duration-200"
+                        />
+                        {/* 수정 모드에서 삭제 버튼 표시 */}
+                        {isEditing && (
+                          <button
+                            onClick={() => handleRemoveImage(image.id)}
+                            className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center text-xs font-bold shadow-lg transition-all duration-200 hover:scale-110"
+                            title="이미지 삭제"
+                          >
+                            ×
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                </div>
+              </div>
+            )}
+
+            {/* 수정 모드에서 이미지가 없을 때 업로드 섹션 표시 */}
+            {isEditing && (!entry.images || entry.images.length === 0) && (
+              <div className="mb-6">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-base font-medium text-sage-100">
+                    이미지 :
+                  </span>
+                  <div className="flex items-center space-x-2">
+                    <button
+                      onClick={() => setShowImageOptionsModal(true)}
+                      className="px-3 py-1 bg-sage-50 hover:bg-sage-60 text-white text-sm rounded-md cursor-pointer transition-colors"
+                    >
+                      사진 불러오기
+                    </button>
+                  </div>
+                </div>
+                <div className="text-center py-8 border-2 border-dashed border-sage-30 rounded-lg bg-sage-5">
+                  <p className="text-sage-70 text-sm">
+                    기존 이미지를 불러와주세요
+                  </p>
+                </div>
+              </div>
+            )}
 
             {/* 본문 영역 */}
             <div className="mb-8">
@@ -679,6 +960,85 @@ export default function ViewPostPage() {
           </div>
         </div>
       </div>
+
+      {/* 이미지 옵션 선택 모달 */}
+      <ImageOptionsModal
+        isOpen={showImageOptionsModal}
+        onClose={() => setShowImageOptionsModal(false)}
+        onLoadExisting={handleLoadExistingImages}
+        onUploadNew={handleUploadNewImage}
+      />
     </div>
   );
 }
+
+// 이미지 옵션 선택 모달
+const ImageOptionsModal = ({
+  isOpen,
+  onClose,
+  onLoadExisting,
+  onUploadNew,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  onLoadExisting: () => void;
+  onUploadNew: () => void;
+}) => {
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-lg p-6 w-80 max-w-md">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">
+          이미지 불러오기 옵션
+        </h3>
+        <div className="space-y-3">
+          <button
+            onClick={() => {
+              onLoadExisting();
+              onClose();
+            }}
+            className="w-full px-4 py-3 bg-sage-50 hover:bg-sage-60 text-white rounded-md transition-colors text-left"
+          >
+            <div className="flex items-center space-x-3">
+              <span className="text-2xl">🔄</span>
+              <div>
+                <div className="font-medium">기존 이미지 불러오기</div>
+                <div className="text-sm text-sage-20">
+                  데이터베이스에서 저장된 이미지
+                </div>
+              </div>
+            </div>
+          </button>
+
+          <button
+            onClick={() => {
+              onUploadNew();
+              onClose();
+            }}
+            className="w-full px-4 py-3 bg-blue-500 hover:bg-blue-600 text-white rounded-md transition-colors text-left"
+          >
+            <div className="flex items-center space-x-3">
+              <span className="text-2xl">📁</span>
+              <div>
+                <div className="font-medium">새 이미지 업로드</div>
+                <div className="text-sm text-blue-200">
+                  로컬에서 새 이미지 선택
+                </div>
+              </div>
+            </div>
+          </button>
+        </div>
+
+        <div className="mt-6 flex justify-end">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
+          >
+            취소
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};

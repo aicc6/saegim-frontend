@@ -457,6 +457,62 @@ export default function CalendarPage() {
                             </div>
                           )}
 
+                          {/* 썸네일 이미지 표시 */}
+                          {entry.images && entry.images.length > 0 && (
+                            <div className="mb-3">
+                              <div className="flex flex-wrap gap-1.5 justify-center">
+                                {entry.images
+                                  .filter((img) => img.thumbnail_path)
+                                  .slice(0, 4) // 최대 4개 이미지 표시
+                                  .map((image, index) => (
+                                    <div
+                                      key={index}
+                                      className="relative flex-shrink-0"
+                                    >
+                                      <img
+                                        src={`${
+                                          process.env
+                                            .NEXT_PUBLIC_API_BASE_URL ||
+                                          'http://localhost:8000'
+                                        }${image.thumbnail_path}`}
+                                        alt={`다이어리 이미지 ${index + 1}`}
+                                        className="rounded-md border border-border-subtle shadow-sm hover:shadow-md transition-all duration-200 hover:scale-105"
+                                        style={{
+                                          width: '70px',
+                                          height: '70px',
+                                          objectFit: 'cover',
+                                        }}
+                                        onError={(e) => {
+                                          // 이미지 로드 실패 시 처리
+                                          console.warn(
+                                            `이미지 로드 실패: ${image.thumbnail_path}`,
+                                          );
+                                          e.currentTarget.style.display =
+                                            'none';
+                                        }}
+                                      />
+                                      {/* 이미지 인덱스 표시 (여러 이미지일 때) */}
+                                      {entry.images &&
+                                        entry.images.length > 1 && (
+                                          <div className="absolute -top-1 -right-1 bg-black bg-opacity-70 text-white text-xs px-1 py-0.5 rounded-full min-w-[20px] text-center">
+                                            {index + 1}
+                                          </div>
+                                        )}
+                                    </div>
+                                  ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* 이미지가 없을 때 표시할 내용 */}
+                          {(!entry.images || entry.images.length === 0) && (
+                            <div className="mb-3 text-center py-3 border border-dashed border-border-subtle rounded-md bg-background-hover">
+                              <p className="text-caption text-text-secondary">
+                                📷 이미지 없음
+                              </p>
+                            </div>
+                          )}
+
                           {/* 클릭 안내 메시지 */}
                           <div className="text-right">
                             <span className="text-caption text-interactive-primary">
