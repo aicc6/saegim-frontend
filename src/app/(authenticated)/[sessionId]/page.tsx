@@ -1,4 +1,4 @@
-import CreateChat from '@/components/individual/shw/CreateChat';
+import CreateChat from '@/components/creatAi/CreateChat';
 
 export default function SessionPage({
   params,

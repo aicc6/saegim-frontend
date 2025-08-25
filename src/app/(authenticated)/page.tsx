@@ -4,7 +4,7 @@ import { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuthStore } from '@/stores/auth';
 import { authApi } from '@/lib/api';
-import CreateAi from '@/components/individual/shw/CreateAi';
+import CreateAi from '@/components/creatAi/CreateAi';
 
 function HomeContent() {
   const router = useRouter();

@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { useCreateStore, WritingStyle, LengthOption } from '@/stores/create';
 import { useEmotionStore } from '@/stores/emotion';
-import Select from '../../ui/custom/Select';
+import Select from '../ui/custom/Select';
 
 // 초기 입력 화면 전용 컴포넌트
 
