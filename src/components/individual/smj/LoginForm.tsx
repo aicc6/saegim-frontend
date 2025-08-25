@@ -11,7 +11,7 @@ export default function LoginForm() {
   const router = useRouter();
   const { toast } = useToast();
   const { login } = useAuthStore();
-  
+
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -26,34 +26,19 @@ export default function LoginForm() {
     }));
   };
 
-  // 데모 계정 정보
-  const DEMO_ACCOUNT = {
-    email: 'demo@saegim.com',
-    password: 'saegim2024',
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // 데모 계정 로그인 체크 (쿠키 기반 인증으로 변경)
-    if (
-      formData.email === DEMO_ACCOUNT.email &&
-      formData.password === DEMO_ACCOUNT.password
-    ) {
-      // 데모 계정도 실제 API를 통해 로그인 처리
-      console.log('🔍 데모 계정 로그인 시도');
-    }
-    
+
     setIsLoading(true);
-    
+
     try {
       const response = await authApi.login({
         email: formData.email,
         password: formData.password,
       });
-      
+
       // 로그인 성공 시 사용자 정보를 스토어에 저장
-      const userData = (response.data as any);
+      const userData = response.data as any;
       login({
         id: userData.user_id,
         email: userData.email,
@@ -62,62 +47,78 @@ export default function LoginForm() {
         provider: 'email',
         createdAt: new Date().toISOString(),
       });
-      
+
       toast({
         title: '로그인 성공',
         description: '새김에 오신 것을 환영합니다!',
         variant: 'default',
       });
-      
+
       router.push('/');
-      
     } catch (error: any) {
       console.error('로그인 실패:', error);
       console.error('에러 상세 정보:', {
         message: error.message,
         status: error.status,
         response: error.response,
-        stack: error.stack
+        stack: error.stack,
       });
-      
+
       // 상세한 에러 메시지 처리
       let errorTitle = '로그인 실패';
       let errorDescription = '로그인 중 오류가 발생했습니다.';
-      
+
       if (error.message) {
         const errorMessage = error.message.toLowerCase();
-        
-        if (errorMessage.includes('401') || errorMessage.includes('unauthorized')) {
+
+        if (
+          errorMessage.includes('401') ||
+          errorMessage.includes('unauthorized')
+        ) {
           errorTitle = '인증 실패';
           errorDescription = '이메일 또는 비밀번호가 올바르지 않습니다.';
         } else if (errorMessage.includes('password')) {
           errorTitle = '비밀번호 오류';
-          errorDescription = '비밀번호가 변경되었을 수 있습니다. 비밀번호 찾기를 이용해주세요.';
-        } else if (errorMessage.includes('email') || errorMessage.includes('user')) {
+          errorDescription =
+            '비밀번호가 변경되었을 수 있습니다. 비밀번호 찾기를 이용해주세요.';
+        } else if (
+          errorMessage.includes('email') ||
+          errorMessage.includes('user')
+        ) {
           errorTitle = '계정 오류';
-          errorDescription = '존재하지 않는 이메일 주소입니다. 회원가입을 먼저 진행해주세요.';
-        } else if (errorMessage.includes('network') || errorMessage.includes('fetch')) {
+          errorDescription =
+            '존재하지 않는 이메일 주소입니다. 회원가입을 먼저 진행해주세요.';
+        } else if (
+          errorMessage.includes('network') ||
+          errorMessage.includes('fetch')
+        ) {
           errorTitle = '네트워크 오류';
-          errorDescription = '서버에 연결할 수 없습니다. 인터넷 연결을 확인해주세요.';
+          errorDescription =
+            '서버에 연결할 수 없습니다. 인터넷 연결을 확인해주세요.';
         } else if (errorMessage.includes('timeout')) {
           errorTitle = '시간 초과';
-          errorDescription = '요청 시간이 초과되었습니다. 잠시 후 다시 시도해주세요.';
+          errorDescription =
+            '요청 시간이 초과되었습니다. 잠시 후 다시 시도해주세요.';
         }
       }
-      
+
       // 백엔드에서 전달된 상세 에러 메시지가 있으면 우선 사용
       if (error.response?.data?.detail) {
         const backendError = error.response.data.detail;
-        
+
         // 비밀번호 변경 관련 특별 처리
-        if (backendError.includes('비밀번호') || backendError.includes('password')) {
+        if (
+          backendError.includes('비밀번호') ||
+          backendError.includes('password')
+        ) {
           errorTitle = '비밀번호 변경됨';
-          errorDescription = '비밀번호가 변경되었습니다. 비밀번호 찾기를 이용해 새로운 비밀번호를 설정해주세요.';
+          errorDescription =
+            '비밀번호가 변경되었습니다. 비밀번호 찾기를 이용해 새로운 비밀번호를 설정해주세요.';
         } else {
           errorDescription = backendError;
         }
       }
-      
+
       toast({
         title: errorTitle,
         description: errorDescription,
@@ -216,16 +217,6 @@ export default function LoginForm() {
           >
             비밀번호 찾기
           </button>
-        </div>
-
-        {/* 데모 계정 안내 */}
-        <div className="text-center mt-6 p-4 bg-gray-50 dark:bg-background-dark-tertiary rounded-lg">
-          <p className="text-sm text-gray-600 dark:text-gray-400 font-light">
-            데모 계정으로 체험해보세요
-          </p>
-          <p className="text-xs text-gray-500 dark:text-gray-500 mt-2 font-mono">
-            demo@saegim.com / saegim2024
-          </p>
         </div>
       </form>
     </div>

@@ -60,11 +60,13 @@ export const useDiaryStore = create<DiaryState>((set, get) => ({
         page_size: (filters?.page_size || get().pageSize).toString(),
       };
 
+      if (filters?.searchTerm) params.searchTerm = filters.searchTerm;
       if (filters?.emotion) params.emotion = filters.emotion;
       if (filters?.is_public !== undefined)
         params.is_public = filters.is_public.toString();
       if (filters?.start_date) params.start_date = filters.start_date;
       if (filters?.end_date) params.end_date = filters.end_date;
+      if (filters?.sort_order) params.sort_order = filters.sort_order;
 
       const response = await diaryApi.getDiaries(params);
 

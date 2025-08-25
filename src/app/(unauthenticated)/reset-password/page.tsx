@@ -1,20 +1,26 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useToast } from '@/hooks/use-toast';
 import { apiClient } from '@/lib/api';
 
-export default function ResetPasswordPage() {
+function ResetPasswordForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { toast } = useToast();
-  
+
   const [email, setEmail] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -36,13 +42,14 @@ export default function ResetPasswordPage() {
     if (password.length < 9) {
       return '비밀번호는 9자 이상이어야 합니다.';
     }
-    
+
     // 영문, 숫자, 특수문자 포함 검증
-    const passwordRegex = /^(?=.*[A-Za-z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{9,}$/;
+    const passwordRegex =
+      /^(?=.*[A-Za-z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{9,}$/;
     if (!passwordRegex.test(password)) {
       return '비밀번호는 영문, 숫자, 특수문자를 포함해야 합니다.';
     }
-    
+
     return '';
   };
 
@@ -76,16 +83,17 @@ export default function ResetPasswordPage() {
       const response = await apiClient.post('/auth/forgot-password/reset', {
         email: email,
         verification_code: token,
-        new_password: newPassword
+        new_password: newPassword,
       });
 
       if ((response.data as any).success) {
         toast({
-          title: "✅ 비밀번호 변경 완료!",
-          description: "비밀번호가 성공적으로 변경되었습니다. 로그인 페이지로 이동합니다.",
+          title: '✅ 비밀번호 변경 완료!',
+          description:
+            '비밀번호가 성공적으로 변경되었습니다. 로그인 페이지로 이동합니다.',
           duration: 3000,
         });
-        
+
         // 로그인 페이지로 리다이렉트
         setTimeout(() => {
           router.push('/login');
@@ -93,7 +101,7 @@ export default function ResetPasswordPage() {
       }
     } catch (error: any) {
       console.error('비밀번호 재설정 오류:', error);
-      
+
       if (error.response?.data?.detail) {
         setError(error.response.data.detail);
       } else {
@@ -115,7 +123,7 @@ export default function ResetPasswordPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Button 
+            <Button
               onClick={() => router.push('/forgot-password')}
               className="w-full saegim-button saegim-button-large"
             >
@@ -141,7 +149,10 @@ export default function ResetPasswordPage() {
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-2">
-              <Label htmlFor="email" className="text-text-primary dark:text-text-dark font-medium">
+              <Label
+                htmlFor="email"
+                className="text-text-primary dark:text-text-dark font-medium"
+              >
                 이메일 주소
               </Label>
               <Input
@@ -156,7 +167,10 @@ export default function ResetPasswordPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="newPassword" className="text-text-primary dark:text-text-dark font-medium">
+              <Label
+                htmlFor="newPassword"
+                className="text-text-primary dark:text-text-dark font-medium"
+              >
                 새 비밀번호
               </Label>
               <Input
@@ -174,7 +188,10 @@ export default function ResetPasswordPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="confirmPassword" className="text-text-primary dark:text-text-dark font-medium">
+              <Label
+                htmlFor="confirmPassword"
+                className="text-text-primary dark:text-text-dark font-medium"
+              >
                 새 비밀번호 확인
               </Label>
               <Input
@@ -189,16 +206,19 @@ export default function ResetPasswordPage() {
             </div>
 
             {error && (
-              <Alert variant="destructive" className="border-red-200 bg-red-50 dark:bg-red-900/20">
+              <Alert
+                variant="destructive"
+                className="border-red-200 bg-red-50 dark:bg-red-900/20"
+              >
                 <AlertDescription className="text-red-800 dark:text-red-200">
                   {error}
                 </AlertDescription>
               </Alert>
             )}
 
-            <Button 
-              type="submit" 
-              className="w-full saegim-button saegim-button-large" 
+            <Button
+              type="submit"
+              className="w-full saegim-button saegim-button-large"
               disabled={isLoading}
             >
               {isLoading ? '처리 중...' : '비밀번호 변경'}
@@ -206,8 +226,8 @@ export default function ResetPasswordPage() {
           </form>
 
           <div className="mt-6 text-center">
-            <Button 
-              variant="link" 
+            <Button
+              variant="link"
               onClick={() => router.push('/login')}
               className="text-sm text-sage-50 dark:text-sage-40 hover:text-sage-60 dark:hover:text-sage-30 transition-colors"
             >
@@ -217,5 +237,26 @@ export default function ResetPasswordPage() {
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+function LoadingSpinner() {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
+      <Card className="w-full max-w-md mx-4">
+        <CardHeader className="text-center">
+          <CardTitle className="text-2xl">로딩 중...</CardTitle>
+          <CardDescription>잠시만 기다려주세요.</CardDescription>
+        </CardHeader>
+      </Card>
+    </div>
+  );
+}
+
+export default function ResetPasswordPage() {
+  return (
+    <Suspense fallback={<LoadingSpinner />}>
+      <ResetPasswordForm />
+    </Suspense>
   );
 }

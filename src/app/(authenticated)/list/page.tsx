@@ -1,6 +1,6 @@
 'use client';
 
-import DiaryListView from '@/components/individual/lsa/DiaryListView';
+import DiaryListView from '@/app/(authenticated)/list/DiaryListView';
 
 export default function ListPage() {
   return (

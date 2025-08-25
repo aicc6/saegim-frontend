@@ -21,7 +21,7 @@ const emotionConfig = {
     bg: 'bg-red-50',
     label: '화남',
   },
-  calm: {
+  peaceful: {
     emoji: '😌',
     color: 'text-purple-500',
     bg: 'bg-purple-50',
