@@ -1,39 +1,161 @@
 'use client';
 
-import { useState, useMemo } from 'react';
-import { useDiaryStore } from '@/stores/diary';
-import { Calendar } from '@/components/calendar/Calendar';
+import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
+import { Calendar } from '@/components/calendar';
 import { EmotionPieChart } from '@/components/charts/EmotionPieChart';
 import { KeywordBarChart } from '@/components/charts/KeywordBarChart';
-import { Button } from '@/components/ui/custom/Button';
-import { formatDate } from '@/lib/utils';
+import PageHeader from '@/components/common/PageHeader';
+import { Button } from '@/components/ui/button';
+import { useDiaryStore } from '@/stores/diary';
+import { useAuthStore } from '@/stores/auth';
+import {
+  EmotionType,
+  EMOTION_COLORS,
+  EMOTION_EMOJIS,
+  KeywordData,
+} from '@/types/diary';
+import { cn } from '@/lib/utils';
 
 export default function CalendarPage() {
-  const {
-    getEntriesByDate,
-    getEmotionDistribution,
-    getKeywordDistribution,
-    getKeywordWithEmotionDistribution,
-  } = useDiaryStore();
+  const router = useRouter();
+  const { diaries, fetchDiaries, fetchCalendarDiaries } = useDiaryStore();
+  const { user, isAuthenticated } = useAuthStore();
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [viewDate, setViewDate] = useState(new Date());
+  const [isLoading, setIsLoading] = useState(true);
+  const [hasChecked, setHasChecked] = useState(false);
+
+  // 로그인한 사용자의 ID
+  const userId = user?.id;
+
+  // 날짜 범위 계산 - useMemo로 최적화하여 불필요한 재계산 방지
+  const dateRange = useMemo(() => {
+    const year = viewDate.getFullYear();
+    const month = viewDate.getMonth() + 1;
+
+    const startDate = new Date(year, month - 1, 1);
+    const endDate = new Date(year, month, 0);
+
+    const startDateStr = startDate.toISOString().split('T')[0];
+    const endDateStr = endDate.toISOString().split('T')[0];
+
+    return { startDate: startDateStr, endDate: endDateStr };
+  }, [viewDate.getFullYear(), viewDate.getMonth()]);
+
+  // 월별 데이터 로딩 함수
+  const loadMonthData = useCallback(async () => {
+    if (!isAuthenticated) {
+      console.log(
+        '❌ CalendarPage: 인증되지 않아 데이터를 로드할 수 없습니다.',
+      );
+      return;
+    }
+
+    try {
+      console.log('📅 CalendarPage: 월별 데이터 로딩', {
+        year: viewDate.getFullYear(),
+        month: viewDate.getMonth() + 1,
+        startDate: dateRange.startDate,
+        endDate: dateRange.endDate,
+      });
+
+      // 쿠키 기반 API 호출
+      const apiBaseUrl =
+        process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000';
+
+      const params = new URLSearchParams({
+        start_date: dateRange.startDate,
+        end_date: dateRange.endDate,
+      });
+
+      const response = await fetch(
+        `${apiBaseUrl}/api/diary/calendar?${params.toString()}`,
+        {
+          credentials: 'include', // 쿠키 기반 인증
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        },
+      );
+
+      if (response.ok) {
+        const result = await response.json();
+        console.log('📡 CalendarPage: 쿠키 기반 API 호출 결과', result);
+
+        // 스토어 상태 업데이트
+        if (result.data && Array.isArray(result.data)) {
+          useDiaryStore.setState({
+            diaries: result.data,
+            totalCount: result.data.length,
+            isLoading: false,
+            error: null,
+          });
+        }
+      } else if (response.status === 401) {
+        console.log('❌ CalendarPage: 인증 실패, 로그인 페이지로 리다이렉트');
+        // 인증 실패 시 로그인 페이지로 리다이렉트
+        router.push('/login');
+      }
+    } catch (error) {
+      console.error('❌ CalendarPage: API 호출 실패', error);
+      useDiaryStore.setState({
+        error: '월별 데이터를 불러오는데 실패했습니다.',
+        isLoading: false,
+      });
+    }
+  }, [isAuthenticated, viewDate, dateRange, router]);
 
   // 현재 보고 있는 월의 데이터
   const currentMonthData = useMemo(() => {
     const year = viewDate.getFullYear();
     const month = viewDate.getMonth() + 1;
 
-    const emotionDistribution = getEmotionDistribution(year, month);
-    const keywordDistribution = getKeywordWithEmotionDistribution(year, month);
+    // 현재 월의 다이어리만 필터링
+    const currentMonthDiaries = diaries.filter((diary) => {
+      const diaryDate = new Date(diary.created_at);
+      return (
+        diaryDate.getFullYear() === year && diaryDate.getMonth() + 1 === month
+      );
+    });
+
+    // 감정별 빈도 계산
+    const emotionCounts: Record<EmotionType, number> = {
+      happy: 0,
+      sad: 0,
+      angry: 0,
+      peaceful: 0,
+      unrest: 0, // worried를 unrest로 통일
+    };
+
+    // 키워드 분포 계산
+    const keywordCounts: Record<string, number> = {};
+
+    currentMonthDiaries.forEach((diary) => {
+      // 감정 카운트
+      if (diary.user_emotion && diary.user_emotion in emotionCounts) {
+        emotionCounts[diary.user_emotion as EmotionType]++;
+      }
+
+      // 키워드 카운트
+      if (diary.keywords && Array.isArray(diary.keywords)) {
+        diary.keywords.forEach((keyword: string) => {
+          keywordCounts[keyword] = (keywordCounts[keyword] || 0) + 1;
+        });
+      }
+    });
+
+    // 키워드 분포를 배열로 변환하고 빈도순으로 정렬
+    const keywordDistribution: KeywordData[] = Object.entries(keywordCounts)
+      .map(([word, count]) => ({ word, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 10); // 상위 10개만
 
     // 총 기록 수 계산
-    const totalEntries = Object.values(emotionDistribution).reduce(
-      (sum, count) => sum + count,
-      0,
-    );
+    const totalEntries = currentMonthDiaries.length;
 
     // 가장 많은 감정 계산
-    const maxEmotion = Object.entries(emotionDistribution)
+    const maxEmotion = Object.entries(emotionCounts)
       .filter(([_, count]) => count > 0)
       .sort(([_, a], [__, b]) => b - a)[0];
 
@@ -42,7 +164,7 @@ export default function CalendarPage() {
       sad: { emoji: '😢', name: '슬픔' },
       angry: { emoji: '😡', name: '화남' },
       peaceful: { emoji: '😌', name: '평온' },
-      unrest: { emoji: '😨', name: '불안' },
+      unrest: { emoji: '😰', name: '불안' }, // worried를 unrest로 통일
     };
 
     const topEmotion = maxEmotion
@@ -50,18 +172,174 @@ export default function CalendarPage() {
       : null;
 
     return {
-      emotionDistribution,
+      emotionDistribution: emotionCounts,
       keywordDistribution,
       totalEntries,
       topEmotion,
     };
-  }, [viewDate, getEmotionDistribution, getKeywordDistribution]);
+  }, [diaries, viewDate]);
 
-  // 선택된 날짜의 다이어리들
+  // 선택된 날짜의 다이어리
   const selectedDateEntries = useMemo(() => {
     if (!selectedDate) return [];
-    return getEntriesByDate(selectedDate);
-  }, [selectedDate, getEntriesByDate]);
+
+    return diaries.filter((diary) => {
+      const diaryDate = new Date(diary.created_at);
+      const selectedDateObj = new Date(selectedDate);
+      return (
+        diaryDate.getFullYear() === selectedDateObj.getFullYear() &&
+        diaryDate.getMonth() === selectedDateObj.getMonth() &&
+        diaryDate.getDate() === selectedDateObj.getDate()
+      );
+    });
+  }, [diaries, selectedDate]);
+
+  // 인증 상태 확인 - 메인 페이지와 동일한 로직
+  useEffect(() => {
+    console.log('🔄 CalendarPage useEffect 실행됨 - hasChecked:', hasChecked);
+
+    if (hasChecked) {
+      console.log('⏭️ CalendarPage 이미 체크됨 - 스킵');
+      return;
+    }
+
+    const handleAuthCheck = async () => {
+      console.log('🚀 CalendarPage handleAuthCheck 시작');
+      try {
+        // 인증 상태 확인
+        console.log('🔍 CalendarPage 인증 상태 확인:', {
+          isAuthenticated,
+          hasUser: !!user,
+        });
+
+        // 이미 인증된 상태라면 스킵
+        if (isAuthenticated && user) {
+          console.log('✅ CalendarPage 이미 인증됨 - 스킵');
+          setIsLoading(false);
+          setHasChecked(true);
+          return;
+        }
+
+        // 쿠키 기반 인증 확인 (localStorage 토큰 불필요)
+        console.log('🔍 CalendarPage 쿠키 기반 인증 확인 중');
+
+        try {
+          console.log('🔍 CalendarPage 서버 인증 확인 중...');
+
+          const apiBaseUrl =
+            process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000';
+
+          const response = await fetch(`${apiBaseUrl}/api/auth/me`, {
+            method: 'GET',
+            credentials: 'include',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+          });
+
+          if (response.ok) {
+            const userData = await response.json();
+            console.log(
+              '✅ CalendarPage 서버 인증 성공:',
+              userData.data.email
+                ? `${userData.data.email.substring(0, 3)}***@${userData.data.email.split('@')[1]}`
+                : '사용자',
+            );
+
+            // Zustand 스토어에 로그인 정보 저장
+            const { login } = useAuthStore.getState();
+            login({
+              id: userData.data.user_id,
+              email: userData.data.email,
+              name: userData.data.nickname,
+              profileImage: '',
+              provider: userData.data.provider || 'email',
+              createdAt: userData.data.created_at || new Date().toISOString(),
+            });
+
+            // 로딩 완료
+            setIsLoading(false);
+            setHasChecked(true);
+          } else {
+            console.log('❌ CalendarPage 서버 인증 실패:', response.status);
+            // 서버 인증 실패 시 로그인 페이지로 이동
+            setHasChecked(true);
+            setIsLoading(false);
+            router.push('/login');
+          }
+        } catch (err) {
+          console.error('❌ CalendarPage 서버 인증 확인 실패:', err);
+          // 에러 발생 시 로그인 페이지로 이동
+          setHasChecked(true);
+          setIsLoading(false);
+          router.push('/login');
+        }
+      } catch (err) {
+        console.error('❌ CalendarPage 인증 체크 실패:', err);
+        setHasChecked(true);
+        setIsLoading(false);
+        router.push('/login');
+      }
+    };
+
+    // 약간의 지연을 두어 페이지 로딩 완료 후 인증 확인
+    const timer = setTimeout(() => {
+      console.log('⏰ CalendarPage 타이머 실행 - 인증 확인 시작');
+      handleAuthCheck();
+    }, 100);
+
+    return () => {
+      console.log('🧹 CalendarPage useEffect 정리 - 타이머 취소');
+      clearTimeout(timer);
+    };
+  }, []); // 의존성 배열을 비워서 컴포넌트 마운트 시에만 실행
+
+  // 페이지 포커스 시 데이터 새로고침 (다이어리 수정 후 돌아왔을 때)
+  useEffect(() => {
+    const handleFocus = () => {
+      console.log('📅 CalendarPage: 페이지 포커스 감지, 데이터 새로고침');
+      loadMonthData();
+    };
+
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
+  }, [loadMonthData]);
+
+  // 월 변경 시 데이터 로드
+  useEffect(() => {
+    if (isAuthenticated) {
+      loadMonthData();
+    }
+  }, [loadMonthData, isAuthenticated]);
+
+  // 인증 확인 완료 후 인증되지 않았을 때만 리다이렉트
+  if (!isAuthenticated || !user) {
+    return null; // router.push('/login')이 이미 실행됨
+  }
+
+  // 로딩 중일 때는 로딩 화면 표시
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background-primary flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-sage-500 mx-auto mb-4"></div>
+          <p className="text-text-secondary">인증 확인 중...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // 사용자 ID가 없으면 로딩 표시
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-background-primary flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-sage-500 mx-auto mb-4"></div>
+          <p className="text-text-secondary">사용자 정보를 불러오는 중...</p>
+        </div>
+      </div>
+    );
+  }
 
   const handleDateSelect = (date: string) => {
     setSelectedDate(date);
@@ -75,204 +353,230 @@ export default function CalendarPage() {
     setSelectedDate(null);
   };
 
+  const handleEntryClick = (entryId: string) => {
+    // 현재 페이지 경로를 쿼리 파라미터로 전달
+    const currentPath = window.location.pathname;
+    router.push(`/viewPost/${entryId}?from=${encodeURIComponent(currentPath)}`);
+  };
+
   return (
     <div className="min-h-screen bg-background-primary flex flex-col">
+      {/* 페이지 헤더 */}
+      <PageHeader
+        title="캘린더"
+        subtitle="월간 감정 기록과 키워드 분석을 확인하세요"
+      />
+
       <div className="flex flex-1">
-        <main className="flex-1 ml-64">
-          <div className="container mx-auto px-6 py-8">
-            {/* 페이지 헤더 */}
-            <div className="mb-8">
-              <h1 className="text-h2 font-bold text-text-primary mb-2">
-                캘린더
-              </h1>
-              <p className="text-body text-text-secondary">
-                월간 감정 기록과 키워드 분석을 확인하세요
-              </p>
-            </div>
+        <div className="container mx-auto px-6 py-8">
+          {/* 메인 그리드 - 반응형 레이아웃 */}
+          <div className="grid grid-cols-1 2xl:grid-cols-3 gap-6">
+            {/* 캘린더 영역 - 2XL에서는 2/3, 작은 화면에서는 전체 */}
+            <div className="2xl:col-span-2">
+              <Calendar
+                onDateSelect={handleDateSelect}
+                onDateChange={handleDateChange}
+                className="h-fit"
+              />
 
-            {/* 메인 그리드 - 반응형 레이아웃 */}
-            <div className="grid grid-cols-1 2xl:grid-cols-3 gap-6">
-              {/* 캘린더 영역 - 2XL에서는 2/3, 작은 화면에서는 전체 */}
-              <div className="2xl:col-span-2">
-                <Calendar
-                  onDateSelect={handleDateSelect}
-                  onDateChange={handleDateChange}
-                  className="h-fit"
-                />
+              {/* 선택된 날짜 정보 */}
+              {selectedDate && (
+                <div className="mt-6 bg-background-primary rounded-lg border border-border-subtle p-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-h4 font-bold text-text-primary">
+                      {selectedDate} 기록
+                    </h3>
+                    <Button variant="ghost" size="sm" onClick={clearSelection}>
+                      ✕
+                    </Button>
+                  </div>
 
-                {/* 선택된 날짜 정보 */}
-                {selectedDate && (
-                  <div className="mt-6 bg-background-primary rounded-lg border border-border-subtle p-6">
-                    <div className="flex items-center justify-between mb-4">
-                      <h3 className="text-h4 font-bold text-text-primary">
-                        {formatDate(selectedDate)} 기록
-                      </h3>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={clearSelection}
-                      >
-                        ✕
-                      </Button>
-                    </div>
+                  {selectedDateEntries.length > 0 ? (
+                    <div className="space-y-4">
+                      {selectedDateEntries.map((entry) => (
+                        <div
+                          key={entry.id}
+                          className="p-4 bg-background-secondary rounded-lg border border-border-subtle cursor-pointer hover:bg-background-hover transition-colors"
+                          onClick={() => handleEntryClick(entry.id)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                              handleEntryClick(entry.id);
+                            }
+                          }}
+                          tabIndex={0}
+                          role="button"
+                          aria-label={`${entry.title} 기록 보기`}
+                        >
+                          <div className="flex items-center justify-between mb-2">
+                            <h4 className="text-body font-medium text-text-primary">
+                              {entry.title}
+                            </h4>
+                            {entry.user_emotion && (
+                              <span
+                                className={cn(
+                                  'text-lg px-2 py-1 rounded-full',
+                                  EMOTION_COLORS[
+                                    entry.user_emotion as EmotionType
+                                  ] || 'bg-gray-100 text-gray-800',
+                                )}
+                              >
+                                {EMOTION_EMOJIS[
+                                  entry.user_emotion as EmotionType
+                                ] || '😐'}
+                              </span>
+                            )}
+                          </div>
 
-                    {selectedDateEntries.length > 0 ? (
-                      <div className="space-y-4">
-                        {selectedDateEntries.map((entry) => (
-                          <div
-                            key={entry.id}
-                            className="p-4 bg-background-secondary rounded-lg border border-border-subtle"
-                          >
-                            <div className="flex items-center justify-between mb-2">
-                              <h4 className="text-body font-medium text-text-primary">
-                                {entry.title}
-                              </h4>
-                              {entry.userEmotion && (
-                                <span className="text-lg">
-                                  {entry.userEmotion === 'happy' && '😊'}
-                                  {entry.userEmotion === 'sad' && '😢'}
-                                  {entry.userEmotion === 'angry' && '😡'}
-                                  {entry.userEmotion === 'peaceful' && '😌'}
-                                  {entry.userEmotion === 'unrest' && '😨'}
-                                </span>
-                              )}
-                            </div>
-
-                            <p className="text-body-small text-text-secondary mb-3">
+                          {/* 수정된 본문 내용 표시 (content) - 우선 표시 */}
+                          {entry.content && (
+                            <p className="text-body-small text-text-primary mb-3 line-clamp-3 font-medium">
                               {entry.content}
                             </p>
+                          )}
 
-                            {entry.keywords && entry.keywords.length > 0 && (
-                              <div className="flex flex-wrap gap-2">
-                                {entry.keywords.map((keyword, index) => (
+                          {/* AI 생성 텍스트 표시 (content가 없을 때만) */}
+                          {!entry.content && entry.ai_generated_text && (
+                            <p className="text-body-small text-text-secondary mb-3 line-clamp-2">
+                              {entry.ai_generated_text}
+                            </p>
+                          )}
+
+                          {/* keywords 표시 */}
+                          {entry.keywords && entry.keywords.length > 0 && (
+                            <div className="flex flex-wrap gap-2 mb-3">
+                              {entry.keywords.map(
+                                (keyword: string, index: number) => (
                                   <span
                                     key={index}
                                     className="text-caption px-2 py-1 bg-interactive-secondary text-text-primary rounded-md"
                                   >
                                     #{keyword}
                                   </span>
-                                ))}
-                              </div>
-                            )}
+                                ),
+                              )}
+                            </div>
+                          )}
+
+                          {/* 클릭 안내 메시지 */}
+                          <div className="text-right">
+                            <span className="text-caption text-interactive-primary">
+                              클릭하여 상세 보기 →
+                            </span>
                           </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="text-center py-8">
-                        <div className="text-4xl mb-2">📝</div>
-                        <p className="text-text-secondary">
-                          이 날에는 기록이 없습니다
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-8">
+                      <div className="text-4xl mb-2">📝</div>
+                      <p className="text-text-secondary">
+                        이 날에는 기록이 없습니다
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
 
-              {/* 차트 영역 - 2XL에서는 1/3, 작은 화면에서는 캘린더 아래 전체 */}
-              <div className="2xl:col-span-1">
-                {/* 2XL 이상: 세로 배치 */}
-                <div className="hidden 2xl:block space-y-6">
-                  {/* 감정 분포 차트 */}
-                  <EmotionPieChart
-                    data={currentMonthData.emotionDistribution}
-                  />
+            {/* 차트 영역 - 2XL에서는 1/3, 작은 화면에서는 캘린더 아래 전체 */}
+            <div className="2xl:col-span-1">
+              {/* 2XL 이상: 세로 배치 */}
+              <div className="hidden 2xl:block space-y-6">
+                {/* 감정 분포 차트 */}
+                <EmotionPieChart data={currentMonthData.emotionDistribution} />
 
-                  {/* 키워드 분포 차트 */}
-                  <KeywordBarChart
-                    data={currentMonthData.keywordDistribution}
-                  />
+                {/* 키워드 분포 차트 */}
+                <KeywordBarChart data={currentMonthData.keywordDistribution} />
 
-                  {/* 월간 요약 */}
-                  <div className="bg-background-primary rounded-lg border border-border-subtle p-6">
-                    <h3 className="text-h4 font-bold text-text-primary mb-4">
-                      이달의 요약
-                    </h3>
+                {/* 월간 요약 */}
+                <div className="bg-background-primary rounded-lg border border-border-subtle p-6">
+                  <h3 className="text-h4 font-bold text-text-primary mb-4">
+                    이달의 요약
+                  </h3>
 
-                    <div className="space-y-3">
-                      <div className="flex justify-between items-center">
-                        <span className="text-body-small text-text-secondary">
-                          총 기록 수
-                        </span>
-                        <span className="text-body font-medium text-text-primary">
-                          {currentMonthData.totalEntries}개
-                        </span>
-                      </div>
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-center">
+                      <span className="text-body-small text-text-secondary">
+                        총 기록 수
+                      </span>
+                      <span className="text-body font-medium text-text-primary">
+                        {currentMonthData.totalEntries}개
+                      </span>
+                    </div>
 
-                      <div className="flex justify-between items-center">
-                        <span className="text-body-small text-text-secondary">
-                          가장 많은 감정
-                        </span>
-                        <span className="text-body font-medium text-text-primary">
-                          {currentMonthData.topEmotion?.name || '기록 없음'}
-                        </span>
-                      </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-body-small text-text-secondary">
+                        가장 많은 감정
+                      </span>
+                      <span className="text-body font-medium text-text-primary">
+                        {currentMonthData.topEmotion?.name || '기록 없음'}
+                      </span>
+                    </div>
 
-                      <div className="flex justify-between items-center">
-                        <span className="text-body-small text-text-secondary">
-                          주요 키워드
-                        </span>
-                        <span className="text-body font-medium text-text-primary">
-                          {currentMonthData.keywordDistribution[0]?.word ||
-                            '없음'}
-                        </span>
-                      </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-body-small text-text-secondary">
+                        주요 키워드
+                      </span>
+                      <span className="text-body font-medium text-text-primary">
+                        {currentMonthData.keywordDistribution[0]?.word ||
+                          '없음'}
+                      </span>
                     </div>
                   </div>
                 </div>
+              </div>
 
-                {/* 2XL 미만: 1280px 이상에서는 가로 배치, 1280px 미만에서는 세로 배치 */}
-                <div className="block 2xl:hidden">
-                  <div className="grid grid-cols-1 xl:grid-cols-5 gap-6">
-                    {/* 감정 분포 차트 - 더 넓은 공간 할당 */}
-                    <div className="xl:col-span-2">
-                      <EmotionPieChart
-                        data={currentMonthData.emotionDistribution}
-                      />
-                    </div>
+              {/* 2XL 미만: 1280px 이상에서는 가로 배치, 1280px 미만에서는 세로 배치 */}
+              <div className="block 2xl:hidden">
+                <div className="grid grid-cols-1 xl:grid-cols-5 gap-6">
+                  {/* 감정 분포 차트 - 더 넓은 공간 할당 */}
+                  <div className="xl:col-span-2">
+                    <EmotionPieChart
+                      data={currentMonthData.emotionDistribution}
+                    />
+                  </div>
 
-                    {/* 키워드 분포 차트 - 작은 공간 할당 */}
-                    <div className="xl:col-span-2">
-                      <KeywordBarChart
-                        data={currentMonthData.keywordDistribution}
-                      />
-                    </div>
+                  {/* 키워드 분포 차트 - 작은 공간 할당 */}
+                  <div className="xl:col-span-2">
+                    <KeywordBarChart
+                      data={currentMonthData.keywordDistribution}
+                    />
+                  </div>
 
-                    {/* 월간 요약 - 가장 작은 공간 할당 */}
-                    <div className="xl:col-span-1">
-                      <div className="bg-background-primary rounded-lg border border-border-subtle p-6">
-                        <h3 className="text-h4 font-bold text-text-primary mb-4">
-                          이달의 요약
-                        </h3>
+                  {/* 월간 요약 - 가장 작은 공간 할당 */}
+                  <div className="xl:col-span-1">
+                    <div className="bg-background-primary rounded-lg border border-border-subtle p-6">
+                      <h3 className="text-h4 font-bold text-text-primary mb-4">
+                        이달의 요약
+                      </h3>
 
-                        <div className="space-y-3">
-                          <div className="flex justify-between items-center">
-                            <span className="text-body-small text-text-secondary">
-                              총 기록 수
-                            </span>
-                            <span className="text-body font-medium text-text-primary">
-                              {currentMonthData.totalEntries}개
-                            </span>
-                          </div>
+                      <div className="space-y-3">
+                        <div className="flex justify-between items-center">
+                          <span className="text-body-small text-text-secondary">
+                            총 기록 수
+                          </span>
+                          <span className="text-body font-medium text-text-primary">
+                            {currentMonthData.totalEntries}개
+                          </span>
+                        </div>
 
-                          <div className="flex justify-between items-center">
-                            <span className="text-body-small text-text-secondary">
-                              가장 많은 감정
-                            </span>
-                            <span className="text-body font-medium text-text-primary">
-                              {currentMonthData.topEmotion?.name || '기록 없음'}
-                            </span>
-                          </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-body-small text-text-secondary">
+                            가장 많은 감정
+                          </span>
+                          <span className="text-body font-medium text-text-primary">
+                            {currentMonthData.topEmotion?.name || '기록 없음'}
+                          </span>
+                        </div>
 
-                          <div className="flex justify-between items-center">
-                            <span className="text-body-small text-text-secondary">
-                              주요 키워드
-                            </span>
-                            <span className="text-body font-medium text-text-primary">
-                              {currentMonthData.keywordDistribution[0]?.word ||
-                                '없음'}
-                            </span>
-                          </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-body-small text-text-secondary">
+                            주요 키워드
+                          </span>
+                          <span className="text-body font-medium text-text-primary">
+                            {currentMonthData.keywordDistribution[0]?.word ||
+                              '없음'}
+                          </span>
                         </div>
                       </div>
                     </div>
@@ -281,7 +585,7 @@ export default function CalendarPage() {
               </div>
             </div>
           </div>
-        </main>
+        </div>
       </div>
     </div>
   );

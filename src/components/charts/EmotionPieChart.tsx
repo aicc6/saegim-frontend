@@ -1,20 +1,29 @@
 'use client';
 
 import { useMemo } from 'react';
-import { EmotionType } from '@/types';
-import { getEmotionColor, getEmotionEmoji, cn } from '@/lib/utils';
+import { EmotionType, EMOTION_EMOJIS } from '@/types/diary';
+import { cn } from '@/lib/utils';
 
 interface EmotionPieChartProps {
   data: Record<EmotionType, number>;
   className?: string;
 }
 
+// 감정별 실제 색상 코드 정의
+const EMOTION_CHART_COLORS: Record<EmotionType, string> = {
+  happy: '#E6C55A', // Soft Gold
+  sad: '#6B8AC7', // Calm Blue
+  angry: '#D67D5C', // Warm Orange
+  peaceful: '#7DB87D', // Natural Green
+  unrest: '#8B5A96', // Deep Purple (진한 보라색)
+};
+
 const emotionLabels = {
   happy: '행복',
   sad: '슬픔',
   angry: '화남',
   peaceful: '평온',
-  unrest: '불안',
+  unrest: '불안', // worried와 excited를 unrest로 통일
 };
 
 export function EmotionPieChart({ data, className }: EmotionPieChartProps) {
@@ -42,7 +51,7 @@ export function EmotionPieChart({ data, className }: EmotionPieChartProps) {
           percentage,
           startAngle,
           endAngle,
-          color: getEmotionColor(emotion),
+          color: EMOTION_CHART_COLORS[emotion as EmotionType],
         };
       });
   }, [data]);
@@ -168,7 +177,7 @@ export function EmotionPieChart({ data, className }: EmotionPieChartProps) {
                     transformOrigin: `${labelPos.x}px ${labelPos.y}px`,
                   }}
                 >
-                  {getEmotionEmoji(item.emotion)}
+                  {EMOTION_EMOJIS[item.emotion]}
                 </text>
               );
             })}
@@ -188,7 +197,7 @@ export function EmotionPieChart({ data, className }: EmotionPieChartProps) {
           {Object.entries(emotionLabels).map(([emotion, label]) => {
             const count = data[emotion as EmotionType] || 0;
             const percentage = total > 0 ? (count / total) * 100 : 0;
-            const color = getEmotionColor(emotion);
+            const color = EMOTION_CHART_COLORS[emotion as EmotionType];
 
             return (
               <div
@@ -201,7 +210,7 @@ export function EmotionPieChart({ data, className }: EmotionPieChartProps) {
                     style={{ backgroundColor: color }}
                   />
                   <span className="text-xl 2xl:text-xl text-base">
-                    {getEmotionEmoji(emotion)}
+                    {EMOTION_EMOJIS[emotion as EmotionType]}
                   </span>
                 </div>
 

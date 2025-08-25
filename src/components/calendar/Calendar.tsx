@@ -1,14 +1,19 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { useDiaryStore } from '@/stores/diary';
-import { EmotionType, DiaryEntry } from '@/types';
-import { cn, getEmotionColor, getEmotionEmoji } from '@/lib/utils';
+import {
+  EmotionType,
+  DiaryListEntry,
+  EMOTION_COLORS,
+  EMOTION_EMOJIS,
+} from '@/types/diary';
+import { cn } from '@/lib/utils';
 
 interface CalendarDay {
   date: Date;
   dateStr: string;
-  entries: DiaryEntry[];
+  entries: DiaryListEntry[];
   dominantEmotion: EmotionType | null;
   keywords: string[];
   isCurrentMonth: boolean;
@@ -29,7 +34,8 @@ export function Calendar({
 }: CalendarProps) {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
-  const { entries } = useDiaryStore();
+
+  const { diaries, isLoading, error, fetchCalendarDiaries } = useDiaryStore();
 
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
@@ -46,96 +52,128 @@ export function Calendar({
   const endDate = new Date(lastDay);
   endDate.setDate(endDate.getDate() + (6 - lastDay.getDay()));
 
+  // 날짜 범위 계산 - useMemo로 최적화하여 불필요한 재계산 방지
+  const dateRange = useMemo(() => {
+    const startDate = new Date(year, month - 1, 1);
+    const endDate = new Date(year, month, 0);
+
+    const startDateStr = startDate.toISOString().split('T')[0];
+    const endDateStr = endDate.toISOString().split('T')[0];
+
+    return { startDate: startDateStr, endDate: endDateStr };
+  }, [year, month]);
+
+  // 월이 변경될 때마다 해당 월의 다이어리 데이터 가져오기 - 의존성 배열 최적화
+  useEffect(() => {
+    console.log('🔍 Calendar: API 호출 시작', {
+      startDate: dateRange.startDate,
+      endDate: dateRange.endDate,
+    });
+
+    // 실제 백엔드 API 호출 - 쿠키 기반 인증 사용
+    const loadCalendarData = async () => {
+      try {
+        const apiBaseUrl =
+          process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000';
+
+        const response = await fetch(
+          `${apiBaseUrl}/api/diary/calendar?start_date=${dateRange.startDate}&end_date=${dateRange.endDate}`,
+          {
+            credentials: 'include', // 쿠키 기반 인증
+            headers: {
+              'Content-Type': 'application/json',
+            },
+          },
+        );
+
+        if (response.ok) {
+          const result = await response.json();
+          console.log('📡 Calendar: 쿠키 기반 API 호출 결과', result);
+
+          // 스토어 상태 업데이트
+          if (result.data && Array.isArray(result.data)) {
+            // Zustand 스토어 직접 업데이트
+            useDiaryStore.setState({
+              diaries: result.data,
+              totalCount: result.data.length,
+              isLoading: false,
+              error: null,
+            });
+          }
+        } else if (response.status === 401) {
+          console.log('❌ Calendar: 인증 실패, 로그인 페이지로 리다이렉트');
+          window.location.href = '/login';
+        }
+      } catch (error) {
+        console.error('❌ Calendar: API 호출 실패', error);
+        useDiaryStore.setState({
+          error: '캘린더 데이터를 불러오는데 실패했습니다.',
+          isLoading: false,
+        });
+      }
+    };
+
+    loadCalendarData();
+  }, [year, month]); // dateRange 제거하고 year, month만 의존성으로 설정
+
+  // 데이터 로딩 상태 디버깅
+  useEffect(() => {
+    console.log('📊 Calendar: 데이터 상태', {
+      diariesCount: diaries.length,
+      isLoading,
+      error,
+      diaries: diaries.slice(0, 3), // 처음 3개만 로그
+    });
+  }, [diaries, isLoading, error]);
+
   // 달력에 표시할 날짜들
   const calendarDays = useMemo(() => {
-    const startDate = new Date(year, month, 1);
-    const endDate = new Date(year, month + 1, 0);
-
-    // 시작 주의 첫 번째 날 (일요일)
-    const startOfWeek = new Date(startDate);
-    startOfWeek.setDate(startDate.getDate() - startDate.getDay());
-
-    // 마지막 주의 마지막 날 (토요일)
-    const endOfWeek = new Date(endDate);
-    endOfWeek.setDate(endDate.getDate() + (6 - endOfWeek.getDay()));
-
     const days: CalendarDay[] = [];
-    const current = new Date(startOfWeek);
+    const current = new Date(startDate);
 
-    while (current <= endOfWeek) {
+    while (current <= endDate) {
       // 로컬 시간대 기준으로 YYYY-MM-DD 형식 생성
       const currentYear = current.getFullYear();
       const currentMonth = String(current.getMonth() + 1).padStart(2, '0');
       const currentDay = String(current.getDate()).padStart(2, '0');
       const dateStr = `${currentYear}-${currentMonth}-${currentDay}`;
 
-      const dayEntries = entries.filter((entry) =>
-        entry.createdAt.startsWith(dateStr),
+      const dayEntries = diaries.filter((entry) =>
+        entry.created_at.startsWith(dateStr),
       );
 
-      // 해당 날짜의 우세한 기록 선택 (최신 기록 우선)
-      let dominantEntry: DiaryEntry | null = null;
+      // 해당 날짜의 우세한 감정 선택
       let dominantEmotion: EmotionType | null = null;
       let topKeywords: string[] = [];
 
       if (dayEntries.length > 0) {
-        // 감정별 빈도와 최신 시간 계산
+        // 감정별 빈도 계산
         const emotionCounts: Record<EmotionType, number> = {
           happy: 0,
           sad: 0,
           angry: 0,
           peaceful: 0,
-          unrest: 0,
-        };
-
-        const emotionLatestTime: Record<EmotionType, string> = {
-          happy: '',
-          sad: '',
-          angry: '',
-          peaceful: '',
-          unrest: '',
-        };
-
-        const emotionLatestEntry: Record<EmotionType, DiaryEntry | null> = {
-          happy: null,
-          sad: null,
-          angry: null,
-          peaceful: null,
-          unrest: null,
+          unrest: 0, // worried를 unrest로 통일
         };
 
         dayEntries.forEach((entry) => {
-          if (entry.userEmotion) {
-            emotionCounts[entry.userEmotion]++;
-            // 더 최신 기록이면 업데이트
-            if (entry.updatedAt > emotionLatestTime[entry.userEmotion]) {
-              emotionLatestTime[entry.userEmotion] = entry.updatedAt;
-              emotionLatestEntry[entry.userEmotion] = entry;
-            }
+          if (entry.user_emotion && entry.user_emotion in emotionCounts) {
+            emotionCounts[entry.user_emotion as EmotionType]++;
           }
         });
 
-        // 우세한 감정 선택 (빈도 우선, 같으면 최신 기록 우선)
+        // 가장 빈도가 높은 감정 선택
         const topEmotion = Object.entries(emotionCounts)
           .filter(([_, count]) => count > 0)
-          .sort(([emotionA, countA], [emotionB, countB]) => {
-            // 빈도가 다르면 빈도 우선
-            if (countB !== countA) {
-              return countB - countA;
-            }
-            // 빈도가 같으면 최신 기록 우선
-            const timeA = emotionLatestTime[emotionA as EmotionType];
-            const timeB = emotionLatestTime[emotionB as EmotionType];
-            return timeB.localeCompare(timeA);
-          })[0];
+          .sort(([_, countA], [__, countB]) => countB - countA)[0];
 
         if (topEmotion) {
           dominantEmotion = topEmotion[0] as EmotionType;
-          dominantEntry = emotionLatestEntry[dominantEmotion];
 
-          // 우세한 기록의 키워드에서 상위 2개 선택
-          if (dominantEntry?.keywords) {
-            topKeywords = dominantEntry.keywords.slice(0, 2);
+          // 키워드가 있는 경우 처리
+          const firstEntry = dayEntries[0];
+          if (firstEntry.keywords && Array.isArray(firstEntry.keywords)) {
+            topKeywords = firstEntry.keywords.slice(0, 2);
           }
         }
       }
@@ -149,7 +187,7 @@ export function Calendar({
         dateStr,
         entries: dayEntries,
         dominantEmotion,
-        keywords: topKeywords, // 추가된 키워드 정보
+        keywords: topKeywords,
         isCurrentMonth: current.getMonth() === currentDate.getMonth(),
         isToday: dateStr === todayStr,
         isSelected: dateStr === selectedDate,
@@ -159,16 +197,22 @@ export function Calendar({
     }
 
     return days;
-  }, [startDate, endDate, entries, month, selectedDate]);
+  }, [startDate, endDate, diaries, month, selectedDate, currentDate]);
 
   const navigateMonth = (direction: 'prev' | 'next') => {
     setCurrentDate((prev) => {
       const newDate = new Date(prev);
       newDate.setMonth(prev.getMonth() + (direction === 'next' ? 1 : -1));
-      onDateChange?.(newDate);
       return newDate;
     });
   };
+
+  // currentDate가 변경될 때 onDateChange 호출
+  useEffect(() => {
+    if (onDateChange) {
+      onDateChange(currentDate);
+    }
+  }, [currentDate, onDateChange]);
 
   const handleDateClick = (dateStr: string) => {
     // 클릭한 날짜 파싱
@@ -184,12 +228,50 @@ export function Calendar({
     if (clickedMonth !== currentMonth || clickedYear !== currentYear) {
       const newDate = new Date(clickedYear, clickedMonth, 1);
       setCurrentDate(newDate);
-      onDateChange?.(newDate);
+      // onDateChange는 useEffect에서 자동으로 호출됨
     }
 
     setSelectedDate(dateStr);
     onDateSelect?.(dateStr);
   };
+
+  // 로딩 상태 표시
+  if (isLoading) {
+    return (
+      <div
+        className={cn(
+          'bg-background-primary rounded-lg border border-border-subtle p-8',
+          className,
+        )}
+      >
+        <div className="flex items-center justify-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-sage-500"></div>
+          <span className="ml-2 text-text-secondary">
+            다이어리를 불러오는 중...
+          </span>
+        </div>
+      </div>
+    );
+  }
+
+  // 에러 상태 표시
+  if (error) {
+    return (
+      <div
+        className={cn(
+          'bg-background-primary rounded-lg border border-border-subtle p-8',
+          className,
+        )}
+      >
+        <div className="text-center text-error">
+          <p className="text-lg font-medium">
+            데이터를 불러오는데 실패했습니다
+          </p>
+          <p className="text-sm mt-2">{error}</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div
@@ -202,20 +284,23 @@ export function Calendar({
       <div className="flex items-center justify-between p-4 border-b border-border-subtle">
         <button
           onClick={() => navigateMonth('prev')}
-          className="p-2 hover:bg-background-hover rounded-lg transition-colors"
+          className="group flex items-center justify-center w-12 h-10 hover:bg-sage-20 rounded-full transition-all duration-200 hover:scale-105"
+          title="이전 달"
         >
-          ←
+          <span className="text-lg group-hover:animate-bounce">◀️</span>
         </button>
 
-        <h2 className="text-h3 font-bold text-text-primary">
+        <h2 className="text-h3 font-bold text-text-primary flex items-center gap-2">
+          <span className="text-2xl">📅</span>
           {year}년 {month + 1}월
         </h2>
 
         <button
           onClick={() => navigateMonth('next')}
-          className="p-2 hover:bg-background-hover rounded-lg transition-colors"
+          className="group flex items-center justify-center w-12 h-10 hover:bg-sage-20 rounded-full transition-all duration-200 hover:scale-105"
+          title="다음 달"
         >
-          →
+          <span className="text-lg group-hover:animate-bounce">▶️</span>
         </button>
       </div>
 
@@ -310,13 +395,12 @@ export function Calendar({
             {day.dominantEmotion && (
               <div className="flex justify-center items-center h-full">
                 <div
-                  className="w-6 h-6 rounded-full flex items-center justify-center text-xs"
-                  style={{
-                    backgroundColor: `${getEmotionColor(day.dominantEmotion)}40`,
-                    border: `1px solid ${getEmotionColor(day.dominantEmotion)}`,
-                  }}
+                  className={cn(
+                    'w-6 h-6 rounded-full flex items-center justify-center text-xs',
+                    EMOTION_COLORS[day.dominantEmotion],
+                  )}
                 >
-                  {getEmotionEmoji(day.dominantEmotion)}
+                  {EMOTION_EMOJIS[day.dominantEmotion]}
                 </div>
               </div>
             )}
@@ -325,23 +409,25 @@ export function Calendar({
             {day.keywords && day.keywords.length > 0 && (
               <div className="absolute bottom-1 left-1 right-1 hidden lg:block">
                 <div className="flex flex-wrap gap-1 justify-center">
-                  {day.keywords.map((keyword, index) => (
-                    <span
-                      key={index}
-                      className={cn(
-                        'text-[10px] px-1 py-0.5 rounded bg-interactive-secondary text-text-primary',
-                        day.isCurrentMonth ? 'font-medium' : 'font-normal',
-                      )}
-                      style={{
-                        fontSize: '11px',
-                        lineHeight: '1.1',
-                        // 선택된 날짜는 다크모드에서도 검은색 글씨
-                        ...(day.isSelected ? { color: '#000000' } : {}),
-                      }}
-                    >
-                      #{keyword}
-                    </span>
-                  ))}
+                  {day.keywords
+                    .slice(0, 2)
+                    .map((keyword: string, index: number) => (
+                      <span
+                        key={index}
+                        className={cn(
+                          'text-[10px] px-1 py-0.5 rounded bg-interactive-secondary text-text-primary',
+                          day.isCurrentMonth ? 'font-medium' : 'font-normal',
+                        )}
+                        style={{
+                          fontSize: '11px',
+                          lineHeight: '1.1',
+                          // 선택된 날짜는 다크모드에서도 검은색 글씨
+                          ...(day.isSelected ? { color: '#000000' } : {}),
+                        }}
+                      >
+                        #{keyword}
+                      </span>
+                    ))}
                 </div>
               </div>
             )}
@@ -353,7 +439,7 @@ export function Calendar({
                   {day.entries.length}개 기록
                   {day.dominantEmotion && (
                     <span className="ml-1">
-                      ({getEmotionEmoji(day.dominantEmotion)})
+                      ({EMOTION_EMOJIS[day.dominantEmotion]})
                     </span>
                   )}
                 </div>

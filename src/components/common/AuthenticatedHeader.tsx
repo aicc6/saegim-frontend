@@ -2,40 +2,75 @@
 
 import { useEffect, useState } from 'react';
 import Image from 'next/image';
+import { useRouter } from 'next/navigation';
 import { useTheme } from 'next-themes';
-import { Bell, Sun, Moon } from 'lucide-react';
-import { Button } from '../ui/button';
-import { Badge } from '../ui/badge';
+import { useNotifications } from '@/hooks/use-notifications';
+import { useFCMStore } from '@/stores/fcm';
+import { authApi } from '@/lib/api';
+import ThemeToggle from '../ui/custom/ThemeToggle';
+import NotificationPopover from './NotificationPopover';
 
-export default function AutheticatedHeader() {
-  const { theme, setTheme } = useTheme();
+interface UserInfo {
+  email: string;
+  nickname: string;
+  account_type: string;
+}
+
+export default function AuthenticatedHeader() {
+  const router = useRouter();
+  const { resolvedTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
+  const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  const { notifications, markAsRead, markAllAsRead, deleteNotification } =
+    useNotifications();
   
-  // TODO: 실제 알림 상태관리에서 가져와야 함
-  const unreadNotificationCount = 3; // 임시 하드코딩
+  // FCM 알림 상태 가져오기
+  const { unreadCount: fcmUnreadCount, notifications: fcmNotifications, markAsRead: fcmMarkAsRead, markAllAsRead: fcmMarkAllAsRead } = useFCMStore();
 
   // 클라이언트 사이드에서만 테마 렌더링 (hydration 에러 방지)
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  const toggleTheme = () => {
-    const newTheme = theme === 'dark' ? 'light' : 'dark';
-    setTheme(newTheme);
-    console.log('테마 변경:', theme, '→', newTheme);
-    
-    // 강제로 클래스 적용 (디버깅용)
-    document.documentElement.classList.toggle('dark', newTheme === 'dark');
-  };
+  // 사용자 정보 가져오기
+  useEffect(() => {
+    const fetchUserInfo = async () => {
+      try {
+        const response = await authApi.getCurrentUser();
+        if (response.data) {
+          setUserInfo(response.data as UserInfo);
+        }
+      } catch (error) {
+        console.error('사용자 정보 가져오기 실패:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
 
-  const handleNotification = () => {
-    // 알림 로직
-    console.log('알림 클릭');
+    if (mounted) {
+      fetchUserInfo();
+    }
+  }, [mounted]);
+
+  if (!mounted) {
+    return null;
+  }
+
+  const isDark = resolvedTheme === 'dark';
+
+  const handleProfileClick = () => {
+    router.push('/profile');
   };
 
   return (
-    <div className="bg-white border-b border-sage-20 p-4 dark:bg-gray-900 dark:border-gray-700">
-      <div className="max-w-full mx-auto flex items-center justify-between">
+    <div
+      className={`border-b h-18 px-12 w-full flex items-center ${
+        isDark ? 'bg-gray-900 border-gray-700' : 'bg-white border-sage-20'
+      }`}
+    >
+      <div className="max-w-full mx-auto flex items-center justify-between w-full">
         {/* 좌측: 로고와 서비스명 */}
         <div className="flex items-center space-x-3">
           <div className="w-8 h-8 rounded-full flex items-center justify-center">
@@ -44,44 +79,32 @@ export default function AutheticatedHeader() {
               alt="새김 로고"
               width={32}
               height={32}
-              className="w-8 h-8"
+              className="w-10 h-10"
             />
           </div>
-          <h1 className="text-xl font-bold text-sage-100 dark:text-white">
+          <h1
+            className={`text-xl font-bold ${
+              isDark ? 'text-white' : 'text-sage-100'
+            }`}
+          >
             새김
           </h1>
         </div>
 
-        {/* 우측: 알림 및 테마 토글 버튼 */}
-        <div className="flex items-center space-x-2">
-          <div className="relative">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleNotification}
-              className="p-2 text-sage-70 hover:text-sage-100 hover:bg-sage-10 dark:text-gray-300 dark:hover:text-white dark:hover:bg-gray-800"
-            >
-              <Bell className="w-5 h-5" />
-            </Button>
-            {unreadNotificationCount > 0 && (
-              <Badge className="absolute -top-0.5 -right-0.5 min-w-[1rem] h-4 p-0 text-[10px] bg-red-500 text-white border-white border-[1px] flex items-center justify-center rounded-full">
-                {unreadNotificationCount > 99 ? '99+' : unreadNotificationCount}
-              </Badge>
-            )}
-          </div>
-          
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={toggleTheme}
-            className="p-2 text-sage-70 hover:text-sage-100 hover:bg-sage-10 dark:text-gray-300 dark:hover:text-white dark:hover:bg-gray-800"
-          >
-            {mounted && theme === 'dark' ? (
-              <Sun className="w-5 h-5" />
-            ) : (
-              <Moon className="w-5 h-5" />
-            )}
-          </Button>
+        {/* 우측: 알림, 테마 토글, 프로필 */}
+        <div className="flex items-center space-x-4">
+          <NotificationPopover
+            notifications={notifications}
+            fcmNotifications={fcmNotifications}
+            fcmUnreadCount={fcmUnreadCount}
+            onMarkAsRead={markAsRead}
+            onMarkAllAsRead={markAllAsRead}
+            onDeleteNotification={deleteNotification}
+            onFCMMarkAsRead={fcmMarkAsRead}
+            onFCMMarkAllAsRead={fcmMarkAllAsRead}
+          />
+
+          <ThemeToggle />
         </div>
       </div>
     </div>

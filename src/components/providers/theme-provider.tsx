@@ -11,12 +11,12 @@ export function Providers({ children }: ProvidersProps) {
   return (
     <ThemeProvider
       attribute="class"
-      defaultTheme="light"
-      enableSystem={false}
+      defaultTheme="system"
+      enableSystem={true}
       disableTransitionOnChange={false}
       storageKey="saegim-theme"
       forcedTheme={undefined}
-      themes={['light', 'dark']}
+      themes={['light', 'dark', 'system']}
     >
       {children}
     </ThemeProvider>

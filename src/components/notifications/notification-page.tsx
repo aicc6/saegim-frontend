@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Bell,
   Settings,
@@ -9,6 +9,7 @@ import {
   Sparkles,
   TrendingUp,
 } from 'lucide-react';
+import { useFCMStore } from '@/stores/fcm';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -23,6 +24,33 @@ interface Notification {
   isRead: boolean;
   actionUrl?: string;
 }
+
+// FCM 알림 타입을 로컬 알림 타입으로 변환하는 함수
+const convertFCMNotificationToLocal = (fcmNotification: any): Notification => {
+  // FCM 알림 타입을 로컬 타입으로 매핑
+  const getLocalType = (fcmType: string): 'emotion_report' | 'ai_suggestion' => {
+    switch (fcmType) {
+      case 'diary':
+      case 'emotion':
+      case 'report':
+        return 'emotion_report';
+      case 'ai':
+      case 'suggestion':
+      default:
+        return 'ai_suggestion';
+    }
+  };
+
+  return {
+    id: fcmNotification.id,
+    type: getLocalType(fcmNotification.type),
+    title: fcmNotification.title,
+    message: fcmNotification.body,
+    date: fcmNotification.sentAt,
+    isRead: fcmNotification.isRead,
+    actionUrl: fcmNotification.data?.url,
+  };
+};
 
 const notificationIcons = {
   emotion_report: TrendingUp,
@@ -66,18 +94,45 @@ const mockNotifications: Notification[] = [
 ];
 
 export function NotificationPage() {
-  const [notifications, setNotifications] = useState(mockNotifications);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
   const [filter, setFilter] = useState<'all' | 'unread'>('all');
+  
+  // FCM store에서 데이터 가져오기
+  const { 
+    notifications: fcmNotifications, 
+    markAsRead: fcmMarkAsRead, 
+    markAllAsRead: fcmMarkAllAsRead,
+    unreadCount: fcmUnreadCount 
+  } = useFCMStore();
+
+  // FCM 알림을 로컬 알림 형태로 변환하여 상태 업데이트
+  useEffect(() => {
+    const convertedNotifications = fcmNotifications.map(convertFCMNotificationToLocal);
+    // Mock 데이터와 함께 표시 (개발용)
+    setNotifications([...convertedNotifications, ...mockNotifications]);
+  }, [fcmNotifications]);
 
   const unreadCount = notifications.filter((n) => !n.isRead).length;
 
   const markAsRead = (id: string) => {
-    setNotifications((prev) =>
-      prev.map((n) => (n.id === id ? { ...n, isRead: true } : n)),
-    );
+    // FCM 알림인지 확인하고 적절한 액션 호출
+    const fcmNotification = fcmNotifications.find((n) => n.id === id);
+    if (fcmNotification) {
+      fcmMarkAsRead(id);
+    } else {
+      // 로컬 알림 처리
+      setNotifications((prev) =>
+        prev.map((n) => (n.id === id ? { ...n, isRead: true } : n)),
+      );
+    }
   };
 
   const markAllAsRead = () => {
+    // FCM 알림 전체 읽기
+    if (fcmUnreadCount > 0) {
+      fcmMarkAllAsRead();
+    }
+    // 로컬 알림 전체 읽기
     setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
   };
 

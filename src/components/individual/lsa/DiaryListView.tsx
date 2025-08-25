@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { useRouter } from 'next/navigation'; // Next.js 라우터 추가
+import { useRouter } from 'next/navigation';
 import {
   Search,
   Filter,
@@ -12,144 +12,152 @@ import {
   SortDesc,
 } from 'lucide-react';
 import { useDiaryStore } from '@/stores/diary';
+import { type DiaryFilters } from '@/types/diary';
 import DiaryCard from './DiaryCard';
 
 export default function DiaryListView() {
-  const router = useRouter(); // 라우터 인스턴스 생성
+  const router = useRouter();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedEmotion, setSelectedEmotion] = useState('all');
-  const [sortBy, setSortBy] = useState('latest');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
-  // 날짜 검색 관련 상태 수정
+  // 날짜 검색 관련 상태
   const [dateFilter, setDateFilter] = useState('all');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
-  const [showCalendar, setShowCalendar] = useState(false);
 
+  // store에서 상태와 액션 가져오기 (Store에 실제로 있는 것만)
   const {
-    entries: posts,
+    diaries,
     isLoading,
-    hasMore,
-    currentPage,
-    fetchPosts,
-    loadMorePosts: storeLoadMore,
+    error,
+    totalCount,
+    currentPage, // hasNextPage 대신 currentPage 사용
+    fetchDiaries,
+    clearError,
   } = useDiaryStore();
 
-  const [loading, setLoading] = useState(false);
-
+  // 무한스크롤용 Observer
   const observer = useRef<IntersectionObserver | null>(null);
-  const loadMorePosts = useCallback(async () => {
-    if (loading || isLoading || !hasMore) return;
 
-    setLoading(true);
+  // 필터 객체 생성 함수
+  const buildFilters = useCallback(
+    (page: number = 1): DiaryFilters => {
+      const filters: DiaryFilters = {
+        page,
+        page_size: 20,
+        sort_order: sortOrder,
+      };
+
+      // 검색어 추가
+      if (searchTerm.trim()) {
+        filters.searchTerm = searchTerm.trim();
+      }
+
+      // 감정 필터
+      if (selectedEmotion !== 'all') {
+        filters.emotion = selectedEmotion;
+      }
+
+      // 날짜 필터
+      if (dateFilter === 'custom') {
+        if (startDate) filters.start_date = startDate;
+        if (endDate) filters.end_date = endDate;
+      } else if (dateFilter !== 'all') {
+        const today = new Date();
+
+        switch (dateFilter) {
+          case 'today': {
+            const todayStr = today.toISOString().split('T')[0];
+            filters.start_date = todayStr;
+            filters.end_date = todayStr;
+            break;
+          }
+          case 'week': {
+            const weekAgo = new Date(today);
+            weekAgo.setDate(today.getDate() - 7);
+            filters.start_date = weekAgo.toISOString().split('T')[0];
+            break;
+          }
+          case 'month': {
+            const monthAgo = new Date(today);
+            monthAgo.setMonth(today.getMonth() - 1);
+            filters.start_date = monthAgo.toISOString().split('T')[0];
+            break;
+          }
+        }
+      }
+
+      return filters;
+    },
+    [searchTerm, selectedEmotion, sortOrder, dateFilter, startDate, endDate],
+  );
+
+  // 간단한 무한스크롤 로드 함수 (Store의 fetchDiaries만 사용)
+  const loadMore = useCallback(async () => {
+    if (isLoading) return;
 
     try {
-      await storeLoadMore(currentPage + 1);
+      const filters = buildFilters(currentPage + 1);
+      await fetchDiaries(filters);
     } catch (error) {
-      console.error('Failed to load more posts:', error);
-    } finally {
-      setLoading(false);
+      console.error('Failed to load more diaries:', error);
     }
-  }, [currentPage, loading, isLoading, hasMore, storeLoadMore]);
+  }, [isLoading, currentPage, buildFilters, fetchDiaries]);
 
-  const lastPostElementRef = useCallback(
+  // hasNextPage 로직을 간단하게 계산
+  const hasNextPage = diaries.length > 0 && diaries.length % 20 === 0;
+
+  const lastDiaryElementRef = useCallback(
     (node: HTMLDivElement) => {
-      if (loading || isLoading) return;
+      if (isLoading) return;
       if (observer.current) observer.current.disconnect();
       observer.current = new IntersectionObserver((entries) => {
-        if (entries[0].isIntersecting && hasMore) {
-          loadMorePosts();
+        if (entries[0].isIntersecting && hasNextPage) {
+          loadMore();
         }
       });
       if (node) observer.current.observe(node);
     },
-    [loading, isLoading, hasMore, loadMorePosts],
+    [isLoading, loadMore, hasNextPage],
   );
 
-  const handleCardClick = (postId: string) => {
-    // 카드 클릭 시 해당 ID의 상세 페이지로 이동
-    router.push(`/viewPost/${postId}`);
-  };
-
-  // 초기 데이터 로드
-  useEffect(() => {
-    fetchPosts();
-  }, [fetchPosts]);
-
-  // 날짜 필터링 함수 추가
-  const checkDateFilter = (postDate: string) => {
-    const today = new Date();
-    const postDateTime = new Date(postDate);
-
-    switch (dateFilter) {
-      case 'today': {
-        const todayStr = today.toISOString().split('T')[0];
-        return postDate.startsWith(todayStr);
-      }
-      case 'week': {
-        const weekAgo = new Date(today);
-        weekAgo.setDate(today.getDate() - 7);
-        return postDateTime >= weekAgo;
-      }
-      case 'month': {
-        const monthAgo = new Date(today);
-        monthAgo.setMonth(today.getMonth() - 1);
-        return postDateTime >= monthAgo;
-      }
-      case 'custom':
-        if (startDate && endDate) {
-          const start = new Date(startDate);
-          const end = new Date(endDate);
-          end.setHours(23, 59, 59, 999); // 종료일 끝까지 포함
-          return postDateTime >= start && postDateTime <= end;
-        } else if (startDate) {
-          const start = new Date(startDate);
-          return postDateTime >= start;
-        } else if (endDate) {
-          const end = new Date(endDate);
-          end.setHours(23, 59, 59, 999);
-          return postDateTime <= end;
-        }
-        return true;
-      default:
-        return true;
+  // 검색 및 필터 적용
+  const applyFilters = useCallback(async () => {
+    try {
+      clearError();
+      const filters = buildFilters(1); // 첫 페이지부터 시작
+      await fetchDiaries(filters);
+    } catch (error) {
+      console.error('Failed to apply filters:', error);
     }
-  };
+  }, [buildFilters, fetchDiaries, clearError]);
 
-  // 필터링된 posts
-  const filteredPosts = posts.filter((post) => {
-    const matchesSearch =
-      searchTerm === '' ||
-      post.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      post.content.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      post.keywords?.some((keyword) =>
-        keyword.toLowerCase().includes(searchTerm.toLowerCase()),
+  // 카드 클릭 핸들러
+  const handleCardClick = useCallback(
+    (diaryId: string) => {
+      // 현재 페이지 경로를 from 파라미터로 전달
+      const currentPath = '/list';
+      router.push(
+        `/viewPost/${diaryId}?from=${encodeURIComponent(currentPath)}`,
       );
+    },
+    [router],
+  );
 
-    const matchesEmotion =
-      selectedEmotion === 'all' || post.userEmotion === selectedEmotion;
+  // 초기 데이터 로드 및 필터 변경 시 재로드
+  useEffect(() => {
+    applyFilters();
+  }, [selectedEmotion, dateFilter, startDate, endDate, sortOrder]);
 
-    const matchesDate = checkDateFilter(post.createdAt);
+  // 검색어는 디바운스 적용
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      applyFilters();
+    }, 500); // 500ms 디바운스
 
-    return matchesSearch && matchesEmotion && matchesDate;
-  });
-
-  // 정렬된 posts
-  const sortedPosts = [...filteredPosts].sort((a, b) => {
-    switch (sortBy) {
-      case 'oldest':
-        return (
-          new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
-        );
-      case 'title':
-        return a.title.localeCompare(b.title);
-      case 'latest':
-      default:
-        return (
-          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-        );
-    }
-  });
+    return () => clearTimeout(timeoutId);
+  }, [searchTerm, applyFilters]);
 
   // 날짜 범위 표시 텍스트 생성
   const getDateRangeText = () => {
@@ -163,14 +171,33 @@ export default function DiaryListView() {
       }
       return '기간 선택';
     }
-    return dateFilter === 'today'
-      ? '오늘'
-      : dateFilter === 'week'
-        ? '일주일 전'
-        : dateFilter === 'month'
-          ? '한달 전'
-          : '';
+
+    const dateLabels: Record<string, string> = {
+      today: '오늘',
+      week: '일주일 전',
+      month: '한달 전',
+    };
+
+    return dateLabels[dateFilter] || '';
   };
+
+  // 에러 처리
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center py-12">
+        <div className="text-red-500 mb-4">오류가 발생했습니다: {error}</div>
+        <button
+          onClick={() => {
+            clearError();
+            applyFilters();
+          }}
+          className="px-4 py-2 bg-sage-100 text-white rounded-lg hover:bg-sage-120"
+        >
+          다시 시도
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -182,7 +209,7 @@ export default function DiaryListView() {
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-text-tertiary w-5 h-5" />
             <input
               type="text"
-              placeholder="제목이나 내용, 키워드로 검색하세요"
+              placeholder="제목이나 내용으로 검색하세요"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full pl-10 pr-4 py-3 bg-background-primary border border-border-subtle rounded-xl text-text-primary placeholder-text-tertiary focus:outline-none focus:ring-2 focus:ring-sage-100 focus:border-transparent"
@@ -217,7 +244,6 @@ export default function DiaryListView() {
               onChange={(e) => {
                 setDateFilter(e.target.value);
                 if (e.target.value !== 'custom') {
-                  setShowCalendar(false);
                   setStartDate('');
                   setEndDate('');
                 }
@@ -235,20 +261,19 @@ export default function DiaryListView() {
           {/* 정렬 옵션 */}
           <div className="flex items-center gap-2 ml-auto">
             <div className="flex items-center gap-1 text-text-tertiary">
-              {sortBy === 'latest' ? (
+              {sortOrder === 'desc' ? (
                 <SortDesc className="w-5 h-5" />
               ) : (
                 <SortAsc className="w-5 h-5" />
               )}
             </div>
             <select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value)}
+              value={sortOrder}
+              onChange={(e) => setSortOrder(e.target.value as 'asc' | 'desc')}
               className="px-4 py-3 bg-background-primary border border-border-subtle rounded-xl text-text-primary focus:outline-none focus:ring-2 focus:ring-sage-100 min-w-[120px]"
             >
-              <option value="latest">최신순</option>
-              <option value="oldest">오래된순</option>
-              <option value="title">제목순</option>
+              <option value="desc">최신순</option>
+              <option value="asc">오래된순</option>
             </select>
           </div>
         </div>
@@ -283,6 +308,7 @@ export default function DiaryListView() {
                 </label>
                 <input
                   type="date"
+                  id="endDate"
                   value={endDate}
                   onChange={(e) => setEndDate(e.target.value)}
                   min={startDate || undefined}
@@ -302,7 +328,7 @@ export default function DiaryListView() {
           </div>
         )}
 
-        {/* 적용된 필터 표시 (선택사항) */}
+        {/* 적용된 필터 표시 */}
         <div className="flex flex-wrap gap-2">
           {searchTerm && (
             <span className="px-3 py-1 bg-sage-10 text-sage-100 rounded-full text-sm flex items-center gap-1">
@@ -351,30 +377,50 @@ export default function DiaryListView() {
             </span>
           )}
         </div>
+
+        {/* 검색 결과 개수 표시 */}
+        <div className="text-text-secondary text-sm">
+          총 {totalCount}개의 일기 중 {diaries.length}개 표시
+        </div>
       </div>
 
       {/* 글목록 - 반응형 그리드 */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-6">
-        {sortedPosts.map((post, index) => (
+        {diaries.map((diary, index) => (
           <DiaryCard
-            key={post.id}
-            ref={index === sortedPosts.length - 1 ? lastPostElementRef : null}
-            post={{
-              id: parseInt(post.id.replace('entry-', '')),
-              title: post.title,
-              content: post.content,
-              emotion: post.userEmotion || 'happy',
-              date: post.createdAt,
-              keywords: post.keywords || [],
-              thumbnail: `https://picsum.photos/400/200?random=${post.id}`,
+            key={diary.id}
+            ref={index === diaries.length - 1 ? lastDiaryElementRef : null}
+            diary={{
+              id: Number(diary.id),
+              title: diary.title || '',
+              ai_generated_text: diary.ai_generated_text || '',
+              emotion:
+                (diary.ai_emotion as string) ||
+                (diary.user_emotion as string) ||
+                'peaceful',
+              date: diary.created_at || '',
+              keywords: diary.keywords || [],
+              thumbnail: `https://picsum.photos/400/200?random=${diary.id}`,
             }}
-            onClick={() => handleCardClick(post.id)}
+            onClick={() => handleCardClick(diary.id.toString())}
           />
         ))}
       </div>
 
+      {/* 빈 결과 메시지 */}
+      {!isLoading && diaries.length === 0 && (
+        <div className="flex flex-col items-center justify-center py-12">
+          <div className="text-text-tertiary text-lg mb-2">
+            검색 결과가 없습니다
+          </div>
+          <div className="text-text-quaternary text-sm">
+            다른 검색어나 필터를 시도해보세요
+          </div>
+        </div>
+      )}
+
       {/* 로딩 인디케이터 */}
-      {(loading || isLoading) && (
+      {isLoading && (
         <div className="flex justify-center items-center py-8">
           <Loader2 className="w-8 h-8 animate-spin text-sage-100" />
           <span className="ml-2 text-text-secondary">
@@ -384,7 +430,7 @@ export default function DiaryListView() {
       )}
 
       {/* 끝에 도달했을 때 메시지 */}
-      {!hasMore && sortedPosts.length > 0 && (
+      {!isLoading && diaries.length > 0 && !hasNextPage && (
         <div className="flex justify-center items-center py-8">
           <span className="text-text-tertiary">모든 글을 확인했습니다.</span>
         </div>

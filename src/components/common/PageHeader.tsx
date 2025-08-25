@@ -1,6 +1,7 @@
 'use client';
 
-import { ReactNode } from 'react';
+import { ReactNode, useState, useEffect } from 'react';
+import { useTheme } from 'next-themes';
 
 interface PageHeaderProps {
   title: string;
@@ -15,18 +16,39 @@ export default function PageHeader({
   actions,
   className = '',
 }: PageHeaderProps) {
+  const [mounted, setMounted] = useState(false);
+  const { resolvedTheme } = useTheme();
+
+  useEffect(() => setMounted(true), []);
+
+  if (!mounted) {
+    return null;
+  }
+
+  const isDark = resolvedTheme === 'dark';
+
   return (
     <div
-      className={`bg-white dark:bg-gray-900 border-b border-sage-20 dark:border-gray-700 px-6 py-4 ${className}`}
+      className={`border-b px-12 h-18 flex items-center sticky top-0 z-50 ${
+        isDark ? 'bg-gray-900 border-gray-700' : 'bg-white border-sage-20'
+      } ${className}`}
     >
-      <div className="max-w-4xl mx-auto flex items-center justify-between">
+      <div className="max-w-full flex items-center justify-between w-full">
         {/* 좌측: 페이지 제목 */}
         <div className="flex flex-col">
-          <h1 className="text-2xl font-bold text-sage-100 dark:text-white">
+          <h1
+            className={`text-2xl font-bold ${
+              isDark ? 'text-white' : 'text-sage-100'
+            }`}
+          >
             {title}
           </h1>
           {subtitle && (
-            <p className="text-sm text-sage-70 dark:text-gray-400 mt-1">
+            <p
+              className={`text-sm mt-1 ${
+                isDark ? 'text-gray-400' : 'text-sage-70'
+              }`}
+            >
               {subtitle}
             </p>
           )}
