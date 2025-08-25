@@ -13,7 +13,9 @@ import { useFCMStore } from '@/stores/fcm';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import PageHeader from '@/components/common/PageHeader';
+import NotificationSettings from './notification-settings';
 
 interface Notification {
   id: string;
@@ -193,166 +195,140 @@ export function NotificationPage() {
       />
 
       <div className="max-w-4xl mx-auto p-4">
-        {/* 필터 */}
-        <div className="mb-6">
-          <div className="flex space-x-2">
-            <Button
-              variant={filter === 'all' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setFilter('all')}
-              className={
-                filter === 'all'
-                  ? 'bg-sage-50 hover:bg-sage-60 dark:bg-sage-70 dark:hover:bg-sage-80'
-                  : 'border-sage-30 dark:border-gray-600 dark:hover:bg-gray-800'
-              }
-            >
-              전체 ({notifications.length})
-            </Button>
-            <Button
-              variant={filter === 'unread' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setFilter('unread')}
-              className={
-                filter === 'unread'
-                  ? 'bg-sage-50 hover:bg-sage-60 dark:bg-sage-70 dark:hover:bg-sage-80'
-                  : 'border-sage-30 dark:border-gray-600 dark:hover:bg-gray-800'
-              }
-            >
-              읽지 않음 ({unreadCount})
-            </Button>
-          </div>
-        </div>
+        <Tabs defaultValue="notifications" className="space-y-6">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="notifications">
+              알림 목록 ({notifications.length})
+            </TabsTrigger>
+            <TabsTrigger value="settings">
+              알림 설정
+            </TabsTrigger>
+          </TabsList>
 
-        {/* 알림 목록 */}
-        <div className="space-y-4">
-          {filteredNotifications.length === 0 ? (
-            <Card>
-              <CardContent className="p-12 text-center">
-                <Bell className="w-12 h-12 text-sage-60 mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-sage-80 mb-2">
-                  {filter === 'unread'
-                    ? '읽지 않은 알림이 없습니다'
-                    : '알림이 없습니다'}
-                </h3>
-                <p className="text-sage-60">
-                  {filter === 'unread'
-                    ? '모든 알림을 확인하셨네요!'
-                    : '새로운 알림이 오면 여기에 표시됩니다.'}
-                </p>
-              </CardContent>
-            </Card>
-          ) : (
-            filteredNotifications.map((notification) => {
-              const IconComponent = notificationIcons[notification.type];
-              return (
-                <Card
-                  key={notification.id}
-                  className={`cursor-pointer transition-all hover:shadow-md ${
-                    !notification.isRead
-                      ? 'border-sage-50 bg-sage-5'
-                      : 'border-sage-20'
-                  }`}
-                  onClick={() =>
-                    !notification.isRead && markAsRead(notification.id)
-                  }
-                >
-                  <CardContent className="p-6">
-                    <div className="flex items-start space-x-4">
-                      <div
-                        className={`w-10 h-10 rounded-full flex items-center justify-center ${notificationColors[notification.type]}`}
-                      >
-                        <IconComponent className="w-5 h-5" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-start justify-between mb-2">
-                          <h3
-                            className={`font-medium ${!notification.isRead ? 'text-sage-100' : 'text-sage-80'}`}
-                          >
-                            {notification.title}
-                          </h3>
-                          <div className="flex items-center space-x-2 ml-4">
-                            {!notification.isRead && (
-                              <div className="w-2 h-2 bg-sage-50 rounded-full"></div>
-                            )}
-                            <span className="text-xs text-sage-60 whitespace-nowrap">
-                              {formatDate(notification.date)}
-                            </span>
-                          </div>
-                        </div>
-                        <p className="text-sage-70 text-sm leading-relaxed mb-3">
-                          {notification.message}
-                        </p>
-                        <div className="flex items-center justify-between">
-                          {notification.actionUrl && (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              className="border-sage-30 bg-transparent"
-                            >
-                              자세히 보기
-                            </Button>
-                          )}
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              deleteNotification(notification.id);
-                            }}
-                            className="text-sage-60 hover:text-red-600 ml-auto"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
+          <TabsContent value="notifications" className="space-y-6">
+            {/* 필터 */}
+            <div className="flex space-x-2">
+              <Button
+                variant={filter === 'all' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setFilter('all')}
+                className={
+                  filter === 'all'
+                    ? 'bg-sage-50 hover:bg-sage-60 dark:bg-sage-70 dark:hover:bg-sage-80'
+                    : 'border-sage-30 dark:border-gray-600 dark:hover:bg-gray-800'
+                }
+              >
+                전체 ({notifications.length})
+              </Button>
+              <Button
+                variant={filter === 'unread' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setFilter('unread')}
+                className={
+                  filter === 'unread'
+                    ? 'bg-sage-50 hover:bg-sage-60 dark:bg-sage-70 dark:hover:bg-sage-80'
+                    : 'border-sage-30 dark:border-gray-600 dark:hover:bg-gray-800'
+                }
+              >
+                읽지 않음 ({unreadCount})
+              </Button>
+            </div>
+
+            {/* 알림 목록 */}
+            <div className="space-y-4">
+              {filteredNotifications.length === 0 ? (
+                <Card>
+                  <CardContent className="p-12 text-center">
+                    <Bell className="w-12 h-12 text-sage-60 mx-auto mb-4" />
+                    <h3 className="text-lg font-medium text-sage-80 mb-2">
+                      {filter === 'unread'
+                        ? '읽지 않은 알림이 없습니다'
+                        : '알림이 없습니다'}
+                    </h3>
+                    <p className="text-sage-60">
+                      {filter === 'unread'
+                        ? '모든 알림을 확인하셨네요!'
+                        : '새로운 알림이 오면 여기에 표시됩니다.'}
+                    </p>
                   </CardContent>
                 </Card>
-              );
-            })
-          )}
-        </div>
-
-        {/* 알림 설정 안내 */}
-        <Card className="mt-8">
-          <CardHeader>
-            <CardTitle className="text-sage-100 flex items-center">
-              <Settings className="w-5 h-5 mr-2" />
-              알림 설정
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3 text-sm text-sage-70">
-              <div className="flex items-center justify-between">
-                <span>감정 리포트 알림</span>
-                <Badge variant="secondary" className="bg-sage-20 text-sage-80">
-                  활성
-                </Badge>
-              </div>
-              <div className="flex items-center justify-between">
-                <span>AI 추천 알림</span>
-                <Badge variant="secondary" className="bg-sage-20 text-sage-80">
-                  활성
-                </Badge>
-              </div>
-              <div className="flex items-center justify-between">
-                <span>이메일 알림</span>
-                <Badge variant="secondary" className="bg-sage-20 text-sage-80">
-                  비활성
-                </Badge>
-              </div>
-              <div className="flex items-center justify-between">
-                <span>Push 알림</span>
-                <Badge variant="secondary" className="bg-sage-20 text-sage-80">
-                  활성
-                </Badge>
-              </div>
+              ) : (
+                filteredNotifications.map((notification) => {
+                  const IconComponent = notificationIcons[notification.type];
+                  return (
+                    <Card
+                      key={notification.id}
+                      className={`cursor-pointer transition-all hover:shadow-md ${
+                        !notification.isRead
+                          ? 'border-sage-50 bg-sage-5'
+                          : 'border-sage-20'
+                      }`}
+                      onClick={() =>
+                        !notification.isRead && markAsRead(notification.id)
+                      }
+                    >
+                      <CardContent className="p-6">
+                        <div className="flex items-start space-x-4">
+                          <div
+                            className={`w-10 h-10 rounded-full flex items-center justify-center ${notificationColors[notification.type]}`}
+                          >
+                            <IconComponent className="w-5 h-5" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-start justify-between mb-2">
+                              <h3
+                                className={`font-medium ${!notification.isRead ? 'text-sage-100' : 'text-sage-80'}`}
+                              >
+                                {notification.title}
+                              </h3>
+                              <div className="flex items-center space-x-2 ml-4">
+                                {!notification.isRead && (
+                                  <div className="w-2 h-2 bg-sage-50 rounded-full"></div>
+                                )}
+                                <span className="text-xs text-sage-60 whitespace-nowrap">
+                                  {formatDate(notification.date)}
+                                </span>
+                              </div>
+                            </div>
+                            <p className="text-sage-70 text-sm leading-relaxed mb-3">
+                              {notification.message}
+                            </p>
+                            <div className="flex items-center justify-between">
+                              {notification.actionUrl && (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="border-sage-30 bg-transparent"
+                                >
+                                  자세히 보기
+                                </Button>
+                              )}
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  deleteNotification(notification.id);
+                                }}
+                                className="text-sage-60 hover:text-red-600 ml-auto"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })
+              )}
             </div>
-            <Button className="w-full mt-4 bg-sage-50 hover:bg-sage-60 text-white">
-              알림 설정 변경
-            </Button>
-          </CardContent>
-        </Card>
+          </TabsContent>
+
+          <TabsContent value="settings" className="space-y-6">
+            <NotificationSettings />
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );

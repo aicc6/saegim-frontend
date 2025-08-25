@@ -91,6 +91,20 @@ export const useFCMStore = create<FCMState>()(
 
     // FCM 토큰 등록
     registerToken: async () => {
+      const currentState = get();
+      
+      // 이미 토큰이 등록되어 있고 로딩 중이 아닌 경우 중복 방지
+      if (currentState.isTokenRegistered && currentState.token && !currentState.isLoading) {
+        console.log('FCM 토큰이 이미 등록되어 있습니다:', currentState.token.substring(0, 20) + '...');
+        return;
+      }
+      
+      // 이미 토큰 등록 진행 중인 경우 중복 방지
+      if (currentState.isLoading) {
+        console.log('FCM 토큰 등록이 이미 진행 중입니다.');
+        return;
+      }
+
       set((state) => {
         state.isLoading = true;
         state.error = null;
@@ -100,6 +114,15 @@ export const useFCMStore = create<FCMState>()(
         const token = await requestFCMToken();
 
         if (token) {
+          // 현재 토큰과 동일한 경우 서버 등록 건너뛰기
+          if (currentState.token === token && currentState.isTokenRegistered) {
+            console.log('동일한 FCM 토큰이 이미 등록되어 있습니다.');
+            set((state) => {
+              state.isLoading = false;
+            });
+            return;
+          }
+
           // 백엔드 API를 통해 토큰 등록
           const tokenData: FCMTokenRegisterRequest = {
             token,
@@ -119,8 +142,10 @@ export const useFCMStore = create<FCMState>()(
               state.isLoading = false;
             });
 
-            // 포그라운드 메시지 리스너 설정
-            setupForegroundListener();
+            // 포그라운드 메시지 리스너 설정 (한 번만)
+            if (!currentState.token) {
+              setupForegroundListener();
+            }
             
             console.log('FCM 토큰 등록 성공:', response.data);
           } else {
