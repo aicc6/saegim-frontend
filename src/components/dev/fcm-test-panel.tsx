@@ -13,8 +13,8 @@ import { Switch } from '@/components/ui/switch';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import useFCMStore, { initializeFCM } from '@/stores/fcm';
-import { fcmApi } from '@/lib/fcm-api';
+import { useFCMStore, initializeFCM } from '@/stores/fcm';
+import { notificationApi } from '@/lib/notification-api';
 
 /**
  * FCM API 연동 테스트 패널 컴포넌트
@@ -63,7 +63,7 @@ export default function FCMTestPanel() {
   // FCM 서비스 상태 확인 테스트
   const testFCMHealth = async () => {
     try {
-      const response = await fcmApi.checkHealth();
+      const response = await notificationApi.checkHealth();
       setTestResults((prev) => ({ ...prev, health: response.success }));
       return response.success;
     } catch (error) {
@@ -121,7 +121,7 @@ export default function FCMTestPanel() {
 
     try {
       // 다이어리 알림 테스트 - 현재 인증된 사용자에게 전송
-      const response = await fcmApi.sendDiaryReminder();
+      const response = await notificationApi.sendDiaryReminder();
       setTestResults((prev) => ({
         ...prev,
         notificationSend: response.success,

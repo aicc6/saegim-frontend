@@ -11,11 +11,11 @@ import type {
 } from '../types/fcm';
 import type { EmotionType } from '../types';
 import { requestFCMToken, onMessageListener } from '../lib/firebase';
-import { 
-  fcmApi, 
+import {
+  notificationApi,
   type FCMTokenRegisterRequest,
-  type NotificationSettingsUpdate 
-} from '../lib/fcm-api';
+  type NotificationSettingsUpdate,
+} from '../lib/notification-api';
 
 // 기본 알림 설정
 const DEFAULT_SETTINGS: NotificationSettings = {
@@ -92,13 +92,20 @@ export const useFCMStore = create<FCMState>()(
     // FCM 토큰 등록
     registerToken: async () => {
       const currentState = get();
-      
+
       // 이미 토큰이 등록되어 있고 로딩 중이 아닌 경우 중복 방지
-      if (currentState.isTokenRegistered && currentState.token && !currentState.isLoading) {
-        console.log('FCM 토큰이 이미 등록되어 있습니다:', currentState.token.substring(0, 20) + '...');
+      if (
+        currentState.isTokenRegistered &&
+        currentState.token &&
+        !currentState.isLoading
+      ) {
+        console.log(
+          'FCM 토큰이 이미 등록되어 있습니다:',
+          currentState.token.substring(0, 20) + '...',
+        );
         return;
       }
-      
+
       // 이미 토큰 등록 진행 중인 경우 중복 방지
       if (currentState.isLoading) {
         console.log('FCM 토큰 등록이 이미 진행 중입니다.');
@@ -130,11 +137,11 @@ export const useFCMStore = create<FCMState>()(
             device_info: {
               userAgent: navigator.userAgent,
               platform: navigator.platform,
-            }
+            },
           };
 
-          const response = await fcmApi.registerToken(tokenData);
-          
+          const response = await notificationApi.registerToken(tokenData);
+
           if (response.success) {
             set((state) => {
               state.token = token;
@@ -146,10 +153,12 @@ export const useFCMStore = create<FCMState>()(
             if (!currentState.token) {
               setupForegroundListener();
             }
-            
+
             console.log('FCM 토큰 등록 성공:', response.data);
           } else {
-            throw new Error(response.message || 'FCM 토큰 등록에 실패했습니다.');
+            throw new Error(
+              response.message || 'FCM 토큰 등록에 실패했습니다.',
+            );
           }
         } else {
           throw new Error('FCM 토큰 생성에 실패했습니다.');
@@ -180,28 +189,36 @@ export const useFCMStore = create<FCMState>()(
           ai_content_ready: newSettings.aiContentReady,
           weekly_report: newSettings.emotionTrend, // 임시 매핑
           marketing: newSettings.friendShare, // 임시 매핑
-          quiet_hours_start: newSettings.quietHours?.enabled ? newSettings.quietHours.startTime : null,
-          quiet_hours_end: newSettings.quietHours?.enabled ? newSettings.quietHours.endTime : null,
+          quiet_hours_start: newSettings.quietHours?.enabled
+            ? newSettings.quietHours.startTime
+            : null,
+          quiet_hours_end: newSettings.quietHours?.enabled
+            ? newSettings.quietHours.endTime
+            : null,
         };
 
-        const response = await fcmApi.updateNotificationSettings(backendSettings);
-        
+        const response =
+          await notificationApi.updateNotificationSettings(backendSettings);
+
         if (response.success) {
           set((state) => {
             state.settings = { ...state.settings, ...newSettings };
             state.isLoading = false;
           });
-          
+
           console.log('알림 설정 업데이트 성공:', response.data);
         } else {
-          throw new Error(response.message || '알림 설정 업데이트에 실패했습니다.');
+          throw new Error(
+            response.message || '알림 설정 업데이트에 실패했습니다.',
+          );
         }
       } catch (error) {
         console.error('알림 설정 업데이트 실패:', error);
         set((state) => {
-          state.error = error instanceof Error 
-            ? error.message 
-            : '알림 설정 업데이트에 실패했습니다.';
+          state.error =
+            error instanceof Error
+              ? error.message
+              : '알림 설정 업데이트에 실패했습니다.';
           state.isLoading = false;
         });
       }
@@ -245,38 +262,41 @@ export const useFCMStore = create<FCMState>()(
 );
 
 // 백엔드에서 알림 설정을 가져와 프론트엔드 설정과 동기화하는 함수
-const syncSettingsFromServer = async (): Promise<NotificationSettings | null> => {
-  try {
-    const response = await fcmApi.getNotificationSettings();
-    
-    if (response.success && response.data) {
-      const serverSettings = response.data;
-      
-      // 백엔드 스키마를 프론트엔드 스키마로 변환
-      const frontendSettings: NotificationSettings = {
-        enabled: true, // 기본적으로 활성화
-        diaryReminder: serverSettings.diary_reminder,
-        aiContentReady: serverSettings.ai_content_ready,
-        emotionTrend: serverSettings.weekly_report, // 임시 매핑
-        anniversary: true, // 백엔드에 없는 필드, 기본값
-        friendShare: serverSettings.marketing, // 임시 매핑
-        quietHours: {
-          enabled: !!(serverSettings.quiet_hours_start && serverSettings.quiet_hours_end),
-          startTime: serverSettings.quiet_hours_start || '22:00',
-          endTime: serverSettings.quiet_hours_end || '08:00',
-        },
-        frequency: 'immediate', // 백엔드에 없는 필드, 기본값
-      };
-      
-      return frontendSettings;
+const syncSettingsFromServer =
+  async (): Promise<NotificationSettings | null> => {
+    try {
+      const response = await notificationApi.getNotificationSettings();
+
+      if (response.success && response.data) {
+        const serverSettings = response.data;
+
+        // 백엔드 스키마를 프론트엔드 스키마로 변환
+        const frontendSettings: NotificationSettings = {
+          enabled: true, // 기본적으로 활성화
+          diaryReminder: serverSettings.diary_reminder,
+          aiContentReady: serverSettings.ai_content_ready,
+          emotionTrend: serverSettings.weekly_report, // 임시 매핑
+          anniversary: true, // 백엔드에 없는 필드, 기본값
+          friendShare: serverSettings.marketing, // 임시 매핑
+          quietHours: {
+            enabled: !!(
+              serverSettings.quiet_hours_start && serverSettings.quiet_hours_end
+            ),
+            startTime: serverSettings.quiet_hours_start || '22:00',
+            endTime: serverSettings.quiet_hours_end || '08:00',
+          },
+          frequency: 'immediate', // 백엔드에 없는 필드, 기본값
+        };
+
+        return frontendSettings;
+      }
+
+      return null;
+    } catch (error) {
+      console.error('서버에서 알림 설정 조회 실패:', error);
+      return null;
     }
-    
-    return null;
-  } catch (error) {
-    console.error('서버에서 알림 설정 조회 실패:', error);
-    return null;
-  }
-};
+  };
 
 // 포그라운드 메시지 리스너 설정
 const setupForegroundListener = (): void => {
@@ -362,7 +382,7 @@ const showInAppNotification = (notification: NotificationHistory): void => {
 // 사용자 토큰 목록 조회 함수
 const getUserTokens = async () => {
   try {
-    const response = await fcmApi.getTokens();
+    const response = await notificationApi.getTokens();
     if (response.success) {
       return response.data;
     }
@@ -376,7 +396,7 @@ const getUserTokens = async () => {
 // 토큰 삭제 함수
 const deleteUserToken = async (tokenId: string) => {
   try {
-    const response = await fcmApi.deleteToken(tokenId);
+    const response = await notificationApi.deleteToken(tokenId);
     if (response.success) {
       console.log('토큰 삭제 성공:', tokenId);
       return true;
@@ -389,9 +409,15 @@ const deleteUserToken = async (tokenId: string) => {
 };
 
 // 알림 히스토리 조회 함수
-const getNotificationHistory = async (limit: number = 20, offset: number = 0) => {
+const getNotificationHistory = async (
+  limit: number = 20,
+  offset: number = 0,
+) => {
   try {
-    const response = await fcmApi.getNotificationHistory(limit, offset);
+    const response = await notificationApi.getNotificationHistory(
+      limit,
+      offset,
+    );
     if (response.success) {
       return response.data;
     }
@@ -415,7 +441,9 @@ export const initializeFCM = async (): Promise<void> => {
 
     // Service Worker 등록 확인
     try {
-      const registration = await navigator.serviceWorker.getRegistration('/firebase-messaging-sw.js');
+      const registration = await navigator.serviceWorker.getRegistration(
+        '/firebase-messaging-sw.js',
+      );
       if (!registration) {
         console.log('Service Worker를 등록합니다...');
         await navigator.serviceWorker.register('/firebase-messaging-sw.js');
@@ -471,18 +499,18 @@ useFCMStore.setState((state) => ({
       ),
     }));
   },
-  
+
   // 토큰 관리 관련 추가 액션들
   getUserTokens,
   deleteToken: deleteUserToken,
-  
+
   // 알림 히스토리 관련 액션들
   loadNotificationHistory: getNotificationHistory,
-  
+
   // FCM 서비스 상태 확인
   checkFCMHealth: async () => {
     try {
-      const response = await fcmApi.checkHealth();
+      const response = await notificationApi.checkHealth();
       return response.success;
     } catch (error) {
       console.error('FCM 서비스 상태 확인 실패:', error);

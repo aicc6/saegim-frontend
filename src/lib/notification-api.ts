@@ -118,9 +118,7 @@ class NotificationApiClient {
    * 알림 설정 조회
    */
   async getNotificationSettings() {
-    return apiClient.get<NotificationSettingsResponse>(
-      '/api/notifications/settings',
-    );
+    return apiClient.get<NotificationSettingsResponse>('/api/notifications/settings');
   }
 
   /**
@@ -174,17 +172,14 @@ class NotificationApiClient {
    * @param offset 오프셋 (기본: 0)
    */
   async getNotificationHistory(limit: number = 20, offset: number = 0) {
-    return apiClient.get<NotificationHistoryResponse[]>(
-      '/api/notifications/history',
-      {
-        limit: limit.toString(),
-        offset: offset.toString(),
-      },
-    );
+    return apiClient.get<NotificationHistoryResponse[]>('/api/notifications/history', {
+      limit: limit.toString(),
+      offset: offset.toString(),
+    });
   }
 }
 
-// Notification API 클라이언트 인스턴스 생성 및 내보내기
+// Notification API 클라이언트 인스턴스 생성 및 내보내기  
 export const notificationApi = new NotificationApiClient();
 
 // 편의를 위한 개별 함수 내보내기

@@ -96,9 +96,9 @@ export function NotificationPage() {
         setError(null);
         setIsRetrying(retryCount > 0);
 
-        // FCM API를 직접 호출하여 알림 이력 조회
-        const { fcmApi } = await import('@/lib/fcm-api');
-        const response = await fcmApi.getNotificationHistory(100, 0);
+        // Notification API를 직접 호출하여 알림 이력 조회
+        const { notificationApi } = await import('@/lib/notification-api');
+        const response = await notificationApi.getNotificationHistory(100, 0);
 
         // 응답 데이터 검증
         if (!response || !response.data || !Array.isArray(response.data)) {
@@ -300,13 +300,13 @@ export function NotificationPage() {
       <div className="max-w-4xl mx-auto p-4">
         <Tabs defaultValue="notifications" className="space-y-6">
           <TabsList className="grid w-full grid-cols-2 bg-sage-10 dark:bg-gray-800 p-2 rounded-xl border border-sage-20 dark:border-gray-700">
-            <TabsTrigger 
+            <TabsTrigger
               value="notifications"
               className="data-[state=active]:bg-white dark:data-[state=active]:bg-gray-700 data-[state=active]:text-sage-90 dark:data-[state=active]:text-gray-100 data-[state=active]:shadow-sm data-[state=active]:border data-[state=active]:border-sage-20 dark:data-[state=active]:border-gray-600 text-sage-60 dark:text-gray-400 hover:text-sage-80 dark:hover:text-gray-300 rounded-lg transition-all duration-200 font-medium"
             >
               알림 목록 ({isLoading ? '...' : notifications.length})
             </TabsTrigger>
-            <TabsTrigger 
+            <TabsTrigger
               value="settings"
               className="data-[state=active]:bg-white dark:data-[state=active]:bg-gray-700 data-[state=active]:text-sage-90 dark:data-[state=active]:text-gray-100 data-[state=active]:shadow-sm data-[state=active]:border data-[state=active]:border-sage-20 dark:data-[state=active]:border-gray-600 text-sage-60 dark:text-gray-400 hover:text-sage-80 dark:hover:text-gray-300 rounded-lg transition-all duration-200 font-medium"
             >
@@ -329,16 +329,18 @@ export function NotificationPage() {
               >
                 <div className="flex items-center space-x-2">
                   <span>전체</span>
-                  <span className={`px-2 py-0.5 text-xs rounded-full font-semibold ${
-                    filter === 'all'
-                      ? 'bg-sage-20 dark:bg-gray-600 text-sage-70 dark:text-gray-300'
-                      : 'bg-sage-15 dark:bg-gray-600 text-sage-60 dark:text-gray-400'
-                  }`}>
+                  <span
+                    className={`px-2 py-0.5 text-xs rounded-full font-semibold ${
+                      filter === 'all'
+                        ? 'bg-sage-20 dark:bg-gray-600 text-sage-70 dark:text-gray-300'
+                        : 'bg-sage-15 dark:bg-gray-600 text-sage-60 dark:text-gray-400'
+                    }`}
+                  >
                     {isLoading ? '...' : notifications.length}
                   </span>
                 </div>
               </Button>
-              
+
               <Button
                 variant="ghost"
                 size="sm"
@@ -356,15 +358,17 @@ export function NotificationPage() {
                       <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
                     )}
                   </div>
-                  <span className={`px-2 py-0.5 text-xs rounded-full font-semibold ${
-                    filter === 'unread'
-                      ? unreadCount > 0
-                        ? 'bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300'
-                        : 'bg-sage-20 dark:bg-gray-600 text-sage-70 dark:text-gray-300'
-                      : unreadCount > 0
-                        ? 'bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-400'
-                        : 'bg-sage-15 dark:bg-gray-600 text-sage-60 dark:text-gray-400'
-                  }`}>
+                  <span
+                    className={`px-2 py-0.5 text-xs rounded-full font-semibold ${
+                      filter === 'unread'
+                        ? unreadCount > 0
+                          ? 'bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300'
+                          : 'bg-sage-20 dark:bg-gray-600 text-sage-70 dark:text-gray-300'
+                        : unreadCount > 0
+                          ? 'bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-400'
+                          : 'bg-sage-15 dark:bg-gray-600 text-sage-60 dark:text-gray-400'
+                    }`}
+                  >
                     {isLoading ? '...' : unreadCount}
                   </span>
                 </div>
@@ -424,7 +428,7 @@ export function NotificationPage() {
                       </p>
                     </div>
                   </div>
-                  
+
                   {/* 개선된 스켈레톤 로딩 UI */}
                   {[1, 2, 3].map((i) => (
                     <div
@@ -437,7 +441,7 @@ export function NotificationPage() {
                     >
                       {/* Shimmer 효과 */}
                       <div className="absolute inset-0 -translate-x-full animate-[shimmer_2s_infinite] bg-gradient-to-r from-transparent via-white/40 dark:via-gray-600/20 to-transparent"></div>
-                      
+
                       <div className="flex items-start space-x-4">
                         <div className="relative">
                           <div className="w-12 h-12 bg-gradient-to-br from-sage-30 to-sage-40 dark:from-gray-600 dark:to-gray-700 rounded-full animate-pulse"></div>
@@ -473,7 +477,7 @@ export function NotificationPage() {
                       </div>
                     )}
                   </div>
-                  
+
                   <div className="space-y-4 max-w-md mx-auto">
                     <h3 className="text-2xl font-bold text-sage-90 dark:text-gray-200 mb-3">
                       {filter === 'unread'
@@ -485,14 +489,16 @@ export function NotificationPage() {
                         ? '새로운 알림이 오면 여기에서 확인할 수 있어요. 잠시 쉬어가세요! 😊'
                         : '다이어리 작성이나 AI 분석 등의 알림을 받으시려면 알림 설정에서 활성화해주세요.'}
                     </p>
-                    
+
                     {filter !== 'unread' && (
                       <div className="pt-4">
                         <button
                           className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-sage-50 to-sage-60 dark:from-sage-70 dark:to-sage-80 text-white rounded-full font-medium hover:scale-105 transform transition-all duration-200 shadow-lg hover:shadow-xl"
                           onClick={() => {
                             // 알림 설정 탭으로 이동하는 로직 추가할 수 있음
-                            const settingsTab = document.querySelector('[value="settings"]') as HTMLElement;
+                            const settingsTab = document.querySelector(
+                              '[value="settings"]',
+                            ) as HTMLElement;
                             settingsTab?.click();
                           }}
                         >
@@ -509,7 +515,7 @@ export function NotificationPage() {
                     const uiElements = getNotificationUIElements(notification);
                     const IconComponent = uiElements.icon;
                     const isUnread = !notification.isRead;
-                    
+
                     return (
                       <button
                         key={notification.id}
@@ -525,7 +531,9 @@ export function NotificationPage() {
                             ? 'none'
                             : 'fadeInUp 0.5s ease-out forwards',
                         }}
-                        onClick={() => !notification.isRead && markAsRead(notification.id)}
+                        onClick={() =>
+                          !notification.isRead && markAsRead(notification.id)
+                        }
                         onKeyDown={(e) => {
                           if (e.key === 'Enter' || e.key === ' ') {
                             e.preventDefault();
@@ -548,20 +556,24 @@ export function NotificationPage() {
                             <div className="relative flex-shrink-0">
                               <div
                                 className={`w-12 h-12 rounded-xl flex items-center justify-center shadow-sm transition-transform duration-200 group-hover:scale-105 ${
-                                  getNotificationDisplayType(notification.notification_type) === 'emotion_report'
+                                  getNotificationDisplayType(
+                                    notification.notification_type,
+                                  ) === 'emotion_report'
                                     ? 'bg-gradient-to-br from-blue-100 to-blue-200 dark:from-blue-900/60 dark:to-blue-800/40'
                                     : 'bg-gradient-to-br from-purple-100 to-purple-200 dark:from-purple-900/60 dark:to-purple-800/40'
                                 }`}
                               >
                                 <IconComponent
                                   className={`w-6 h-6 ${
-                                    getNotificationDisplayType(notification.notification_type) === 'emotion_report'
+                                    getNotificationDisplayType(
+                                      notification.notification_type,
+                                    ) === 'emotion_report'
                                       ? 'text-blue-600 dark:text-blue-400'
                                       : 'text-purple-600 dark:text-purple-400'
                                   }`}
                                 />
                               </div>
-                              
+
                               {isUnread && (
                                 <div className="absolute -top-1 -right-1 w-4 h-4 bg-gradient-to-br from-blue-400 to-blue-600 rounded-full border-2 border-white dark:border-gray-800 animate-pulse"></div>
                               )}
@@ -600,7 +612,7 @@ export function NotificationPage() {
                                   >
                                     {uiElements.label}
                                   </Badge>
-                                  
+
                                   {notification.actionUrl && (
                                     <Button
                                       size="sm"
