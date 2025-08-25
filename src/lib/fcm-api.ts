@@ -48,7 +48,12 @@ export interface NotificationSendRequest {
   user_ids: string[];
   title: string;
   body: string;
-  notification_type: 'diary_reminder' | 'ai_content_ready' | 'weekly_report' | 'marketing' | 'general';
+  notification_type:
+    | 'diary_reminder'
+    | 'ai_content_ready'
+    | 'weekly_report'
+    | 'marketing'
+    | 'general';
   data?: Record<string, unknown>;
 }
 
@@ -86,7 +91,10 @@ class FCMApiClient {
    * @param tokenData 등록할 토큰 정보
    */
   async registerToken(tokenData: FCMTokenRegisterRequest) {
-    return apiClient.post<FCMTokenResponse>('/api/fcm/register-token', tokenData);
+    return apiClient.post<FCMTokenResponse>(
+      '/api/fcm/register-token',
+      tokenData,
+    );
   }
 
   /**
@@ -116,7 +124,10 @@ class FCMApiClient {
    * @param settings 업데이트할 설정
    */
   async updateNotificationSettings(settings: NotificationSettingsUpdate) {
-    return apiClient.put<NotificationSettingsResponse>('/api/fcm/settings', settings);
+    return apiClient.put<NotificationSettingsResponse>(
+      '/api/fcm/settings',
+      settings,
+    );
   }
 
   /**
@@ -124,24 +135,33 @@ class FCMApiClient {
    * @param notification 전송할 알림 정보
    */
   async sendNotification(notification: NotificationSendRequest) {
-    return apiClient.post<NotificationSendResponse>('/api/fcm/send-notification', notification);
+    return apiClient.post<NotificationSendResponse>(
+      '/api/fcm/send-notification',
+      notification,
+    );
   }
 
   /**
    * 다이어리 작성 알림 전송
-   * @param userId 대상 사용자 ID
+   * 현재 인증된 사용자에게 다이어리 작성 알림을 전송합니다.
    */
-  async sendDiaryReminder(userId: string) {
-    return apiClient.post<NotificationSendResponse>(`/api/fcm/send-diary-reminder/${userId}`, {});
+  async sendDiaryReminder() {
+    return apiClient.post<NotificationSendResponse>(
+      '/api/fcm/send-diary-reminder',
+      {},
+    );
   }
 
   /**
    * AI 콘텐츠 준비 완료 알림 전송
-   * @param userId 대상 사용자 ID
+   * 현재 인증된 사용자에게 AI 콘텐츠 준비 완료 알림을 전송합니다.
    * @param diaryId 다이어리 ID
    */
-  async sendAiContentReady(userId: string, diaryId: string) {
-    return apiClient.post<NotificationSendResponse>(`/api/fcm/send-ai-content-ready/${userId}/${diaryId}`, {});
+  async sendAiContentReady(diaryId: string) {
+    return apiClient.post<NotificationSendResponse>(
+      `/api/fcm/send-ai-content-ready/${diaryId}`,
+      {},
+    );
   }
 
   /**

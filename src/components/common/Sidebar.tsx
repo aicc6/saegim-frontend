@@ -21,6 +21,12 @@ import { useAuthStore } from '@/stores/auth';
 import { authApi } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
 
+interface UserInfo {
+  email: string;
+  nickname: string;
+  account_type: string;
+}
+
 const navigation = [
   { name: '글쓰기', href: '/', icon: PenTool },
   { name: '글목록', href: '/list', icon: Grid3X3 },
@@ -30,12 +36,34 @@ const navigation = [
 export function Sidebar() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const { isCollapsed, setIsCollapsed } = useSidebar();
   const { resolvedTheme } = useTheme();
   const pathname = usePathname();
   const router = useRouter();
   const { logout } = useAuthStore();
   const { toast } = useToast();
+
+  // 사용자 정보 가져오기
+  useEffect(() => {
+    const fetchUserInfo = async () => {
+      try {
+        const response = await authApi.getCurrentUser();
+        if (response.data) {
+          setUserInfo(response.data as UserInfo);
+        }
+      } catch (error) {
+        console.error('사용자 정보 가져오기 실패:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    if (mounted) {
+      fetchUserInfo();
+    }
+  }, [mounted]);
 
   const handleLogout = async () => {
     try {
@@ -78,6 +106,9 @@ export function Sidebar() {
 
   const isDark = resolvedTheme === 'dark';
 
+  // 사용자 표시 이름 (닉네임이 있으면 닉네임, 없으면 이메일)
+  const displayName = userInfo?.nickname || userInfo?.email || '사용자';
+
   return (
     <>
       {/* 데스크톱 사이드바 */}
@@ -104,9 +135,13 @@ export function Sidebar() {
                     variant="ghost"
                     size="sm"
                     className={`w-full p-2 ${
-                      isDark
-                        ? 'text-gray-300 hover:text-white'
-                        : 'text-sage-70 hover:text-sage-100'
+                      pathname === '/profile'
+                        ? isDark
+                          ? 'bg-gray-700 text-white'
+                          : 'bg-sage-20 text-sage-100'
+                        : isDark
+                          ? 'text-gray-300 hover:text-white'
+                          : 'text-sage-70 hover:text-sage-100'
                     }`}
                   >
                     <User className="h-5 w-5" />
@@ -131,13 +166,17 @@ export function Sidebar() {
                   <Button
                     variant="ghost"
                     className={`justify-start ${
-                      isDark
-                        ? 'text-gray-300 hover:text-white'
-                        : 'text-sage-70 hover:text-sage-100'
+                      pathname === '/profile'
+                        ? isDark
+                          ? 'bg-gray-700 text-white'
+                          : 'bg-sage-20 text-sage-100'
+                        : isDark
+                          ? 'text-gray-300 hover:text-white'
+                          : 'text-sage-70 hover:text-sage-100'
                     }`}
                   >
                     <User className="mr-3 h-5 w-5" />
-                    프로필
+                    {!isLoading && displayName}
                   </Button>
                 </Link>
                 <Button
@@ -266,7 +305,7 @@ export function Sidebar() {
                 onClick={() => setIsMobileMenuOpen(false)}
               >
                 <User className="mr-4 h-6 w-6" />
-                프로필
+                {!isLoading && displayName}
               </Link>
 
               <button

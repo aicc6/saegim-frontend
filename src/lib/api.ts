@@ -15,13 +15,20 @@ export interface ApiResponse<T> {
   request_id: string;
 }
 
+export interface PasswordResetEmailResponse {
+  success: boolean;
+  message: string;
+  is_social_account?: boolean;
+  email_sent?: boolean;
+  redirect_to_error_page?: boolean;
+}
+
 export interface LoginResponse {
   user_id: string;
   email: string;
   nickname: string;
   message: string;
-  access_token: string;
-  refresh_token: string;
+  // 쿠키 기반 인증이므로 토큰은 응답에 포함되지 않음
 }
 
 export interface PaginationInfo {
@@ -46,30 +53,34 @@ class ApiClient {
   ): Promise<ApiResponse<T>> {
     const url = `${this.baseURL}${endpoint}`;
 
-    // JWT 토큰 가져오기 (localStorage)
-    const token = localStorage.getItem('access_token');
-
     console.log('🌐 ApiClient: 요청 시작', {
       url,
       method: options.method || 'GET',
       hasAuthHeader: !!options.headers && 'Authorization' in options.headers,
-      hasToken: !!token,
     });
 
     const defaultOptions: RequestInit = {
-      credentials: 'include', // 모든 API 호출에 쿠키 포함 (Google OAuth용)
+      credentials: 'include', // 모든 API 호출에 쿠키 포함 (통일된 인증 방식)
       headers: {
         'Content-Type': 'application/json; charset=utf-8',
         Accept: 'application/json; charset=utf-8',
         'Accept-Charset': 'utf-8',
-        ...(token && { Authorization: `Bearer ${token}` }), // Bearer 토큰 포함 (이메일 로그인용)
         ...options.headers,
       },
       ...options,
     };
 
     try {
-      const response = await fetch(url, defaultOptions);
+      // 타임아웃 설정 (10초)
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000);
+      
+      const response = await fetch(url, {
+        ...defaultOptions,
+        signal: controller.signal
+      });
+      
+      clearTimeout(timeoutId);
 
       console.log('📡 ApiClient: 응답 받음', {
         status: response.status,
@@ -77,11 +88,32 @@ class ApiClient {
         url: response.url,
       });
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+      // 401 에러 시 토큰 갱신 시도 (쿠키 기반)
+      if (response.status === 401) {
+        console.log('🔄 토큰 만료, 갱신 시도...');
+        const refreshed = await this.refreshToken();
+        
+        if (refreshed) {
+          // 새로운 토큰으로 재시도 (쿠키가 자동으로 전송됨)
+          const retryResponse = await fetch(url, defaultOptions);
+          
+          if (!retryResponse.ok) {
+            throw new Error(`HTTP error! status: ${retryResponse.status}`);
+          }
+          
+          const retryData = await retryResponse.json();
+          return retryData;
+        }
       }
 
       const data = await response.json();
+
+      if (!response.ok) {
+        // 에러 응답을 포함한 에러 객체 생성
+        const error = new Error(`HTTP error! status: ${response.status}`);
+        (error as any).response = { data, status: response.status };
+        throw error;
+      }
 
       console.log('📊 ApiClient: 응답 데이터', {
         hasData: !!data,
@@ -90,9 +122,49 @@ class ApiClient {
       });
 
       return data;
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('❌ ApiClient: 요청 실패', error);
+      
+      // 타임아웃 에러 처리
+      if (error instanceof Error && error.name === 'AbortError') {
+        throw new Error('요청 시간이 초과되었습니다. 잠시 후 다시 시도해주세요.');
+      }
+      
       throw error;
+    }
+  }
+
+  private async refreshToken(): Promise<boolean> {
+    try {
+      // 토큰 갱신에도 타임아웃 설정 (5초)
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000);
+      
+      const response = await fetch(`${this.baseURL}/api/auth/refresh`, {
+        method: 'POST',
+        credentials: 'include', // 쿠키에서 refresh_token 자동 전송
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        signal: controller.signal
+      });
+      
+      clearTimeout(timeoutId);
+
+      if (response.ok) {
+        console.log('✅ 토큰 갱신 성공');
+        return true;
+      } else {
+        console.log('❌ 토큰 갱신 실패');
+        // 갱신 실패 시 로그인 페이지로 리다이렉트
+        if (typeof window !== 'undefined') {
+          window.location.href = '/login';
+        }
+        return false;
+      }
+    } catch (error) {
+      console.error('❌ 토큰 갱신 중 오류:', error);
+      return false;
     }
   }
 
@@ -151,16 +223,11 @@ export const authApi = {
       // 백엔드에 로그아웃 요청 (쿠키 기반 세션 정리)
       await apiClient.post('/api/auth/logout', {});
 
-      // 클라이언트 측 토큰 정리
-      localStorage.removeItem('access_token');
-      localStorage.removeItem('refresh_token');
-
+      // 쿠키가 자동으로 삭제되므로 localStorage 정리 불필요
       return { success: true };
     } catch (error) {
       console.error('로그아웃 API 호출 실패:', error);
-      // API 호출이 실패해도 클라이언트 상태는 정리
-      localStorage.removeItem('access_token');
-      localStorage.removeItem('refresh_token');
+      // API 호출이 실패해도 쿠키는 자동으로 정리됨
       return { success: true };
     }
   },
@@ -191,12 +258,7 @@ export const authApi = {
       data,
     );
 
-    // JWT 토큰 저장
-    if (response.data && response.data.access_token) {
-      localStorage.setItem('access_token', response.data.access_token);
-      localStorage.setItem('refresh_token', response.data.refresh_token);
-    }
-
+    // 쿠키에 토큰이 자동으로 설정되므로 localStorage 저장 불필요
     return response;
   },
 
@@ -213,6 +275,28 @@ export const authApi = {
   // 현재 사용자 정보 조회
   getCurrentUser: async () => {
     return apiClient.get('/api/auth/me');
+  },
+
+  // 비밀번호 재설정 이메일 발송
+  sendPasswordResetEmail: async (data: { email: string }) => {
+    return apiClient.post<PasswordResetEmailResponse>('/api/auth/forgot-password', data);
+  },
+
+  // 비밀번호 재설정 인증코드 확인
+  verifyPasswordResetCode: async (data: { 
+    email: string; 
+    verification_code: string 
+  }) => {
+    return apiClient.post('/api/auth/forgot-password/verify', data);
+  },
+
+  // 비밀번호 재설정
+  resetPassword: async (data: { 
+    email: string; 
+    verification_code: string; 
+    new_password: string 
+  }) => {
+    return apiClient.post('/api/auth/forgot-password/reset', data);
   },
 };
 

@@ -2,14 +2,25 @@
 
 import { useEffect, useState } from 'react';
 import Image from 'next/image';
+import { useRouter } from 'next/navigation';
 import { useTheme } from 'next-themes';
 import { useNotifications } from '@/hooks/use-notifications';
+import { authApi } from '@/lib/api';
 import ThemeToggle from '../ui/custom/ThemeToggle';
 import NotificationPopover from './NotificationPopover';
 
+interface UserInfo {
+  email: string;
+  nickname: string;
+  account_type: string;
+}
+
 export default function AuthenticatedHeader() {
+  const router = useRouter();
   const { resolvedTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
+  const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   const { notifications, markAsRead, markAllAsRead, deleteNotification } =
     useNotifications();
@@ -19,11 +30,35 @@ export default function AuthenticatedHeader() {
     setMounted(true);
   }, []);
 
+  // 사용자 정보 가져오기
+  useEffect(() => {
+    const fetchUserInfo = async () => {
+      try {
+        const response = await authApi.getCurrentUser();
+        if (response.data) {
+          setUserInfo(response.data as UserInfo);
+        }
+      } catch (error) {
+        console.error('사용자 정보 가져오기 실패:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    if (mounted) {
+      fetchUserInfo();
+    }
+  }, [mounted]);
+
   if (!mounted) {
     return null;
   }
 
   const isDark = resolvedTheme === 'dark';
+
+  const handleProfileClick = () => {
+    router.push('/profile');
+  };
 
   return (
     <div
@@ -52,8 +87,8 @@ export default function AuthenticatedHeader() {
           </h1>
         </div>
 
-        {/* 우측: 알림 및 테마 토글 버튼 */}
-        <div className="flex items-center space-x-2">
+        {/* 우측: 알림, 테마 토글, 프로필 */}
+        <div className="flex items-center space-x-4">
           <NotificationPopover
             notifications={notifications}
             onMarkAsRead={markAsRead}
