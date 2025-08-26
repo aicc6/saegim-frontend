@@ -265,46 +265,26 @@ export default function ViewPostPage() {
     );
   };
 
-  const handleRemoveImage = async (imageId: string) => {
+  const handleRemoveImage = (imageId: string) => {
     if (entry && entry.images) {
-      try {
-        // 백엔드에서 이미지 삭제
-        const apiBaseUrl =
-          process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000';
-        const response = await fetch(
-          `${apiBaseUrl}/api/diary/${entry.id}/images/${imageId}`,
-          {
-            method: 'DELETE',
-            credentials: 'include',
-          },
-        );
+      // 로컬 상태에서만 이미지 제거 (DB는 삭제하지 않음)
+      const updatedImages = entry.images.filter(
+        (img: ImageInfo) => img.id !== imageId,
+      );
+      const updatedEntry = {
+        ...entry,
+        images: updatedImages,
+      };
+      setEntry(updatedEntry);
 
-        if (response.ok) {
-          // 로컬 상태에서 이미지 제거
-          const updatedImages = entry.images.filter(
-            (img: ImageInfo) => img.id !== imageId,
-          );
-          const updatedEntry = {
-            ...entry,
-            images: updatedImages,
-          };
-          setEntry(updatedEntry);
+      // 다이어리 스토어 상태도 업데이트하여 캘린더와 동기화
+      const currentDiaries = useDiaryStore.getState().diaries;
+      const updatedDiaries = currentDiaries.map((diary) =>
+        diary.id === entry.id ? { ...diary, images: updatedImages } : diary,
+      );
+      useDiaryStore.setState({ diaries: updatedDiaries });
 
-          // 다이어리 스토어 상태도 업데이트하여 캘린더와 동기화
-          const currentDiaries = useDiaryStore.getState().diaries;
-          const updatedDiaries = currentDiaries.map((diary) =>
-            diary.id === entry.id ? { ...diary, images: updatedImages } : diary,
-          );
-          useDiaryStore.setState({ diaries: updatedDiaries });
-
-          console.log('✅ 이미지 삭제 완료 (백엔드 동기화 및 캘린더 동기화)');
-        } else {
-          throw new Error('이미지 삭제 실패');
-        }
-      } catch (error) {
-        console.error('❌ 이미지 삭제 실패:', error);
-        alert('이미지 삭제에 실패했습니다. 다시 시도해주세요.');
-      }
+      console.log('✅ 이미지 삭제 완료 (로컬 상태만 업데이트, DB는 유지)');
     }
   };
 
@@ -380,7 +360,7 @@ export default function ViewPostPage() {
       if (response.ok) {
         const result = await response.json();
         if (result.data && result.data.length > 0) {
-          // 기존 이미지들을 entry에 추가
+          // 기존 이미지들을 entry에 추가 (삭제된 이미지도 복원)
           const existingImages = result.data.map((img: any) => ({
             id: img.id,
             file_path: img.file_path,
@@ -405,7 +385,9 @@ export default function ViewPostPage() {
           );
           useDiaryStore.setState({ diaries: updatedDiaries });
 
-          alert('기존 이미지를 성공적으로 불러왔습니다.');
+          alert(
+            '기존 이미지를 성공적으로 불러왔습니다. (삭제된 이미지도 복원됨)',
+          );
         } else {
           alert('불러올 이미지가 없습니다.');
         }
@@ -777,7 +759,7 @@ export default function ViewPostPage() {
                           <button
                             onClick={() => handleRemoveImage(image.id)}
                             className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center text-xs font-bold shadow-lg transition-all duration-200 hover:scale-110"
-                            title="이미지 삭제"
+                            title="이미지 임시 삭제 (DB는 유지)"
                           >
                             ×
                           </button>
@@ -1006,6 +988,9 @@ const ImageOptionsModal = ({
                 <div className="font-medium">기존 이미지 불러오기</div>
                 <div className="text-sm text-sage-20">
                   데이터베이스에서 저장된 이미지
+                </div>
+                <div className="text-xs text-sage-30 mt-1">
+                  삭제된 이미지도 복원됩니다
                 </div>
               </div>
             </div>

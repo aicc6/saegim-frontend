@@ -52,13 +52,25 @@ export default function CalendarPage() {
       return;
     }
 
+    // 이미 로딩 중이면 중복 호출 방지 (데이터가 있어도 날짜 변경 시에는 로드)
+    if (isLoading) {
+      console.log('📝 CalendarPage: 이미 로딩 중이어서 중복 호출 방지', {
+        isLoading,
+        diariesCount: diaries.length,
+      });
+      return;
+    }
+
     try {
-      console.log('📅 CalendarPage: 월별 데이터 로딩', {
+      console.log('📅 CalendarPage: 월별 데이터 로딩 시작', {
         year: viewDate.getFullYear(),
         month: viewDate.getMonth() + 1,
         startDate: dateRange.startDate,
         endDate: dateRange.endDate,
       });
+
+      // 로딩 상태 설정
+      useDiaryStore.setState({ isLoading: true, error: null });
 
       // 쿠키 기반 API 호출
       const apiBaseUrl =
@@ -85,12 +97,34 @@ export default function CalendarPage() {
 
         // 스토어 상태 업데이트
         if (result.data && Array.isArray(result.data)) {
-          useDiaryStore.setState({
-            diaries: result.data,
-            totalCount: result.data.length,
-            isLoading: false,
-            error: null,
-          });
+          // 현재 상태와 비교하여 변경사항이 있을 때만 업데이트
+          const currentDiaries = useDiaryStore.getState().diaries;
+          const newDiaries = result.data;
+
+          // 데이터가 실제로 변경되었는지 확인
+          const hasChanged =
+            JSON.stringify(currentDiaries) !== JSON.stringify(newDiaries);
+
+          if (hasChanged) {
+            useDiaryStore.setState({
+              diaries: newDiaries,
+              totalCount: newDiaries.length,
+              isLoading: false,
+              error: null,
+            });
+            console.log('✅ CalendarPage: 데이터 로딩 완료 (변경사항 있음)', {
+              diariesCount: newDiaries.length,
+            });
+          } else {
+            // 데이터가 변경되지 않았으면 로딩 상태만 해제
+            useDiaryStore.setState({
+              isLoading: false,
+              error: null,
+            });
+            console.log(
+              '📝 CalendarPage: 데이터 변경사항 없음 (로딩 상태만 해제)',
+            );
+          }
         }
       } else if (response.status === 401) {
         console.log('❌ CalendarPage: 인증 실패, 로그인 페이지로 리다이렉트');
@@ -104,7 +138,7 @@ export default function CalendarPage() {
         isLoading: false,
       });
     }
-  }, [isAuthenticated, viewDate, dateRange, router]);
+  }, [isAuthenticated, viewDate, dateRange, router, isLoading]);
 
   // 현재 보고 있는 월의 데이터
   const currentMonthData = useMemo(() => {
@@ -298,19 +332,23 @@ export default function CalendarPage() {
   useEffect(() => {
     const handleFocus = () => {
       console.log('📅 CalendarPage: 페이지 포커스 감지, 데이터 새로고침');
-      loadMonthData();
+      // 포커스 시에만 데이터 새로고침 (중복 방지)
+      if (isAuthenticated && !isLoading) {
+        loadMonthData();
+      }
     };
 
     window.addEventListener('focus', handleFocus);
     return () => window.removeEventListener('focus', handleFocus);
-  }, [loadMonthData]);
+  }, [loadMonthData, isAuthenticated, isLoading]);
 
-  // 월 변경 시 데이터 로드
+  // 월 변경 시 데이터 로드 (한 번만 실행)
   useEffect(() => {
-    if (isAuthenticated) {
+    if (isAuthenticated && !hasChecked && !isLoading) {
+      console.log('📅 CalendarPage: 초기 데이터 로드 (한 번만)');
       loadMonthData();
     }
-  }, [loadMonthData, isAuthenticated]);
+  }, [isAuthenticated, hasChecked, isLoading, loadMonthData]);
 
   // 인증 확인 완료 후 인증되지 않았을 때만 리다이렉트
   if (!isAuthenticated || !user) {
@@ -346,7 +384,32 @@ export default function CalendarPage() {
   };
 
   const handleDateChange = (date: Date) => {
+    console.log('📅 CalendarPage: Calendar에서 날짜 변경 감지', {
+      oldDate: viewDate,
+      newDate: date,
+      oldMonth: viewDate.getMonth() + 1,
+      newMonth: date.getMonth() + 1,
+    });
+
+    // 같은 월이면 데이터 로드하지 않음
+    if (
+      viewDate.getMonth() === date.getMonth() &&
+      viewDate.getFullYear() === date.getFullYear()
+    ) {
+      console.log('📝 CalendarPage: 같은 월이므로 데이터 로드 스킵');
+      return;
+    }
+
     setViewDate(date);
+
+    // 날짜가 변경되면 데이터를 새로 로드
+    // 기존 데이터를 초기화하여 중복 호출 방지 로직을 우회
+    useDiaryStore.setState({ diaries: [], isLoading: false, error: null });
+
+    // 새로운 날짜로 데이터 로드
+    setTimeout(() => {
+      loadMonthData();
+    }, 100);
   };
 
   const clearSelection = () => {
@@ -376,6 +439,7 @@ export default function CalendarPage() {
               <Calendar
                 onDateSelect={handleDateSelect}
                 onDateChange={handleDateChange}
+                currentViewDate={viewDate}
                 className="h-fit"
               />
 

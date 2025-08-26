@@ -26,20 +26,24 @@ interface CalendarProps {
   className?: string;
   onDateSelect?: (date: string) => void;
   onDateChange?: (date: Date) => void;
+  currentViewDate?: Date; // 현재 보고 있는 날짜 추가
 }
 
 export function Calendar({
   className,
   onDateSelect,
   onDateChange,
+  currentViewDate, // props 추가
 }: CalendarProps) {
-  const [currentDate, setCurrentDate] = useState(new Date());
+  const [currentDate, setCurrentDate] = useState(currentViewDate || new Date());
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
 
   const { diaries, isLoading, error, fetchCalendarDiaries } = useDiaryStore();
 
-  const year = currentDate.getFullYear();
-  const month = currentDate.getMonth();
+  // props로 전달받은 날짜가 있으면 사용, 없으면 내부 상태 사용
+  const effectiveDate = currentViewDate || currentDate;
+  const year = effectiveDate.getFullYear();
+  const month = effectiveDate.getMonth();
 
   // 해당 월의 첫째 날과 마지막 날
   const firstDay = new Date(year, month, 1);
@@ -55,67 +59,41 @@ export function Calendar({
 
   // 날짜 범위 계산 - useMemo로 최적화하여 불필요한 재계산 방지
   const dateRange = useMemo(() => {
-    const startDate = new Date(year, month - 1, 1);
-    const endDate = new Date(year, month, 0);
+    // year와 month는 이미 올바른 값이므로 그대로 사용
+    const startDate = new Date(year, month, 1); // month - 1 제거
+    const endDate = new Date(year, month + 1, 0); // month + 1로 다음 월의 0일 = 현재 월의 마지막 날
 
     const startDateStr = startDate.toISOString().split('T')[0];
     const endDateStr = endDate.toISOString().split('T')[0];
+
+    console.log('📅 Calendar: 날짜 범위 계산', {
+      year,
+      month,
+      startDate: startDateStr,
+      endDate: endDateStr,
+      startDateObj: startDate,
+      endDateObj: endDate,
+    });
 
     return { startDate: startDateStr, endDate: endDateStr };
   }, [year, month]);
 
   // 월이 변경될 때마다 해당 월의 다이어리 데이터 가져오기 - 의존성 배열 최적화
   useEffect(() => {
-    console.log('🔍 Calendar: API 호출 시작', {
+    console.log('🔍 Calendar: 데이터 상태 확인', {
       startDate: dateRange.startDate,
       endDate: dateRange.endDate,
+      diariesCount: diaries.length,
     });
 
-    // 실제 백엔드 API 호출 - 쿠키 기반 인증 사용
-    const loadCalendarData = async () => {
-      try {
-        const apiBaseUrl =
-          process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000';
-
-        const response = await fetch(
-          `${apiBaseUrl}/api/diary/calendar?start_date=${dateRange.startDate}&end_date=${dateRange.endDate}`,
-          {
-            credentials: 'include', // 쿠키 기반 인증
-            headers: {
-              'Content-Type': 'application/json',
-            },
-          },
-        );
-
-        if (response.ok) {
-          const result = await response.json();
-          console.log('📡 Calendar: 쿠키 기반 API 호출 결과', result);
-
-          // 스토어 상태 업데이트
-          if (result.data && Array.isArray(result.data)) {
-            // Zustand 스토어 직접 업데이트
-            useDiaryStore.setState({
-              diaries: result.data,
-              totalCount: result.data.length,
-              isLoading: false,
-              error: null,
-            });
-          }
-        } else if (response.status === 401) {
-          console.log('❌ Calendar: 인증 실패, 로그인 페이지로 리다이렉트');
-          window.location.href = '/login';
-        }
-      } catch (error) {
-        console.error('❌ Calendar: API 호출 실패', error);
-        useDiaryStore.setState({
-          error: '캘린더 데이터를 불러오는데 실패했습니다.',
-          isLoading: false,
-        });
-      }
-    };
-
-    loadCalendarData();
-  }, [year, month]); // dateRange 제거하고 year, month만 의존성으로 설정
+    // 부모 컴포넌트에서 이미 데이터를 로드했으므로 추가 API 호출 불필요
+    // 데이터가 없을 때만 부모에게 알림
+    if (diaries.length === 0) {
+      console.log(
+        '📝 Calendar: 다이어리 데이터가 없습니다. 부모 컴포넌트에서 로드 필요',
+      );
+    }
+  }, [year, month, diaries.length]); // dateRange 제거하고 year, month만 의존성으로 설정
 
   // 데이터 로딩 상태 디버깅
   useEffect(() => {
@@ -203,7 +181,7 @@ export function Calendar({
         entries: dayEntries,
         dominantEmotion,
         keywords: topKeywords,
-        isCurrentMonth: current.getMonth() === currentDate.getMonth(),
+        isCurrentMonth: current.getMonth() === effectiveDate.getMonth(),
         isToday: dateStr === todayStr,
         isSelected: dateStr === selectedDate,
         thumbnailPath, // 썸네일 경로 추가
@@ -213,13 +191,38 @@ export function Calendar({
     }
 
     return days;
-  }, [startDate, endDate, diaries, month, selectedDate, currentDate]);
+  }, [
+    startDate,
+    endDate,
+    diaries,
+    month,
+    selectedDate,
+    currentDate,
+    effectiveDate,
+  ]);
 
   const navigateMonth = (direction: 'prev' | 'next') => {
-    setCurrentDate((prev) => {
-      const newDate = new Date(prev);
-      newDate.setMonth(prev.getMonth() + (direction === 'next' ? 1 : -1));
-      return newDate;
+    const newDate = new Date(effectiveDate);
+
+    if (direction === 'prev') {
+      newDate.setMonth(newDate.getMonth() - 1);
+    } else {
+      newDate.setMonth(newDate.getMonth() + 1);
+    }
+
+    setCurrentDate(newDate);
+
+    // 부모 컴포넌트에 날짜 변경 알림
+    if (onDateChange) {
+      onDateChange(newDate);
+    }
+
+    console.log('📅 Calendar: 월 변경', {
+      direction,
+      oldDate: effectiveDate,
+      newDate,
+      oldMonth: effectiveDate.getMonth() + 1,
+      newMonth: newDate.getMonth() + 1,
     });
   };
 
