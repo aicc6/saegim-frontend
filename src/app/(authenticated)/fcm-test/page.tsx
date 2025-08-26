@@ -26,6 +26,23 @@ export default function FCMTestPage() {
       {/* 통합된 FCM 테스트 및 관리 패널 */}
       <UnifiedFCMPanel />
 
+      {/* Husky + Lint-staged 테스트 섹션 */}
+      <div className="mt-8 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+        <h2 className="text-lg font-semibold text-blue-800 dark:text-blue-200 mb-2">
+          🔧 Husky + Lint-staged 테스트
+        </h2>
+        <p className="text-sm text-blue-600 dark:text-blue-300">
+          이 섹션은 커밋 전 자동 포맷팅 및 린트 기능을 테스트하기 위해
+          추가되었습니다. 파일을 수정하고 커밋하면 prettier와 eslint가 자동으로
+          실행됩니다.
+        </p>
+        <div className="mt-2">
+          <span className="inline-block px-2 py-1 text-xs bg-green-100 text-green-800 rounded">
+            포맷팅 테스트 완료
+          </span>
+        </div>
+      </div>
+
       {/* 사용법 안내 */}
       <div className="mt-12 max-w-4xl mx-auto">
         <div className="bg-sage-50 rounded-lg p-6">
