@@ -1,11 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { authApi } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
 
-export default function RestoreAccountPage() {
+function RestoreAccountContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { toast } = useToast();
@@ -207,5 +207,13 @@ export default function RestoreAccountPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function RestoreAccountPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-background-primary dark:bg-background-dark flex items-center justify-center"><div>로딩 중...</div></div>}>
+      <RestoreAccountContent />
+    </Suspense>
   );
 }
