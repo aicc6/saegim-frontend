@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import GoogleLoginButton from '@/components/ui/custom/GoogleLoginButton';
 import { authApi } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
@@ -9,6 +9,7 @@ import { useAuthStore } from '@/stores/auth';
 
 export default function LoginForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { toast } = useToast();
   const { login } = useAuthStore();
 
@@ -17,6 +18,31 @@ export default function LoginForm() {
     password: '',
   });
   const [isLoading, setIsLoading] = useState(false);
+
+  // URL 파라미터로 전달된 에러 처리
+  useEffect(() => {
+    const error = searchParams.get('error');
+    const message = searchParams.get('message');
+    
+    if (error && message) {
+      let errorTitle = '로그인 실패';
+      let errorDescription = message;
+      
+      if (error === 'account_permanently_deleted') {
+        errorTitle = '영구 삭제된 계정';
+        errorDescription = '탈퇴 후 30일이 경과되어 복구할 수 없습니다.';
+      } else if (error === 'account_deleted') {
+        errorTitle = '탈퇴된 계정';
+        errorDescription = '탈퇴된 계정입니다. 복구 페이지에서 계정을 복구할 수 있습니다.';
+      }
+      
+      toast({
+        title: errorTitle,
+        description: errorDescription,
+        variant: 'destructive',
+      });
+    }
+  }, [searchParams, toast]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -105,16 +131,44 @@ export default function LoginForm() {
       // 백엔드에서 전달된 상세 에러 메시지가 있으면 우선 사용
       if (error.response?.data?.detail) {
         const backendError = error.response.data.detail;
-
+        
+        // 탈퇴된 계정 처리
+        if (error.response?.status === 403 && typeof backendError === 'object') {
+          if (backendError.error === 'ACCOUNT_DELETED' && backendError.restore_available) {
+            errorTitle = '탈퇴된 계정';
+            errorDescription = `탈퇴된 계정입니다. ${backendError.days_remaining}일 이내에 복구할 수 있습니다.`;
+            
+            // 복구 가능한 경우 복구 페이지로 이동 옵션 제공
+            toast({
+              title: errorTitle,
+              description: errorDescription,
+              variant: 'destructive',
+              action: (
+                <div className="mt-2 space-y-2">
+                  <button
+                    onClick={() => router.push('/restore-account')}
+                    className="w-full px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+                  >
+                    계정 복구하기
+                  </button>
+                </div>
+              ),
+            });
+            return; // 다른 에러 처리 중단
+          } else if (backendError.error === 'ACCOUNT_PERMANENTLY_DELETED') {
+            errorTitle = '영구 삭제된 계정';
+            errorDescription = '탈퇴 후 30일이 경과되어 복구할 수 없습니다.';
+          }
+        }
+        
         // 비밀번호 변경 관련 특별 처리
         if (
           backendError.includes('비밀번호') ||
           backendError.includes('password')
         ) {
           errorTitle = '비밀번호 변경됨';
-          errorDescription =
-            '비밀번호가 변경되었습니다. 비밀번호 찾기를 이용해 새로운 비밀번호를 설정해주세요.';
-        } else {
+          errorDescription = '비밀번호가 변경되었습니다. 비밀번호 찾기를 이용해 새로운 비밀번호를 설정해주세요.';
+        } else if (typeof backendError === 'string') {
           errorDescription = backendError;
         }
       }

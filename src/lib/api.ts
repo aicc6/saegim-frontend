@@ -298,6 +298,19 @@ export const authApi = {
   }) => {
     return apiClient.post('/api/auth/forgot-password/reset', data);
   },
+
+  // 계정 복구 이메일 발송
+  sendRestoreEmail: async (email: string) => {
+    return apiClient.post('/api/auth/restore/send-restore-email', { email });
+  },
+
+  // 계정 복구
+  restoreAccount: async (data: { 
+    email: string; 
+    verification_code: string 
+  }) => {
+    return apiClient.post('/api/auth/restore', data);
+  },
 };
 
 // 다이어리 API 엔드포인트
