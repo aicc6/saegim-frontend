@@ -2,7 +2,7 @@
 // 개발 환경에서 FCM 기능을 테스트할 수 있는 페이지
 
 import type { Metadata } from 'next';
-import { FCMManager, FCMTestPanel } from '../../../components/dev';
+import { UnifiedFCMPanel } from '../../../components/dev';
 
 export const metadata: Metadata = {
   title: 'FCM 푸시 알림 테스트 | 새김',
@@ -13,23 +13,18 @@ export default function FCMTestPage() {
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="mb-8 text-center">
-        <h1 className="text-3xl font-bold text-text-primary mb-2">
+        <h1 className="text-3xl font-bold text-sage-90 dark:text-gray-100 mb-2">
           FCM 푸시 알림 테스트
         </h1>
-        <p className="text-text-secondary max-w-2xl mx-auto">
+        <p className="text-sage-60 dark:text-gray-400 max-w-2xl mx-auto">
           새김 앱의 Firebase Cloud Messaging (FCM) 푸시 알림 기능을 테스트하고
           관리할 수 있습니다. 실제 서비스에서는 백엔드 API를 통해 사용자에게
           개인화된 알림이 전송됩니다.
         </p>
       </div>
 
-      {/* FCM API 연동 테스트 패널 */}
-      <FCMTestPanel />
-      
-      {/* 기존 FCM 관리 컴포넌트 */}
-      <div className="mt-8">
-        <FCMManager />
-      </div>
+      {/* 통합된 FCM 테스트 및 관리 패널 */}
+      <UnifiedFCMPanel />
 
       {/* 사용법 안내 */}
       <div className="mt-12 max-w-4xl mx-auto">

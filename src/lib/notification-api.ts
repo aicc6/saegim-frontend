@@ -94,7 +94,7 @@ class NotificationApiClient {
    */
   async registerToken(tokenData: FCMTokenRegisterRequest) {
     return apiClient.post<FCMTokenResponse>(
-      '/api/notifications/tokens/register',
+      '/api/notifications/tokens',
       tokenData as unknown as Record<string, unknown>,
     );
   }
@@ -126,7 +126,7 @@ class NotificationApiClient {
    * @param settings 업데이트할 설정
    */
   async updateNotificationSettings(settings: NotificationSettingsUpdate) {
-    return apiClient.put<NotificationSettingsResponse>(
+    return apiClient.patch<NotificationSettingsResponse>(
       '/api/notifications/settings',
       settings as unknown as Record<string, unknown>,
     );
@@ -145,11 +145,11 @@ class NotificationApiClient {
 
   /**
    * 다이어리 작성 알림 전송
-   * 현재 인증된 사용자에게 다이어리 작성 알림을 전송합니다.
+   * 현재 사용자에게 다이어리 작성 알림을 전송합니다.
    */
   async sendDiaryReminder() {
     return apiClient.post<NotificationSendResponse>(
-      '/api/notifications/send/diary-reminder',
+      '/api/notifications/diary-reminder',
       {},
     );
   }
