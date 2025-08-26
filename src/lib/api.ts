@@ -211,6 +211,17 @@ class ApiClient {
     });
   }
 
+  // PATCH 요청
+  async patch<T>(
+    endpoint: string,
+    data: Record<string, unknown>,
+  ): Promise<ApiResponse<T>> {
+    return this.request<T>(endpoint, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    });
+  }
+
   // DELETE 요청
   async delete<T>(endpoint: string): Promise<ApiResponse<T>> {
     return this.request<T>(endpoint, { method: 'DELETE' });

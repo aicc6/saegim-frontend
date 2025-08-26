@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import GoogleLoginButton from '@/components/ui/custom/GoogleLoginButton';
 import { authApi } from '@/lib/api';
