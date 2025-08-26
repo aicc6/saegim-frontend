@@ -765,10 +765,16 @@ export default function ViewPostPage() {
                     .map((image, index) => (
                       <div key={index} className="relative group">
                         <img
-                          src={`${
-                            process.env.NEXT_PUBLIC_API_BASE_URL ||
-                            'http://localhost:8000'
-                          }${image.thumbnail_path}`}
+                          src={
+                            image.thumbnail_path
+                              ? `${
+                                  process.env.NEXT_PUBLIC_API_BASE_URL ||
+                                  'http://localhost:8000'
+                                }/api/public/image-proxy?url=${encodeURIComponent(
+                                  image.thumbnail_path
+                                )}`
+                              : ''
+                          }
                           alt={`다이어리 이미지 ${index + 1}`}
                           className="w-32 h-32 object-cover rounded-lg border border-sage-30 shadow-sm hover:shadow-md transition-shadow duration-200"
                         />

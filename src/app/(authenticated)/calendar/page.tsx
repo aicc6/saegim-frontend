@@ -470,11 +470,17 @@ export default function CalendarPage() {
                                       className="relative flex-shrink-0"
                                     >
                                       <img
-                                        src={`${
-                                          process.env
-                                            .NEXT_PUBLIC_API_BASE_URL ||
-                                          'http://localhost:8000'
-                                        }${image.thumbnail_path}`}
+                                        src={
+                                          image.thumbnail_path
+                                            ? `${
+                                                process.env
+                                                  .NEXT_PUBLIC_API_BASE_URL ||
+                                                'http://localhost:8000'
+                                              }/api/public/image-proxy?url=${encodeURIComponent(
+                                                image.thumbnail_path
+                                              )}`
+                                            : ''
+                                        }
                                         alt={`다이어리 이미지 ${index + 1}`}
                                         className="rounded-md border border-border-subtle shadow-sm hover:shadow-md transition-all duration-200 hover:scale-105"
                                         style={{
