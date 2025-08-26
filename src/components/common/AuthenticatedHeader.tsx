@@ -5,6 +5,7 @@ import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useTheme } from 'next-themes';
 import { useNotifications } from '@/hooks/use-notifications';
+import { useFCMStore } from '@/stores/fcm';
 import { authApi } from '@/lib/api';
 import ThemeToggle from '../ui/custom/ThemeToggle';
 import NotificationPopover from './NotificationPopover';
@@ -24,6 +25,9 @@ export default function AuthenticatedHeader() {
 
   const { notifications, markAsRead, markAllAsRead, deleteNotification } =
     useNotifications();
+  
+  // FCM 알림 상태 가져오기
+  const { unreadCount: fcmUnreadCount, notifications: fcmNotifications, markAsRead: fcmMarkAsRead, markAllAsRead: fcmMarkAllAsRead } = useFCMStore();
 
   // 클라이언트 사이드에서만 테마 렌더링 (hydration 에러 방지)
   useEffect(() => {
@@ -91,9 +95,13 @@ export default function AuthenticatedHeader() {
         <div className="flex items-center space-x-4">
           <NotificationPopover
             notifications={notifications}
+            fcmNotifications={fcmNotifications}
+            fcmUnreadCount={fcmUnreadCount}
             onMarkAsRead={markAsRead}
             onMarkAllAsRead={markAllAsRead}
             onDeleteNotification={deleteNotification}
+            onFCMMarkAsRead={fcmMarkAsRead}
+            onFCMMarkAllAsRead={fcmMarkAllAsRead}
           />
 
           <ThemeToggle />

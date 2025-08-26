@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Bell, Check, X } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { Button } from '../ui/button';
@@ -19,25 +20,61 @@ interface Notification {
   type?: 'info' | 'success' | 'warning' | 'error';
 }
 
+// FCM 알림 타입
+interface FCMNotification {
+  id: string;
+  title: string;
+  body: string;
+  sentAt: string;
+  isRead: boolean;
+  type: string;
+}
+
 interface NotificationPopoverProps {
   notifications: Notification[];
+  fcmNotifications?: FCMNotification[];
+  fcmUnreadCount?: number;
   onMarkAsRead: (id: string) => void;
   onMarkAllAsRead: () => void;
   onDeleteNotification: (id: string) => void;
+  onFCMMarkAsRead?: (id: string) => void;
+  onFCMMarkAllAsRead?: () => void;
 }
 
 export default function NotificationPopover({
   notifications,
+  fcmNotifications = [],
+  fcmUnreadCount = 0,
   onMarkAsRead,
   onMarkAllAsRead,
   onDeleteNotification,
+  onFCMMarkAsRead,
+  onFCMMarkAllAsRead,
 }: NotificationPopoverProps) {
+  const router = useRouter();
   const { resolvedTheme } = useTheme();
   const [isOpen, setIsOpen] = useState(false);
 
   const isDark = resolvedTheme === 'dark';
   const unreadNotifications = notifications.filter((n) => !n.isRead);
-  const unreadCount = unreadNotifications.length;
+  const localUnreadCount = unreadNotifications.length;
+  
+  // FCM 읽지 않은 알림 우선적으로 사용
+  const totalUnreadCount = fcmUnreadCount || localUnreadCount;
+  
+  // FCM 알림을 로컬 알림 형태로 변환
+  const convertedFCMNotifications: Notification[] = fcmNotifications.map((fcm) => ({
+    id: `fcm_${fcm.id}`,
+    title: fcm.title,
+    message: fcm.body,
+    timestamp: new Date(fcm.sentAt),
+    isRead: fcm.isRead,
+    type: fcm.type === 'diary' ? 'info' : 'info' as 'info' | 'success' | 'warning' | 'error',
+  }));
+  
+  // 모든 알림 합치기 (FCM 알림을 우선으로)
+  const allNotifications = [...convertedFCMNotifications, ...notifications]
+    .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
 
   const formatTime = (date: Date) => {
     const now = new Date();
@@ -80,9 +117,9 @@ export default function NotificationPopover({
           >
             <Bell className="w-5 h-5" />
           </Button>
-          {unreadCount > 0 && (
+          {totalUnreadCount > 0 && (
             <Badge className="absolute -top-0.5 -right-0.5 min-w-[1rem] h-4 p-0 text-[10px] bg-red-500 text-white border-white border-[1px] flex items-center justify-center rounded-full">
-              {unreadCount > 99 ? '99+' : unreadCount}
+              {totalUnreadCount > 99 ? '99+' : totalUnreadCount}
             </Badge>
           )}
         </div>
@@ -97,13 +134,20 @@ export default function NotificationPopover({
           <h3
             className={`font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}
           >
-            알림 {unreadCount > 0 && `(${unreadCount})`}
+            알림 {totalUnreadCount > 0 && `(${totalUnreadCount})`}
           </h3>
-          {unreadCount > 0 && (
+          {totalUnreadCount > 0 && (
             <Button
               variant="ghost"
               size="sm"
-              onClick={onMarkAllAsRead}
+              onClick={() => {
+                // FCM 알림이 있으면 FCM 전체 읽기, 없으면 로컬 전체 읽기
+                if (fcmUnreadCount > 0 && onFCMMarkAllAsRead) {
+                  onFCMMarkAllAsRead();
+                } else {
+                  onMarkAllAsRead();
+                }
+              }}
               className={`text-xs ${
                 isDark
                   ? 'text-gray-300 hover:text-white hover:bg-gray-700'
@@ -116,20 +160,35 @@ export default function NotificationPopover({
         </div>
 
         <ScrollArea className="max-h-96">
-          {notifications.length === 0 ? (
+          {allNotifications.length === 0 ? (
             <div className="p-8 text-center">
               <Bell
                 className={`w-12 h-12 mx-auto mb-2 ${isDark ? 'text-gray-600' : 'text-gray-300'}`}
               />
               <p
-                className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}
+                className={`text-sm mb-4 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}
               >
                 새로운 알림이 없습니다.
               </p>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setIsOpen(false);
+                  router.push('/notifications');
+                }}
+                className={`text-xs ${
+                  isDark
+                    ? 'text-gray-300 hover:text-white hover:bg-gray-700'
+                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                }`}
+              >
+                전체 알림 보기
+              </Button>
             </div>
           ) : (
             <div className="divide-y divide-gray-200 dark:divide-gray-600">
-              {notifications.map((notification, index) => (
+              {allNotifications.map((notification, index) => (
                 <div
                   key={notification.id}
                   className={`p-4 hover:bg-gray-50 dark:hover:bg-gray-700 ${
@@ -176,7 +235,15 @@ export default function NotificationPopover({
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => onMarkAsRead(notification.id)}
+                          onClick={() => {
+                            // FCM 알림인지 확인해서 적절한 액션 호출
+                            if (notification.id.startsWith('fcm_') && onFCMMarkAsRead) {
+                              const fcmId = notification.id.replace('fcm_', '');
+                              onFCMMarkAsRead(fcmId);
+                            } else {
+                              onMarkAsRead(notification.id);
+                            }
+                          }}
                           className={`p-1 h-6 w-6 ${
                             isDark
                               ? 'text-gray-400 hover:text-white hover:bg-gray-600'
@@ -206,13 +273,17 @@ export default function NotificationPopover({
           )}
         </ScrollArea>
 
-        {notifications.length > 0 && (
+        {allNotifications.length > 0 && (
           <>
             <Separator className="dark:border-gray-600" />
             <div className="p-3 text-center">
               <Button
                 variant="ghost"
                 size="sm"
+                onClick={() => {
+                  setIsOpen(false);
+                  router.push('/notifications');
+                }}
                 className={`text-xs ${
                   isDark
                     ? 'text-gray-300 hover:text-white hover:bg-gray-700'

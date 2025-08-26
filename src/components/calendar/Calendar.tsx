@@ -19,6 +19,7 @@ interface CalendarDay {
   isCurrentMonth: boolean;
   isToday: boolean;
   isSelected: boolean;
+  thumbnailPath: string | null; // 썸네일 경로 추가
 }
 
 interface CalendarProps {
@@ -145,6 +146,7 @@ export function Calendar({
       // 해당 날짜의 우세한 감정 선택
       let dominantEmotion: EmotionType | null = null;
       let topKeywords: string[] = [];
+      let thumbnailPath: string | null = null;
 
       if (dayEntries.length > 0) {
         // 감정별 빈도 계산
@@ -176,6 +178,19 @@ export function Calendar({
             topKeywords = firstEntry.keywords.slice(0, 2);
           }
         }
+
+        // 썸네일 이미지가 있는 첫 번째 다이어리에서 썸네일 경로 가져오기
+        for (const entry of dayEntries) {
+          if (entry.images && entry.images.length > 0) {
+            const imageWithThumbnail = entry.images.find(
+              (img) => img.thumbnail_path,
+            );
+            if (imageWithThumbnail?.thumbnail_path) {
+              thumbnailPath = imageWithThumbnail.thumbnail_path;
+              break;
+            }
+          }
+        }
       }
 
       // 오늘 날짜를 로컬 시간대 기준으로 생성
@@ -191,6 +206,7 @@ export function Calendar({
         isCurrentMonth: current.getMonth() === currentDate.getMonth(),
         isToday: dateStr === todayStr,
         isSelected: dateStr === selectedDate,
+        thumbnailPath, // 썸네일 경로 추가
       });
 
       current.setDate(current.getDate() + 1);
@@ -330,7 +346,7 @@ export function Calendar({
             key={index}
             onClick={() => handleDateClick(day.dateStr)}
             className={cn(
-              'aspect-square p-2 relative group transition-colors',
+              'aspect-square p-2 relative group transition-colors overflow-hidden',
               // 기본 테두리 설정
               !day.isSelected && 'border border-gray-200',
               // 마지막 열 오른쪽 테두리 제거
@@ -371,10 +387,28 @@ export function Calendar({
                 : {}),
             }}
           >
+            {/* 썸네일 배경 이미지 */}
+            {day.thumbnailPath && (
+              <div className="absolute inset-0 w-full h-full flex items-center justify-center overflow-hidden">
+                <img
+                  src={`${
+                    process.env.NEXT_PUBLIC_API_BASE_URL ||
+                    'http://localhost:8000'
+                  }${day.thumbnailPath}`}
+                  alt="다이어리 썸네일"
+                  className="w-full h-full object-contain opacity-25 hover:opacity-35 transition-opacity duration-200"
+                  style={{
+                    maxWidth: '100%',
+                    maxHeight: '100%',
+                  }}
+                />
+              </div>
+            )}
+
             {/* 날짜 숫자 - 오른쪽 위로 이동 */}
             <div
               className={cn(
-                'absolute top-1 right-1 text-body-small',
+                'absolute top-1 right-1 text-body-small z-10',
                 // 현재 월 날짜는 폰트를 굵게
                 day.isCurrentMonth ? 'font-bold' : 'font-medium',
                 day.isToday
@@ -386,6 +420,15 @@ export function Calendar({
                 fontWeight: day.isCurrentMonth ? 'bold' : 'normal',
                 // 선택된 날짜는 다크모드에서도 검은색 글씨
                 ...(day.isSelected ? { color: '#000000' } : {}),
+                // 썸네일이 있을 때 텍스트 가독성 향상
+                ...(day.thumbnailPath
+                  ? {
+                      textShadow: '0 0 3px rgba(255, 255, 255, 0.8)',
+                      backgroundColor: 'rgba(255, 255, 255, 0.7)',
+                      borderRadius: '4px',
+                      padding: '2px 4px',
+                    }
+                  : {}),
               }}
             >
               {day.date.getDate()}
@@ -393,21 +436,30 @@ export function Calendar({
 
             {/* 감정 표시 - 중앙에 위치 */}
             {day.dominantEmotion && (
-              <div className="flex justify-center items-center h-full">
+              <div className="flex justify-center items-center h-full relative z-10">
                 <div
                   className={cn(
                     'w-6 h-6 rounded-full flex items-center justify-center text-xs',
                     EMOTION_COLORS[day.dominantEmotion],
                   )}
+                  style={{
+                    // 썸네일이 있을 때 배경 가독성 향상
+                    ...(day.thumbnailPath
+                      ? {
+                          backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                          boxShadow: '0 0 4px rgba(0, 0, 0, 0.2)',
+                        }
+                      : {}),
+                  }}
                 >
                   {EMOTION_EMOJIS[day.dominantEmotion]}
                 </div>
               </div>
             )}
 
-            {/* 키워드 표시 - 칸 아래쪽에 위치 */}
+            {/* 키워드 표시 - 칸 안쪽에 위치 */}
             {day.keywords && day.keywords.length > 0 && (
-              <div className="absolute bottom-1 left-1 right-1 hidden lg:block">
+              <div className="absolute bottom-2 left-1 right-1 relative z-10">
                 <div className="flex flex-wrap gap-1 justify-center">
                   {day.keywords
                     .slice(0, 2)
@@ -415,14 +467,21 @@ export function Calendar({
                       <span
                         key={index}
                         className={cn(
-                          'text-[10px] px-1 py-0.5 rounded bg-interactive-secondary text-text-primary',
+                          'text-[9px] px-1 py-0.5 rounded bg-interactive-secondary text-text-primary',
                           day.isCurrentMonth ? 'font-medium' : 'font-normal',
                         )}
                         style={{
-                          fontSize: '11px',
+                          fontSize: '9px',
                           lineHeight: '1.1',
                           // 선택된 날짜는 다크모드에서도 검은색 글씨
                           ...(day.isSelected ? { color: '#000000' } : {}),
+                          // 썸네일이 있을 때 가독성 향상
+                          ...(day.thumbnailPath
+                            ? {
+                                backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                                boxShadow: '0 0 2px rgba(0, 0, 0, 0.1)',
+                              }
+                            : {}),
                         }}
                       >
                         #{keyword}
@@ -434,7 +493,7 @@ export function Calendar({
 
             {/* 호버 툴팁 */}
             {day.entries.length > 0 && (
-              <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-2 opacity-0 group-hover:opacity-100 transition-opacity z-10 pointer-events-none">
+              <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-2 opacity-0 group-hover:opacity-100 transition-opacity z-20 pointer-events-none">
                 <div className="bg-gray-900 text-white text-caption px-2 py-1 rounded whitespace-nowrap">
                   {day.entries.length}개 기록
                   {day.dominantEmotion && (
@@ -442,6 +501,7 @@ export function Calendar({
                       ({EMOTION_EMOJIS[day.dominantEmotion]})
                     </span>
                   )}
+                  {day.thumbnailPath && <span className="ml-1">📷</span>}
                 </div>
               </div>
             )}
