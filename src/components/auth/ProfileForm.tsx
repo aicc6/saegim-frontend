@@ -24,6 +24,8 @@ export default function ProfileForm() {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isEmailChangeModalOpen, setIsEmailChangeModalOpen] = useState(false);
   const [isNicknameCheckModalOpen, setIsNicknameCheckModalOpen] = useState(false);
+  const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
+  const [withdrawPassword, setWithdrawPassword] = useState('');
   const [nicknameCheckResult, setNicknameCheckResult] = useState({
     available: false,
     message: '',
@@ -291,13 +293,72 @@ export default function ProfileForm() {
   };
 
   const handleAccountDelete = () => {
-    setIsDeleteModalOpen(true);
+    // 계정 타입에 따라 다른 처리
+    if (profileData.accountType === 'email') {
+      // 이메일 계정: 비밀번호 입력 모달 표시
+      setIsPasswordModalOpen(true);
+    } else {
+      // 소셜 계정: 바로 탈퇴 확인 모달 표시
+      setIsDeleteModalOpen(true);
+    }
   };
 
-  const handleConfirmDelete = () => {
-    // TODO: 계정 탈퇴 API 호출
-    console.log('계정 탈퇴 확인');
-    setIsDeleteModalOpen(false);
+  const handleConfirmDelete = async () => {
+    try {
+      setIsUpdating(true);
+      
+      // 계정 타입에 따라 다른 요청 데이터
+      const requestData = profileData.accountType === 'email' 
+        ? { password: withdrawPassword }
+        : { password: '' };
+      
+      // 탈퇴 API 호출
+      const response = await apiClient.post('/api/auth/withdraw', requestData);
+      
+      // 성공 토스트 메시지
+      toast({
+        title: "탈퇴 완료",
+        description: "계정이 성공적으로 탈퇴되었습니다. 30일 이내에 복구할 수 있습니다.",
+        duration: 5000,
+      });
+      
+      // 모달 닫기
+      setIsDeleteModalOpen(false);
+      setIsPasswordModalOpen(false);
+      setWithdrawPassword('');
+      
+      // 2초 후 로그인 페이지로 리다이렉트
+      setTimeout(() => {
+        router.push('/login');
+      }, 2000);
+      
+    } catch (error: any) {
+      console.error('탈퇴 실패:', error);
+      
+      // 에러 토스트 메시지
+      toast({
+        title: "탈퇴 실패",
+        description: error.response?.data?.detail || "탈퇴 처리 중 오류가 발생했습니다.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  const handlePasswordConfirm = () => {
+    if (!withdrawPassword.trim()) {
+      toast({
+        title: "입력 오류",
+        description: "비밀번호를 입력해주세요.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    // 비밀번호 입력 모달 닫고 탈퇴 확인 모달 표시
+    setIsPasswordModalOpen(false);
+    setIsDeleteModalOpen(true);
   };
 
   const handleCustomerService = () => {
@@ -524,14 +585,17 @@ export default function ProfileForm() {
           계정 설정
         </h2>
         <p className="text-sm text-text-secondary dark:text-text-dark-secondary mb-4">
-          계정을 탈퇴하면 모든 데이터가 영구적으로 삭제되며 복구할 수 없습니다.
+          {profileData.accountType === 'email' 
+            ? '계정을 탈퇴하면 모든 데이터가 30일간 보관 후 영구적으로 삭제됩니다.'
+            : '소셜 계정 탈퇴 시 모든 데이터가 30일간 보관 후 영구적으로 삭제됩니다.'
+          }
         </p>
         <div className="flex space-x-4">
           <button
             onClick={handleAccountDelete}
             className="px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
           >
-            계정 탈퇴
+            {profileData.accountType === 'email' ? '계정 탈퇴 (비밀번호 필요)' : '계정 탈퇴'}
           </button>
           <button
             onClick={handleCustomerService}
@@ -546,14 +610,81 @@ export default function ProfileForm() {
       <ConfirmModal
         isOpen={isDeleteModalOpen}
         title="계정 탈퇴"
-        message="정말로 계정을 탈퇴하시겠습니까? 이 작업은 되돌릴 수 없으며, 모든 데이터가 영구적으로 삭제됩니다."
+        message={`정말로 계정을 탈퇴하시겠습니까? 
+        
+${profileData.accountType === 'email' 
+  ? '• 비밀번호 확인이 완료되었습니다.\n• 계정과 모든 데이터가 30일간 보관됩니다.\n• 30일 이내에 복구할 수 있습니다.'
+  : '• 소셜 계정 탈퇴는 즉시 처리됩니다.\n• 계정과 모든 데이터가 30일간 보관됩니다.\n• 30일 이내에 복구할 수 있습니다.'
+}
+
+• 30일 경과 후 모든 데이터가 영구적으로 삭제됩니다.`}
         confirmText="예, 탈퇴하겠습니다"
         cancelText="아니오"
         onConfirm={handleConfirmDelete}
         onCancel={() => setIsDeleteModalOpen(false)}
       />
 
-             {/* 이메일 변경 모달 */}
+      {/* 비밀번호 입력 모달 (이메일 계정용) */}
+      {isPasswordModalOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-background-primary dark:bg-background-dark-secondary rounded-2xl shadow-2xl p-8 border border-border-subtle dark:border-border-dark max-w-md w-full mx-4">
+            <div className="text-center mb-6">
+              <h2 className="text-2xl font-bold text-text-primary dark:text-text-dark mb-2">
+                🔐 계정 탈퇴 확인
+              </h2>
+              <p className="text-text-secondary dark:text-text-dark-secondary mb-2">
+                이메일 계정 탈퇴를 위해 비밀번호를 입력해주세요.
+              </p>
+              <p className="text-sm text-text-secondary dark:text-text-dark-secondary">
+                탈퇴 후 30일 이내에 복구할 수 있습니다.
+              </p>
+            </div>
+
+            <div className="space-y-6">
+              <div>
+                <label
+                  htmlFor="withdraw-password"
+                  className="block text-sm font-medium text-text-primary dark:text-text-dark mb-2"
+                >
+                  비밀번호
+                </label>
+                <input
+                  type="password"
+                  id="withdraw-password"
+                  value={withdrawPassword}
+                  onChange={(e) => setWithdrawPassword(e.target.value)}
+                  className="w-full px-4 py-3 bg-gray-50 dark:bg-background-dark-tertiary border border-gray-300 dark:border-border-dark-subtle rounded-lg focus:outline-none focus:ring-2 focus:ring-sage-50 dark:focus:ring-border-dark-focus focus:border-sage-50 dark:focus:border-border-dark-focus text-gray-900 dark:text-text-dark-primary placeholder-gray-500 dark:placeholder-text-dark-placeholder transition-all duration-200"
+                  placeholder="비밀번호를 입력하세요"
+                  required
+                />
+              </div>
+
+              <div className="flex space-x-4">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsPasswordModalOpen(false);
+                    setWithdrawPassword('');
+                  }}
+                  className="flex-1 px-4 py-3 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+                >
+                  취소
+                </button>
+                <button
+                  type="button"
+                  onClick={handlePasswordConfirm}
+                  disabled={!withdrawPassword.trim()}
+                  className="flex-1 px-4 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
+                >
+                  확인
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+       {/* 이메일 변경 모달 */}
        {isEmailChangeModalOpen && (
          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
            <div className="bg-background-primary dark:bg-background-dark-secondary rounded-2xl shadow-2xl p-8 border border-border-subtle dark:border-border-dark max-w-md w-full mx-4">
