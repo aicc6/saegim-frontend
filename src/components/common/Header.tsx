@@ -4,12 +4,16 @@ import { Menu, X } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { useTheme } from 'next-themes';
+import { useAuthStore } from '@/stores/auth';
 import { Button } from '../ui/button';
 import ThemeToggle from '../ui/custom/ThemeToggle';
 
 export default function Header() {
+  const router = useRouter();
   const { resolvedTheme } = useTheme();
+  const { isAuthenticated, logout, clearStorage } = useAuthStore();
   const [mounted, setMounted] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
@@ -24,6 +28,17 @@ export default function Header() {
 
   const isDark = resolvedTheme === 'dark';
 
+  const handleLogoClick = () => {
+    // 인증된 사용자인 경우 로그아웃 처리 후 랜딩페이지로 이동
+    if (isAuthenticated) {
+      clearStorage();
+      router.push('/landing?status=logout');
+    } else {
+      // 비인증 사용자는 랜딩페이지로 이동
+      router.push('/landing');
+    }
+  };
+
   return (
     <nav
       className={`border-b sticky top-0 z-50 ${
@@ -33,7 +48,10 @@ export default function Header() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           {/* 로고 */}
-          <Link href="/" className="flex items-center space-x-3">
+          <button
+            onClick={handleLogoClick}
+            className="flex items-center space-x-3 hover:opacity-80 transition-opacity"
+          >
             <div className="w-8 h-8 rounded-full flex items-center justify-center">
               <Image
                 src="/images/logoop.png"
@@ -50,7 +68,7 @@ export default function Header() {
             >
               새김
             </span>
-          </Link>
+          </button>
 
           {/* 데스크톱 메뉴 */}
           <div className="hidden md:flex items-center space-x-6">

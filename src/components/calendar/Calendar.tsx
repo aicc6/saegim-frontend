@@ -102,8 +102,8 @@ export function Calendar({
             });
           }
         } else if (response.status === 401) {
-          console.log('❌ Calendar: 인증 실패, 로그인 페이지로 리다이렉트');
-          window.location.href = '/login';
+          console.log('❌ Calendar: 인증 실패, 랜딩 페이지로 리다이렉트');
+          window.location.href = '/?status=auth_failed';
         }
       } catch (error) {
         console.error('❌ Calendar: API 호출 실패', error);

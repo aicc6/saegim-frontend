@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useTheme } from 'next-themes';
 import { useNotifications } from '@/hooks/use-notifications';
 import { useFCMStore } from '@/stores/fcm';
+import { useAuthStore } from '@/stores/auth';
 import { authApi } from '@/lib/api';
 import ThemeToggle from '../ui/custom/ThemeToggle';
 import NotificationPopover from './NotificationPopover';
@@ -19,6 +20,7 @@ interface UserInfo {
 export default function AuthenticatedHeader() {
   const router = useRouter();
   const { resolvedTheme } = useTheme();
+  const { logout, clearStorage } = useAuthStore();
   const [mounted, setMounted] = useState(false);
   const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -64,6 +66,12 @@ export default function AuthenticatedHeader() {
     router.push('/profile');
   };
 
+  const handleLogoClick = () => {
+    // 로고 클릭 시 로그아웃 처리 후 랜딩페이지로 이동
+    clearStorage();
+    router.push('/landing?status=logout');
+  };
+
   return (
     <div
       className={`border-b h-18 px-12 w-full flex items-center ${
@@ -72,7 +80,10 @@ export default function AuthenticatedHeader() {
     >
       <div className="max-w-full mx-auto flex items-center justify-between w-full">
         {/* 좌측: 로고와 서비스명 */}
-        <div className="flex items-center space-x-3">
+        <button
+          onClick={handleLogoClick}
+          className="flex items-center space-x-3 hover:opacity-80 transition-opacity"
+        >
           <div className="w-8 h-8 rounded-full flex items-center justify-center">
             <Image
               src="/images/logo.webp"
@@ -89,7 +100,7 @@ export default function AuthenticatedHeader() {
           >
             새김
           </h1>
-        </div>
+        </button>
 
         {/* 우측: 알림, 테마 토글, 프로필 */}
         <div className="flex items-center space-x-4">

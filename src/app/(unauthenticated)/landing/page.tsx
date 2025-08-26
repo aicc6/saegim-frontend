@@ -1,10 +1,16 @@
 'use client';
 
 import Link from 'next/link';
-import { Heart, Sparkles, Calendar, Shield, Play } from 'lucide-react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { useEffect, useState, useRef } from 'react';
+import { Heart, Sparkles, Calendar, Shield, Play, CheckCircle, AlertCircle, Info } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { useToast } from '@/hooks/use-toast';
+import { Toaster } from '@/components/ui/toaster';
+import { ToastAction, type ToastActionElement } from '@/components/ui/toast';
+
 
 const features = [
   {
@@ -37,7 +43,141 @@ const features = [
   },
 ];
 
+
+
 export default function LandingPage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const { toast } = useToast();
+  const statusTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    // URL 파라미터에서 상태 확인
+    const status = searchParams.get('status');
+    const message = searchParams.get('message');
+
+    if (status) {
+      const messages: Record<string, { type: 'success' | 'info' | 'warning'; title: string; description: string; icon: React.ComponentType<any> }> = {
+        logout: {
+          type: 'success',
+          title: '로그아웃되었습니다',
+          description: '안전하게 로그아웃되었습니다. 언제든지 다시 로그인하실 수 있습니다.',
+          icon: CheckCircle,
+        },
+        withdraw: {
+          type: 'success',
+          title: '✅ 계정 탈퇴가 완료되었습니다',
+          description: searchParams.get('message') || '계정이 성공적으로 탈퇴되었습니다. 30일 이내에 복구할 수 있으며, 그 이후에는 모든 데이터가 영구적으로 삭제됩니다.',
+          icon: CheckCircle,
+        },
+
+        token_expired: {
+          type: 'warning',
+          title: '세션이 만료되었습니다',
+          description: '보안을 위해 다시 로그인해주세요.',
+          icon: AlertCircle,
+        },
+      };
+
+      const selectedMessage = messages[status];
+      if (selectedMessage) {
+        // 기존 타이머가 있으면 정리
+        if (statusTimerRef.current) {
+          clearTimeout(statusTimerRef.current);
+        }
+        
+        // 토스트 알림 표시 (탈퇴: 5초, 세션 만료: 무제한)
+        const duration = status === 'withdraw' ? 5000 : undefined;
+        
+        // 세션 만료 토스트의 경우 클릭 가능한 액션 추가
+        const toastConfig: {
+          title: string;
+          description: string;
+          variant: 'default' | 'destructive';
+          duration?: number;
+          className: string;
+          action?: ToastActionElement;
+        } = {
+          title: selectedMessage.title,
+          description: selectedMessage.description,
+          variant: selectedMessage.type === 'success' ? 'default' : 
+                   selectedMessage.type === 'warning' ? 'destructive' : 'default',
+          duration: duration,
+          className: "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-600 text-gray-900 dark:text-white",
+        };
+
+        // 세션 만료 토스트의 경우 로그인 버튼 액션 추가
+        if (status === 'token_expired') {
+          toastConfig.action = (
+            <ToastAction
+              altText="로그인 페이지로 이동"
+              onClick={() => {
+                // 타이머가 있으면 정리
+                if (statusTimerRef.current) {
+                  clearTimeout(statusTimerRef.current);
+                  statusTimerRef.current = null;
+                }
+                // URL 파라미터 정리하고 로그인 페이지로 이동
+                router.replace('/landing');
+                router.push('/login');
+              }}
+            >
+              로그인하기
+            </ToastAction>
+          );
+        }
+
+        // 탈퇴의 경우 토스트 표시하지 않음 (프로필 페이지에서 이미 표시됨)
+        if (status === 'withdraw') {
+          // 즉시 URL 파라미터 정리
+          router.replace('/landing');
+        } else {
+          // 다른 상태는 토스트 알림 표시
+          toast(toastConfig);
+          
+          if (status === 'token_expired') {
+            // 세션 만료의 경우 토스트 시간에 맞춰서 URL 파라미터 정리
+            const timer = setTimeout(() => {
+              statusTimerRef.current = null;
+              router.replace('/landing');
+            }, duration);
+            
+            statusTimerRef.current = timer;
+          }
+        }
+      }
+    }
+    
+    // cleanup 함수: 컴포넌트 언마운트 시 타이머 정리
+    return () => {
+      if (statusTimerRef.current) {
+        clearTimeout(statusTimerRef.current);
+      }
+    };
+  }, [searchParams, router]);
+
+  const handleStartNow = () => {
+    // 타이머가 있으면 정리하고 URL 파라미터도 정리
+    if (statusTimerRef.current) {
+      clearTimeout(statusTimerRef.current);
+      statusTimerRef.current = null;
+    }
+    // URL 파라미터 정리
+    router.replace('/landing');
+    router.push('/login');
+  };
+
+  const handleViewRecords = () => {
+    // 타이머가 있으면 정리하고 URL 파라미터도 정리
+    if (statusTimerRef.current) {
+      clearTimeout(statusTimerRef.current);
+      statusTimerRef.current = null;
+    }
+    // URL 파라미터 정리
+    router.replace('/landing');
+    router.push('/login?redirect=records');
+  };
+
   return (
     <>
       <section className="relative overflow-hidden py-20 lg:py-32">
@@ -66,78 +206,76 @@ export default function LandingPage() {
                   당신의 소중한 감정을 기록하고, 마음의 평화를 찾아보세요.
                 </span>
               </p>
-            </div>
 
-            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
-              <Link href="/write">
+              <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
                 <Button
                   size="lg"
                   className="bg-sage-50 hover:bg-sage-60 text-white w-full sm:w-auto"
+                  onClick={handleStartNow}
                 >
                   <Heart className="w-4 h-4 mr-2" />
                   지금 바로 시작하기
                 </Button>
-              </Link>
-              <Link href="/list">
                 <Button
                   size="lg"
                   variant="outline"
-                  className="border-sage-30 bg-transparent w-full sm:w-auto"
+                  className="border-sage-30 bg-white dark:bg-gray-800 text-sage-100 dark:text-gray-100 hover:bg-sage-10 dark:hover:bg-gray-700 dark:border-gray-600 w-full sm:w-auto shadow-sm"
+                  onClick={handleViewRecords}
                 >
                   <Play className="w-4 h-4 mr-2" />
                   기록 보기
                 </Button>
-              </Link>
+              </div>
             </div>
-          </div>
 
-          {/* 이미지/일러스트 */}
-          <div className="relative">
-            <div className="relative z-10">
-              <Card className="p-6 bg-white/80 backdrop-blur-sm border-sage-20 shadow-xl">
-                <CardContent className="p-0 space-y-4">
-                  <div className="flex items-center space-x-3">
-                    <div className="w-10 h-10 bg-sage-20 rounded-full flex items-center justify-center">
-                      <Heart className="w-5 h-5 text-sage-70" />
+            {/* 이미지/일러스트 */}
+            <div className="relative">
+              <div className="relative z-10">
+                <Card className="p-6 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border-sage-20 dark:border-gray-700 shadow-xl">
+                  <CardContent className="p-0 space-y-4">
+                    <div className="flex items-center space-x-3">
+                      <div className="w-10 h-10 bg-sage-20 rounded-full flex items-center justify-center">
+                        <Heart className="w-5 h-5 text-sage-70" />
+                      </div>
+                      <div>
+                        <h3 className="font-medium text-sage-100">오늘의 감정</h3>
+                        <p className="text-sm text-sage-70">평온한 하루</p>
+                      </div>
                     </div>
-                    <div>
-                      <h3 className="font-medium text-sage-100">오늘의 감정</h3>
-                      <p className="text-sm text-sage-70">평온한 하루</p>
+                    <div className="bg-sage-10 p-4 rounded-lg">
+                      <p className="text-sage-80 font-serif leading-relaxed text-center">
+                        &quot;바람에 흔들리는 나뭇잎처럼
+                        <br />
+                        마음도 자연스럽게 흘러가네
+                        <br />
+                        오늘이라는 선물을 받아
+                        <br />
+                        감사의 마음으로 새김하며&quot;
+                      </p>
                     </div>
-                  </div>
-                  <div className="bg-sage-10 p-4 rounded-lg">
-                    <p className="text-sage-80 font-serif leading-relaxed text-center">
-                      &quot;바람에 흔들리는 나뭇잎처럼
-                      <br />
-                      마음도 자연스럽게 흘러가네
-                      <br />
-                      오늘이라는 선물을 받아
-                      <br />
-                      감사의 마음으로 새김하며&quot;
-                    </p>
-                  </div>
-                  <div className="flex justify-between items-center text-xs text-sage-60">
-                    <span>AI 생성 글귀</span>
-                    <span>2025.01.16</span>
-                  </div>
-                </CardContent>
-              </Card>
+                    <div className="flex justify-between items-center text-xs text-sage-60">
+                      <span>AI 생성 글귀</span>
+                      <span>2025.01.16</span>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+              {/* 배경 장식 */}
+              <div className="absolute -top-4 -right-4 w-72 h-72 bg-sage-30 rounded-full opacity-20 blur-3xl"></div>
+              <div className="absolute -bottom-8 -left-8 w-64 h-64 bg-sage-40 rounded-full opacity-20 blur-3xl"></div>
             </div>
-            {/* 배경 장식 */}
-            <div className="absolute -top-4 -right-4 w-72 h-72 bg-sage-30 rounded-full opacity-20 blur-3xl"></div>
-            <div className="absolute -bottom-8 -left-8 w-64 h-64 bg-sage-40 rounded-full opacity-20 blur-3xl"></div>
           </div>
         </div>
       </section>
 
       {/* 주요 기능 섹션 */}
-      <section id="features" className="py-20 bg-white">
+      <section id="features" className="py-20 bg-white dark:bg-gray-900">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center space-y-4 mb-16">
-            <h2 className="text-3xl lg:text-4xl font-bold text-sage-100">
+            <h2 className="text-3xl lg:text-4xl font-bold text-sage-100 dark:text-gray-100">
               새김만의 특별한 기능
             </h2>
-            <p className="text-lg text-sage-70 max-w-2xl mx-auto">
+            <p className="text-lg text-sage-70 dark:text-gray-300 max-w-2xl mx-auto">
               AI 기술과 자연 치유의 만남으로 당신만의 특별한 감정 기록 경험을
               제공합니다
             </p>
@@ -149,7 +287,7 @@ export default function LandingPage() {
               return (
                 <Card
                   key={index}
-                  className="border-sage-20 hover:shadow-lg transition-shadow"
+                  className="border-sage-20 dark:border-gray-700 hover:shadow-lg transition-shadow bg-white dark:bg-gray-800"
                 >
                   <CardContent className="p-6 text-center space-y-4">
                     <div
@@ -157,10 +295,10 @@ export default function LandingPage() {
                     >
                       <Icon className="w-6 h-6" />
                     </div>
-                    <h3 className="text-lg font-semibold text-sage-100">
+                    <h3 className="text-lg font-semibold text-sage-100 dark:text-gray-100">
                       {feature.title}
                     </h3>
-                    <p className="text-sage-70 text-sm leading-relaxed">
+                    <p className="text-sage-70 dark:text-gray-300 text-sm leading-relaxed">
                       {feature.description}
                     </p>
                   </CardContent>
@@ -170,6 +308,7 @@ export default function LandingPage() {
           </div>
         </div>
       </section>
+      <Toaster />
     </>
   );
 }

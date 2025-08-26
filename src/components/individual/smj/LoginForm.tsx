@@ -7,7 +7,11 @@ import { authApi } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
 import { useAuthStore } from '@/stores/auth';
 
-export default function LoginForm() {
+interface LoginFormProps {
+  redirectTo?: string | null;
+}
+
+export default function LoginForm({ redirectTo }: LoginFormProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { toast } = useToast();
@@ -80,7 +84,9 @@ export default function LoginForm() {
         variant: 'default',
       });
 
-      router.push('/');
+      // 리다이렉트 경로가 있으면 해당 경로로, 없으면 메인 페이지로
+      const redirectPath = redirectTo === 'records' ? '/list' : '/';
+      router.push(redirectPath);
     } catch (error: any) {
       console.error('로그인 실패:', error);
       console.error('에러 상세 정보:', {

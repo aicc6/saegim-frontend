@@ -80,8 +80,12 @@ export function Sidebar() {
         variant: 'default',
       });
       
-      // 로그인 페이지로 리다이렉트
-      router.push('/login');
+      // 랜딩 페이지로 리다이렉트 후 강제 새로고침
+      router.push('/landing?status=logout');
+      // 클라이언트 상태 완전 정리를 위해 새로고침
+      setTimeout(() => {
+        window.location.reload();
+      }, 100);
     } catch (error) {
       console.error('로그아웃 처리 중 오류:', error);
       // 에러가 발생해도 클라이언트 상태는 정리하고 로그인 페이지로 이동
@@ -94,7 +98,11 @@ export function Sidebar() {
         variant: 'default',
       });
       
-      router.push('/login');
+      router.push('/landing?status=logout');
+      // 클라이언트 상태 완전 정리를 위해 새로고침
+      setTimeout(() => {
+        window.location.reload();
+      }, 100);
     }
   };
 

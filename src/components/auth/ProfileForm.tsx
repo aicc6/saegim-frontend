@@ -234,14 +234,18 @@ export default function ProfileForm() {
         // URL 파라미터 정리
         router.replace('/profile');
         
-        // 2초 후 로그인 페이지로 리다이렉트
+        // 2초 후 랜딩 페이지로 리다이렉트
         setTimeout(() => {
           toast({
             title: "로그아웃",
             description: "새로운 이메일로 다시 로그인해주세요.",
             duration: 3000,
           });
-          router.push('/login');
+          router.push('/landing?status=logout');
+          // 클라이언트 상태 완전 정리를 위해 새로고침
+          setTimeout(() => {
+            window.location.reload();
+          }, 100);
         }, 2000);
       }
 
@@ -315,27 +319,61 @@ export default function ProfileForm() {
       // 탈퇴 API 호출
       const response = await apiClient.post('/api/auth/withdraw', requestData);
       
-      // 성공 토스트 메시지
-      toast({
-        title: "탈퇴 완료",
-        description: "계정이 성공적으로 탈퇴되었습니다. 30일 이내에 복구할 수 있습니다.",
-        duration: 5000,
-      });
-      
-      // 모달 닫기
-      setIsDeleteModalOpen(false);
-      setIsPasswordModalOpen(false);
-      setWithdrawPassword('');
-      
-      // 2초 후 로그인 페이지로 리다이렉트
-      setTimeout(() => {
-        router.push('/login');
-      }, 2000);
+             // API 응답이 성공인지 확인
+       if (response && response.success) {
+                   // 성공 토스트 메시지 (5.5초 표시)
+          toast({
+            title: "✅ 계정 탈퇴 완료",
+            description: "계정이 성공적으로 탈퇴되었습니다. 30일 이내에 복구할 수 있으며, 그 이후에는 모든 데이터가 영구적으로 삭제됩니다.",
+            duration: 5500, // 5.5초
+          });
+          
+          // 모달 닫기
+          setIsDeleteModalOpen(false);
+          setIsPasswordModalOpen(false);
+          setWithdrawPassword('');
+          
+          // 5.5초 후 랜딩 페이지로 리다이렉트
+          setTimeout(() => {
+            router.push('/landing');
+            // 클라이언트 상태 완전 정리를 위해 새로고침
+            setTimeout(() => {
+              window.location.reload();
+            }, 100);
+          }, 5500);
+      } else {
+        throw new Error('탈퇴 처리에 실패했습니다.');
+      }
       
     } catch (error: any) {
       console.error('탈퇴 실패:', error);
       
-      // 에러 토스트 메시지
+             // 401 에러인 경우 (토큰 만료 또는 사용자 삭제됨) 랜딩 페이지로 리다이렉트
+       if (error.message && error.message.includes('401')) {
+         // 모달 닫기
+         setIsDeleteModalOpen(false);
+         setIsPasswordModalOpen(false);
+         setWithdrawPassword('');
+         
+                   // 401 에러 시에도 탈퇴 완료 토스트 표시 (5.5초)
+          toast({
+            title: "✅ 계정 탈퇴 완료",
+            description: "계정이 성공적으로 탈퇴되었습니다. 30일 이내에 복구할 수 있으며, 그 이후에는 모든 데이터가 영구적으로 삭제됩니다.",
+            duration: 5500, // 5.5초
+          });
+          
+          // 5.5초 후 랜딩 페이지로 리다이렉트
+          setTimeout(() => {
+            router.push('/landing');
+            // 클라이언트 상태 완전 정리를 위해 새로고침
+            setTimeout(() => {
+              window.location.reload();
+            }, 100);
+          }, 5500);
+         return;
+       }
+      
+      // 다른 에러의 경우 에러 토스트 메시지
       toast({
         title: "탈퇴 실패",
         description: error.response?.data?.detail || "탈퇴 처리 중 오류가 발생했습니다.",
