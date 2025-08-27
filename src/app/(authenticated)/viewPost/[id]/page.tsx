@@ -145,6 +145,12 @@ export default function ViewPostPage({
         '📝 ViewPost: 해당 ID의 다이어리를 찾을 수 없습니다:',
         entryId,
       );
+
+      // diaries에서 찾을 수 없는 경우 API로 직접 조회 시도
+      if (diaries.length === 0) {
+        console.log('📝 ViewPost: diaries가 비어있음, API로 직접 조회 시도');
+        fetchDiary(entryId);
+      }
     }
   }, [entryId, diaries, deletedImageIds]); // entry 의존성 제거, deletedImageIds 추가
 
@@ -899,7 +905,7 @@ export default function ViewPostPage({
                                   process.env.NEXT_PUBLIC_API_BASE_URL ||
                                   'http://localhost:8000'
                                 }/api/public/image-proxy?url=${encodeURIComponent(
-                                  image.thumbnail_path
+                                  image.thumbnail_path,
                                 )}`
                               : ''
                           }

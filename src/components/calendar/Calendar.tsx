@@ -610,7 +610,7 @@ export const Calendar = forwardRef<CalendarRef, CalendarProps>(
                       className="flex-shrink-0 relative group cursor-pointer overflow-hidden"
                       style={{
                         width: 'clamp(40px, 8vw, 90px)',
-                        height: 'clamp(30px, 6vw, 80px)',
+                        height: 'clamp(30px, 5vw, 70px)',
                         maxWidth: '70%',
                         maxHeight: '40%',
                       }}
@@ -707,9 +707,16 @@ export const Calendar = forwardRef<CalendarRef, CalendarProps>(
                     {day.dominantEmotion && (
                       <div
                         className={cn(
-                          'w-5 h-5 rounded-full flex items-center justify-center text-xs',
+                          'rounded-full flex items-center justify-center',
                           EMOTION_COLORS[day.dominantEmotion],
                         )}
+                        style={{
+                          width: 'calc(clamp(40px, 8vw, 90px) / 3)',
+                          height: 'calc(clamp(40px, 8vw, 90px) / 3)',
+                          minWidth: '13px',
+                          minHeight: '13px',
+                          fontSize: 'calc(clamp(40px, 8vw, 90px) / 3 * 0.6)',
+                        }}
                       >
                         {EMOTION_EMOJIS[day.dominantEmotion]}
                       </div>
