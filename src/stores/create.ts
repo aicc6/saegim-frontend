@@ -6,8 +6,8 @@ import { immer } from 'zustand/middleware/immer';
 import { apiClient } from '@/lib/api';
 
 // ===== 타입 정의 =====
-export type WritingStyle = '시' | '단편글';
-export type LengthOption = '단문' | '중문' | '장문';
+export type WritingStyle = 'poem' | 'short_story';
+export type LengthOption = 'short' | 'medium' | 'long';
 export type EmotionOption = string;
 
 // AI 생성 결과 타입
@@ -53,71 +53,71 @@ export class APIError extends Error {
 // ===== 기본 설정 =====
 const DEFAULT_CONFIG: CreateConfig = {
   styles: [
-    { value: '시', label: '시', displayName: 'poem' },
-    { value: '단편글', label: '단편글', displayName: 'prose' },
+    { value: 'poem', label: '시', displayName: 'poem' },
+    { value: 'short_story', label: '단편글', displayName: 'prose' },
   ],
   lengths: [
-    { value: '단문', label: '단문', displayName: 'short' },
-    { value: '중문', label: '중문', displayName: 'medium' },
-    { value: '장문', label: '장문', displayName: 'long' },
+    { value: 'short', label: '단문', displayName: 'short' },
+    { value: 'medium', label: '중문', displayName: 'medium' },
+    { value: 'long', label: '장문', displayName: 'long' },
   ],
 };
 
 // ===== API 함수들 =====
-export async function generateAIText(
-  prompt: string,
-  style: string,
-  length: string,
-  emotion: string = '',
-  regeneration_count: number = 0,
-  sessionId?: string,
-  images?: File[],
-): Promise<AIGenerationResult> {
+export async function generateAIText(params: {
+  prompt: string;
+  style: string;
+  length: string;
+  emotion?: string;
+  regeneration_count?: number;
+  sessionId?: string | null;
+  images?: File[];
+}): Promise<AIGenerationResult> {
   try {
+    const {
+      prompt,
+      style,
+      length,
+      emotion = '',
+      regeneration_count = 0,
+      sessionId,
+      images,
+    } = params;
+
+    // API 요청 본문 구성 (undefined 값은 제외)
+    const requestBody: Record<string, unknown> = {
+      prompt,
+      style,
+      length,
+      emotion,
+      regeneration_count,
+    };
+
+    // sessionId가 있을 때만 추가
+    if (sessionId && sessionId.trim() !== '') {
+      requestBody.sessionId = sessionId;
+    }
+
+    // images가 있을 때만 추가
+    if (images && images.length > 0) {
+      requestBody.images = images;
+    }
+
     console.log('🚀 API 호출 시작:', {
       url: '/api/ai-generate',
       method: 'POST',
-      body: {
-        prompt,
-        style,
-        length,
-        emotion,
-        regeneration_count,
-        sessionId,
-        images,
-      },
+      body: requestBody,
     });
 
     const response = await apiClient.post<AIGenerationResult>(
       '/api/ai-generate',
-      {
-        prompt,
-        style,
-        length,
-        emotion,
-        regeneration_count,
-        sessionId,
-        images,
-      },
+      requestBody,
     );
 
-    // ApiResponse<AIGenerationResult>에서 data 추출
     return response.data;
   } catch (error) {
-    console.error('💥 API 호출 중 오류 발생:', error);
-
-    if (error instanceof APIError) {
-      throw error;
-    }
-
-    // 네트워크 오류인지 확인
-    if (error instanceof TypeError && error.message.includes('fetch')) {
-      throw new APIError(
-        '네트워크 연결을 확인해주세요. 백엔드 서버가 실행 중인지 확인하세요.',
-      );
-    }
-
-    throw new APIError('AI 텍스트 생성 중 오류가 발생했습니다.');
+    console.error('❌ AI 텍스트 생성 API 호출 실패:', error);
+    throw error;
   }
 }
 
@@ -162,14 +162,14 @@ export const useCreateStore = create<CreateState>()(
       // 초기 상태
       config: DEFAULT_CONFIG,
       prompt: '',
-      style: '시',
-      length: '단문',
+      style: 'poem',
+      length: 'short',
       emotion: '',
       isGenerating: false,
       error: null,
       generatedText: null,
       generatedKeywords: null,
-      sessionId: '',
+      sessionId: null, // 빈 문자열이 아닌 null로 설정
 
       // 기본 액션들
       setPrompt: (prompt) =>
@@ -204,21 +204,22 @@ export const useCreateStore = create<CreateState>()(
         });
 
         try {
-          // AI 텍스트 생성 API 호출
-          const response = await generateAIText(
-            prompt.trim(),
+          // AI 텍스트 생성 API 호출 (새 생성 시 sessionId는 전달하지 않음)
+          const response = await generateAIText({
+            prompt: prompt.trim(),
             style,
             length,
-            emotion || '',
-            1,
-          );
+            emotion: emotion || '',
+            regeneration_count: 1,
+            // sessionId는 전달하지 않음 (백엔드에서 새로 생성)
+          });
           console.log('response', response);
 
-          // 결과 저장
+          // 결과 저장 (새로운 sessionId로 업데이트)
           set((state) => {
             state.generatedText = response.ai_generated_text;
             state.generatedKeywords = response.keywords;
-            state.sessionId = response.session_id; // session_id 저장
+            state.sessionId = response.session_id; // 새로운 session_id 저장
             state.isGenerating = false;
           });
         } catch (error) {

@@ -84,7 +84,23 @@ export default function CreateAi() {
 
   // 글 생성 후 세션 페이지로 이동
   const handleGenerateText = useCallback(async () => {
-    if (!prompt.trim() || isGenerating) return;
+    // 입력값 검증
+    if (!prompt.trim()) {
+      alert('텍스트를 입력해주세요');
+      return;
+    }
+
+    if (!style) {
+      alert('문체를 선택해주세요');
+      return;
+    }
+
+    if (!length) {
+      alert('길이를 선택해주세요');
+      return;
+    }
+
+    if (isGenerating) return;
 
     try {
       // generateText 실행 (이미 세션 생성 로직 포함)
@@ -94,6 +110,8 @@ export default function CreateAi() {
       const { sessionId } = useCreateStore.getState();
 
       if (sessionId) {
+        // textarea 초기화
+        setPrompt('');
         // 세션 ID로 리다이렉트
         router.push(`/${sessionId}`);
       } else {
@@ -102,7 +120,16 @@ export default function CreateAi() {
     } catch (error) {
       console.error('글 생성 실패:', error);
     }
-  }, [prompt, emotion, isGenerating, generateText, router]);
+  }, [
+    prompt,
+    style,
+    length,
+    emotion,
+    isGenerating,
+    generateText,
+    router,
+    setPrompt,
+  ]);
 
   // 메모이제이션된 옵션들
   const { styleOptions, lengthOptions } = useMemo(
@@ -321,7 +348,7 @@ export default function CreateAi() {
       <button
         onClick={handleGenerateText}
         disabled={isGenerating || !prompt.trim()}
-        className="mt-8 w-full rounded-xl bg-sage-90 px-6 py-4 text-body-large font-semibold text-text-on-color hover:bg-sage-100 active:bg-sage-80 disabled:opacity-60 transition-colors shadow-card"
+        className="mt-8 w-full rounded-xl bg-sage-90 px-6 py-4 text-body-large font-semibold text-text-on-color hover:bg-sage-100 active:bg-sage-80 disabled:opacity-40 transition-colors shadow-card"
       >
         {isGenerating ? (
           <span className="inline-flex items-center justify-center gap-2">

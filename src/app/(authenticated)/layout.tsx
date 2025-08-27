@@ -33,18 +33,20 @@ export default function AuthenticatedLayout({
             <div className="min-h-screen bg-sage-10 dark:bg-gray-900">
               <Sidebar />
 
-          <MainContent>
-            {/* 헤더 */}
-            <AuthenticatedHeader />
-            
-            {/* 메인 콘텐츠 영역 - flex-1로 확장 */}
-            <div className="flex-1">{children}</div>
-            
-            {/* 푸터 - 항상 바닥에 위치 */}
-            <Footer />
-          </MainContent>
-        </div>
-      </div>
-    </SidebarProvider>
+              <MainContent>
+                {/* 헤더 */}
+                <AuthenticatedHeader />
+
+                {/* 메인 콘텐츠 영역 - flex-1로 확장 */}
+                <div className="flex-1">{children}</div>
+
+                {/* 푸터 - 항상 바닥에 위치 */}
+                <Footer />
+              </MainContent>
+            </div>
+          </div>
+        </SidebarProvider>
+      </FCMProvider>
+    </AuthGuard>
   );
 }

@@ -25,6 +25,7 @@ interface GeneratedMessage {
   length: LengthOption;
   regenerationCount: number;
   sessionId?: string;
+  prompt: string; // 프롬프트도 저장하여 재생성시 구분
 }
 
 // CreateChat 컴포넌트에 sessionId prop 추가
@@ -43,6 +44,11 @@ export default function CreateChat({ sessionId }: CreateChatProps) {
   const [generatedMessages, setGeneratedMessages] = useState<
     GeneratedMessage[]
   >([]);
+
+  // 현재 활성화된 sessionId 추적 (재생성용)
+  const [currentActiveSessionId, setCurrentActiveSessionId] = useState<
+    string | null
+  >(null);
 
   // create.ts store에서 필요한 상태와 함수만 가져오기
   const {
@@ -67,9 +73,6 @@ export default function CreateChat({ sessionId }: CreateChatProps) {
     setSelectedEmotion: setEmotion,
     getEmotionConfig,
   } = useEmotionStore();
-
-  // 재생성 횟수 상태 추가
-  const [regenerationCount, setRegenerationCount] = useState(1);
 
   // 임시 옵션 상태 (엔터를 눌러야 실제 적용)
   const [tempStyle, setTempStyle] = useState<WritingStyle>(style);
@@ -146,10 +149,11 @@ export default function CreateChat({ sessionId }: CreateChatProps) {
         style,
         length,
         regenerationCount: 1, // 새 메시지는 1번째 생성
-        sessionId,
+        sessionId: currentActiveSessionId || '', // 현재 활성화된 sessionId 사용
+        prompt: prompt, // 현재 프롬프트 저장
       };
 
-      // 새 메시지는 항상 배열에 추가 (sessionId와 관계없이)
+      // 새 메시지는 항상 배열에 추가
       setGeneratedMessages((prev) => [...prev, newMessage]);
     }
   }, [
@@ -158,59 +162,108 @@ export default function CreateChat({ sessionId }: CreateChatProps) {
     emotion,
     style,
     length,
-    sessionId,
+    currentActiveSessionId,
     isGenerating,
+    prompt,
   ]);
 
-  // 재생성 핸들러
-  const handleRegenerate = useCallback(async () => {
+  // 새 글 생성 핸들러 (새로운 sessionId 생성)
+  const handleNewGeneration = useCallback(async () => {
     if (!prompt.trim() || isGenerating) return;
 
     try {
-      // 재생성 횟수 증가
-      const newCount = regenerationCount + 1;
-      setRegenerationCount(newCount);
+      // 새로운 sessionId 생성
+      const newSessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      setCurrentActiveSessionId(newSessionId);
 
-      console.log(`재생성 시작 (${newCount}번째):`, { prompt, emotion });
+      console.log('새 글 생성 - 새로운 sessionId:', newSessionId);
 
-      // generateAIText를 직접 호출하여 regeneration_count 전달
-      const response = await generateAIText(
-        prompt,
+      // generateAIText를 직접 호출 (sessionId 없이 - 백엔드에서 새로 생성)
+      const response = await generateAIText({
+        prompt: prompt.trim(),
         style,
         length,
         emotion,
-        newCount,
-      );
+        regeneration_count: 1,
+        // sessionId 전달하지 않음 - 백엔드에서 새로 생성
+      });
 
-      // 같은 session_id를 가진 가장 최근 메시지를 찾아서 업데이트
-      setGeneratedMessages((prev) => {
-        // sessionId가 같은 메시지들 중에서 가장 최근 것(regenerationCount가 가장 높은 것)을 찾기
-        const messagesWithSameSession = prev.filter(
-          (msg) => msg.sessionId === sessionId,
+      // 생성된 sessionId로 업데이트
+      setCurrentActiveSessionId(response.session_id);
+
+      const newMessage: GeneratedMessage = {
+        id: `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        text: response.ai_generated_text,
+        keywords: response.keywords || [],
+        emotion: response.ai_emotion as EmotionOption,
+        style,
+        length,
+        regenerationCount: 1,
+        sessionId: response.session_id,
+        prompt: prompt.trim(),
+      };
+
+      setGeneratedMessages((prev) => [...prev, newMessage]);
+
+      // 메시지 전송 후 처리
+      setSelectedImages([]);
+      setPrompt('');
+      setTimeout(scrollToBottom, 200);
+    } catch (error) {
+      console.error('💥 새 글 생성 실패:', error);
+    }
+  }, [prompt, emotion, isGenerating, style, length]);
+
+  // 재생성 핸들러 (기존 sessionId 사용)
+  const handleRegenerate = useCallback(
+    async (
+      messageSessionId: string,
+      messagePrompt: string,
+      messageEmotion: EmotionOption,
+      messageStyle: WritingStyle,
+      messageLength: LengthOption,
+    ) => {
+      if (!messagePrompt.trim() || isGenerating) return;
+
+      try {
+        console.log('재생성 - 기존 sessionId 사용:', messageSessionId);
+
+        // 해당 sessionId의 메시지들 찾기
+        const messagesWithSameSession = generatedMessages.filter(
+          (msg) => msg.sessionId === messageSessionId,
         );
 
-        if (messagesWithSameSession.length === 0) {
-          // sessionId가 같은 메시지가 없으면 새로 추가
-          const newMessage: GeneratedMessage = {
-            id: `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-            text: response.ai_generated_text,
-            keywords: response.keywords || [],
-            emotion: response.ai_emotion as EmotionOption,
-            style,
-            length,
-            regenerationCount: newCount,
-            sessionId,
-          };
-          return [...prev, newMessage];
-        } else {
-          // 가장 최근 메시지(regenerationCount가 가장 높은 것)를 업데이트
+        const currentRegenerationCount =
+          messagesWithSameSession.length > 0
+            ? Math.max(
+                ...messagesWithSameSession.map((m) => m.regenerationCount),
+              )
+            : 0;
+
+        const newCount = currentRegenerationCount + 1;
+
+        // 재생성 횟수 제한 (최대 5번)
+        if (newCount > 5) {
+          alert('재생성은 최대 5번까지만 가능합니다.');
+          return;
+        }
+
+        // generateAIText를 직접 호출하여 regeneration_count 전달
+        const response = await generateAIText({
+          prompt: messagePrompt,
+          style: messageStyle,
+          length: messageLength,
+          emotion: messageEmotion,
+          regeneration_count: newCount,
+          sessionId: messageSessionId, // 재생성 시에는 기존 sessionId 사용
+        });
+
+        // 같은 session_id를 가진 가장 최근 메시지를 찾아서 업데이트
+        setGeneratedMessages((prev) => {
           const latestMessageIndex = prev.findIndex(
             (msg) =>
-              msg.sessionId === sessionId &&
-              msg.regenerationCount ===
-                Math.max(
-                  ...messagesWithSameSession.map((m) => m.regenerationCount),
-                ),
+              msg.sessionId === messageSessionId &&
+              msg.regenerationCount === currentRegenerationCount,
           );
 
           if (latestMessageIndex !== -1) {
@@ -218,30 +271,31 @@ export default function CreateChat({ sessionId }: CreateChatProps) {
             updatedMessages[latestMessageIndex] = {
               ...updatedMessages[latestMessageIndex],
               text: response.ai_generated_text,
-              keywords: response.keywords || [],
-              emotion: response.ai_emotion as EmotionOption,
               regenerationCount: newCount,
             };
             return updatedMessages;
+          } else {
+            // 기존 메시지가 없으면 새로 추가
+            const newMessage: GeneratedMessage = {
+              id: `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+              text: response.ai_generated_text,
+              keywords: response.keywords || [],
+              emotion: response.ai_emotion as EmotionOption,
+              style: messageStyle,
+              length: messageLength,
+              regenerationCount: newCount,
+              sessionId: messageSessionId,
+              prompt: messagePrompt,
+            };
+            return [...prev, newMessage];
           }
-        }
-
-        return prev;
-      });
-
-      console.log(`재생성 완료 (${newCount}번째)`);
-    } catch (error) {
-      console.error('재생성 실패:', error);
-    }
-  }, [
-    prompt,
-    emotion,
-    isGenerating,
-    style,
-    length,
-    sessionId,
-    regenerationCount,
-  ]);
+        });
+      } catch (error) {
+        console.error('💥 재생성 실패:', error);
+      }
+    },
+    [isGenerating, generatedMessages],
+  );
 
   // 다이어리로 이동 핸들러 (간단한 alert로 처리)
   const handleMoveToDiary = useCallback(
@@ -319,14 +373,11 @@ export default function CreateChat({ sessionId }: CreateChatProps) {
         e.preventDefault();
         // 임시 옵션들을 실제 옵션으로 적용
         applyOptions();
-        // 적용된 옵션으로 generateText 호출 (tempEmotion 사용)
-        generateText(tempEmotion);
-        // 메시지 전송 후 이미지 초기화 및 스크롤
-        setSelectedImages([]);
-        setTimeout(scrollToBottom, 200);
+        // 새 글 생성
+        handleNewGeneration();
       }
     },
-    [isGenerating, prompt, tempEmotion, generateText, scrollToBottom],
+    [isGenerating, prompt, handleNewGeneration],
   );
 
   // Effects
@@ -348,14 +399,6 @@ export default function CreateChat({ sessionId }: CreateChatProps) {
     };
   }, [selectedImages]);
 
-  // 컴포넌트 언마운트 시 localStorage 정리 (선택사항)
-  useEffect(() => {
-    return () => {
-      // 세션별로 localStorage 정리 (선택사항)
-      // localStorage.removeItem(`ai_messages_${sessionId}`);
-    };
-  }, [sessionId]);
-
   return (
     <div className="flex min-h-screen flex-col relative">
       {/* 결과 영역 */}
@@ -371,6 +414,9 @@ export default function CreateChat({ sessionId }: CreateChatProps) {
               <div className="mb-4 flex justify-between items-center">
                 <div className="flex items-center gap-2">
                   <span className="text-sm text-gray-500">생성된 글</span>
+                  <span className="text-xs text-gray-400">
+                    (세션: {message.sessionId?.substring(0, 8)}...)
+                  </span>
                 </div>
                 <div className="flex gap-2">
                   {message.emotion &&
@@ -400,7 +446,7 @@ export default function CreateChat({ sessionId }: CreateChatProps) {
 
               {/* 내용 */}
               <div className="space-y-2 text-gray-800 leading-relaxed">
-                {message.style === '시'
+                {message.style === 'poem'
                   ? message.text
                       .split('\n')
                       .map((line, idx) => <div key={idx}>{line}</div>)
@@ -440,9 +486,17 @@ export default function CreateChat({ sessionId }: CreateChatProps) {
                   text="다이어리로 이동"
                 />
 
-                {/* 재생성 버튼 */}
+                {/* 재생성 버튼 - 각 메시지별로 개별 처리 */}
                 <ActionButton
-                  onClick={handleRegenerate}
+                  onClick={() =>
+                    handleRegenerate(
+                      message.sessionId || '',
+                      message.prompt,
+                      message.emotion,
+                      message.style,
+                      message.length,
+                    )
+                  }
                   disabled={isGenerating}
                   text={
                     message.regenerationCount === 1
@@ -555,19 +609,12 @@ export default function CreateChat({ sessionId }: CreateChatProps) {
                   </button>
                 )}
               </div>
-              {/* 백엔드에 정보 전달 */}
+              {/* 새 글 작성 버튼 */}
               <button
-                onClick={() => {
-                  // 임시 옵션들을 실제 옵션으로 적용
-                  applyOptions();
-                  // 적용된 옵션으로 generateText 호출 (tempEmotion 사용)
-                  generateText(tempEmotion);
-                  // 메시지 전송 후 이미지 초기화 및 스크롤
-                  setSelectedImages([]);
-                  setTimeout(scrollToBottom, 200);
-                }}
+                onClick={handleNewGeneration}
                 disabled={isGenerating || !prompt.trim()}
                 className="flex hover:bg-sage-50 h-12 w-12 items-center justify-center rounded-2xl bg-sage-40 transition-colors text-2xl"
+                title="새 글 작성"
               >
                 <CiLocationArrow1 className="text-sage-100" />
               </button>
@@ -717,25 +764,5 @@ const EmotionGuide = ({
     <p className="text-sm text-gray-600 mb-4">
       다른 감정을 원하시면 아래에 선택해 주세요
     </p>
-    {/* <div className="flex gap-2">
-      {emotionConfigs.map(({ value, emoji, label, styles }) => {
-        const isSelected = emotion === value;
-        return (
-          // <button
-          //   key={value}
-          //   type="button"
-          //   onClick={() => setEmotion(emotion === value ? '' : value)}
-          //   className={`flex h-10 w-10 items-center justify-center rounded-full text-lg transition-all ${
-          //     isSelected
-          //       ? `${styles.bg} ring-2 ${styles.ring}`
-          //       : 'hover:bg-gray-50'
-          //   }`}
-          //   aria-label={label}
-          // >
-          //   {emoji}
-          // </button>
-        );
-      })}
-    </div> */}
   </div>
 );
