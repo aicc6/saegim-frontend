@@ -1,16 +1,22 @@
 'use client';
 
-import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useEffect, useState, useRef } from 'react';
-import { Heart, Sparkles, Calendar, Shield, Play, CheckCircle, AlertCircle, Info } from 'lucide-react';
+import { useEffect, useRef, Suspense } from 'react';
+import {
+  Heart,
+  Sparkles,
+  Calendar,
+  Shield,
+  Play,
+  CheckCircle,
+  AlertCircle,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { Toaster } from '@/components/ui/toaster';
 import { ToastAction, type ToastActionElement } from '@/components/ui/toast';
-
 
 const features = [
   {
@@ -43,9 +49,8 @@ const features = [
   },
 ];
 
-
-
-export default function LandingPage() {
+// useSearchParams를 사용하는 컴포넌트를 분리
+function LandingWithSearchParams() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { toast } = useToast();
@@ -54,20 +59,30 @@ export default function LandingPage() {
   useEffect(() => {
     // URL 파라미터에서 상태 확인
     const status = searchParams.get('status');
-    const message = searchParams.get('message');
 
     if (status) {
-      const messages: Record<string, { type: 'success' | 'info' | 'warning'; title: string; description: string; icon: React.ComponentType<any> }> = {
+      const messages: Record<
+        string,
+        {
+          type: 'success' | 'info' | 'warning';
+          title: string;
+          description: string;
+          icon: React.ComponentType<{ className?: string }>;
+        }
+      > = {
         logout: {
           type: 'success',
           title: '로그아웃되었습니다',
-          description: '안전하게 로그아웃되었습니다. 언제든지 다시 로그인하실 수 있습니다.',
+          description:
+            '안전하게 로그아웃되었습니다. 언제든지 다시 로그인하실 수 있습니다.',
           icon: CheckCircle,
         },
         withdraw: {
           type: 'success',
           title: '✅ 계정 탈퇴가 완료되었습니다',
-          description: searchParams.get('message') || '계정이 성공적으로 탈퇴되었습니다. 30일 이내에 복구할 수 있으며, 그 이후에는 모든 데이터가 영구적으로 삭제됩니다.',
+          description:
+            searchParams.get('message') ||
+            '계정이 성공적으로 탈퇴되었습니다. 30일 이내에 복구할 수 있으며, 그 이후에는 모든 데이터가 영구적으로 삭제됩니다.',
           icon: CheckCircle,
         },
 
@@ -85,10 +100,10 @@ export default function LandingPage() {
         if (statusTimerRef.current) {
           clearTimeout(statusTimerRef.current);
         }
-        
+
         // 토스트 알림 표시 (탈퇴: 5초, 세션 만료: 무제한)
         const duration = status === 'withdraw' ? 5000 : undefined;
-        
+
         // 세션 만료 토스트의 경우 클릭 가능한 액션 추가
         const toastConfig: {
           title: string;
@@ -100,10 +115,15 @@ export default function LandingPage() {
         } = {
           title: selectedMessage.title,
           description: selectedMessage.description,
-          variant: selectedMessage.type === 'success' ? 'default' : 
-                   selectedMessage.type === 'warning' ? 'destructive' : 'default',
+          variant:
+            selectedMessage.type === 'success'
+              ? 'default'
+              : selectedMessage.type === 'warning'
+                ? 'destructive'
+                : 'default',
           duration: duration,
-          className: "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-600 text-gray-900 dark:text-white",
+          className:
+            'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-600 text-gray-900 dark:text-white',
         };
 
         // 세션 만료 토스트의 경우 로그인 버튼 액션 추가
@@ -134,20 +154,20 @@ export default function LandingPage() {
         } else {
           // 다른 상태는 토스트 알림 표시
           toast(toastConfig);
-          
+
           if (status === 'token_expired') {
             // 세션 만료의 경우 토스트 시간에 맞춰서 URL 파라미터 정리
             const timer = setTimeout(() => {
               statusTimerRef.current = null;
               router.replace('/landing');
             }, duration);
-            
+
             statusTimerRef.current = timer;
           }
         }
       }
     }
-    
+
     // cleanup 함수: 컴포넌트 언마운트 시 타이머 정리
     return () => {
       if (statusTimerRef.current) {
@@ -238,7 +258,9 @@ export default function LandingPage() {
                         <Heart className="w-5 h-5 text-sage-70" />
                       </div>
                       <div>
-                        <h3 className="font-medium text-sage-100">오늘의 감정</h3>
+                        <h3 className="font-medium text-sage-100">
+                          오늘의 감정
+                        </h3>
                         <p className="text-sm text-sage-70">평온한 하루</p>
                       </div>
                     </div>
@@ -310,5 +332,14 @@ export default function LandingPage() {
       </section>
       <Toaster />
     </>
+  );
+}
+
+// 기본 export는 Suspense로 감싼 컴포넌트
+export default function LandingPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <LandingWithSearchParams />
+    </Suspense>
   );
 }

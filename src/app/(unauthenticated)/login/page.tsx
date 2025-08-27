@@ -1,14 +1,12 @@
 'use client';
 
-import LoginForm from '@/components/individual/smj/LoginForm';
-import { useTheme } from 'next-themes';
 import { useSearchParams } from 'next/navigation';
+import { Suspense } from 'react';
+import LoginForm from '@/components/individual/smj/LoginForm';
 
-export default function LoginPage() {
-  const { resolvedTheme } = useTheme();
+function LoginWithSearchParams() {
   const searchParams = useSearchParams();
   const redirect = searchParams.get('redirect');
-  const isDark = resolvedTheme === 'dark';
 
   return (
     <div className="min-h-screen bg-background-secondary dark:bg-background-dark transition-colors">
@@ -20,5 +18,13 @@ export default function LoginPage() {
         </div>
       </main>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <LoginWithSearchParams />
+    </Suspense>
   );
 }
