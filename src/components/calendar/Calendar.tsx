@@ -38,7 +38,8 @@ export function Calendar({
   const [currentDate, setCurrentDate] = useState(currentViewDate || new Date());
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
 
-  const { diaries, isLoading, error, fetchCalendarDiaries } = useDiaryStore();
+  const { diaries, isLoading, error, fetchCalendarDiaries, deletedImageIds } =
+    useDiaryStore();
 
   // props로 전달받은 날짜가 있으면 사용, 없으면 내부 상태 사용
   const effectiveDate = currentViewDate || currentDate;
@@ -101,9 +102,11 @@ export function Calendar({
       diariesCount: diaries.length,
       isLoading,
       error,
+      deletedImageIdsCount: deletedImageIds.size,
+      deletedImageIds: Array.from(deletedImageIds),
       diaries: diaries.slice(0, 3), // 처음 3개만 로그
     });
-  }, [diaries, isLoading, error]);
+  }, [diaries, isLoading, error, deletedImageIds]);
 
   // 달력에 표시할 날짜들
   const calendarDays = useMemo(() => {
@@ -158,13 +161,22 @@ export function Calendar({
         }
 
         // 썸네일 이미지가 있는 첫 번째 다이어리에서 썸네일 경로 가져오기
+        // deletedImageIds를 명확하게 구독하여 필터링
         for (const entry of dayEntries) {
           if (entry.images && entry.images.length > 0) {
-            const imageWithThumbnail = entry.images.find(
-              (img) => img.thumbnail_path,
+            // 삭제된 이미지는 제외하고 필터링 - deletedImageIds 상태를 직접 참조
+            const validImages = entry.images.filter(
+              (img) => img.thumbnail_path && !deletedImageIds.has(img.id),
             );
-            if (imageWithThumbnail?.thumbnail_path) {
-              thumbnailPath = imageWithThumbnail.thumbnail_path;
+
+            if (validImages.length > 0) {
+              thumbnailPath = validImages[0].thumbnail_path;
+              console.log('📷 Calendar: 썸네일 이미지 설정', {
+                date: dateStr,
+                imageId: validImages[0].id,
+                thumbnailPath: validImages[0].thumbnail_path,
+                deletedImageIds: Array.from(deletedImageIds),
+              });
               break;
             }
           }
@@ -199,6 +211,7 @@ export function Calendar({
     selectedDate,
     currentDate,
     effectiveDate,
+    deletedImageIds, // 이미지 삭제 상태 변화 감지 - 명시적으로 구독
   ]);
 
   const navigateMonth = (direction: 'prev' | 'next') => {

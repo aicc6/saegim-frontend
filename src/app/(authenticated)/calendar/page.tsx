@@ -19,7 +19,8 @@ import { cn } from '@/lib/utils';
 
 export default function CalendarPage() {
   const router = useRouter();
-  const { diaries, fetchDiaries, fetchCalendarDiaries } = useDiaryStore();
+  const { diaries, fetchDiaries, fetchCalendarDiaries, deletedImageIds } =
+    useDiaryStore();
   const { user, isAuthenticated } = useAuthStore();
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [viewDate, setViewDate] = useState(new Date());
@@ -98,22 +99,20 @@ export default function CalendarPage() {
         // 스토어 상태 업데이트
         if (result.data && Array.isArray(result.data)) {
           // 현재 상태와 비교하여 변경사항이 있을 때만 업데이트
-          const currentDiaries = useDiaryStore.getState().diaries;
-          const newDiaries = result.data;
-
-          // 데이터가 실제로 변경되었는지 확인
+          const currentData = useDiaryStore.getState().diaries;
           const hasChanged =
-            JSON.stringify(currentDiaries) !== JSON.stringify(newDiaries);
+            JSON.stringify(currentData) !== JSON.stringify(result.data);
 
           if (hasChanged) {
+            // 삭제된 이미지를 제외하고 필터링하지 않고 원본 데이터 그대로 저장
             useDiaryStore.setState({
-              diaries: newDiaries,
-              totalCount: newDiaries.length,
+              diaries: result.data,
               isLoading: false,
               error: null,
             });
-            console.log('✅ CalendarPage: 데이터 로딩 완료 (변경사항 있음)', {
-              diariesCount: newDiaries.length,
+
+            console.log('✅ CalendarPage: 데이터 로딩 완료', {
+              diariesCount: result.data.length,
             });
           } else {
             // 데이터가 변경되지 않았으면 로딩 상태만 해제
@@ -213,11 +212,40 @@ export default function CalendarPage() {
     };
   }, [diaries, viewDate]);
 
+  // 필터링된 다이어리 목록 (삭제된 이미지 제외)
+  const filteredDiaries = useMemo(() => {
+    console.log('🔄 CalendarPage: 다이어리 필터링 시작', {
+      총_다이어리_수: diaries.length,
+      삭제된_이미지_ID_수: deletedImageIds.size,
+      삭제된_이미지_ID들: Array.from(deletedImageIds),
+    });
+
+    const filtered = diaries.map((diary) => ({
+      ...diary,
+      images: (diary.images || []).filter(
+        (img) => !deletedImageIds.has(img.id),
+      ),
+    }));
+
+    console.log('✅ CalendarPage: 다이어리 필터링 완료', {
+      필터링_전_이미지_수: diaries.reduce(
+        (sum, d) => sum + (d.images?.length || 0),
+        0,
+      ),
+      필터링_후_이미지_수: filtered.reduce(
+        (sum, d) => sum + (d.images?.length || 0),
+        0,
+      ),
+    });
+
+    return filtered;
+  }, [diaries, deletedImageIds]);
+
   // 선택된 날짜의 다이어리
   const selectedDateEntries = useMemo(() => {
     if (!selectedDate) return [];
 
-    return diaries.filter((diary) => {
+    return filteredDiaries.filter((diary) => {
       const diaryDate = new Date(diary.created_at);
       const selectedDateObj = new Date(selectedDate);
       return (
@@ -226,7 +254,7 @@ export default function CalendarPage() {
         diaryDate.getDate() === selectedDateObj.getDate()
       );
     });
-  }, [diaries, selectedDate]);
+  }, [selectedDate, filteredDiaries]);
 
   // 인증 상태 확인 - 메인 페이지와 동일한 로직
   useEffect(() => {
