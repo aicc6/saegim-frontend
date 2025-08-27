@@ -72,6 +72,27 @@ export default function ViewPostPage({
   // 이전 페이지 경로 추적 (쿼리 파라미터 우선, referrer 폴백)
   const [previousPath, setPreviousPath] = useState<string>('/calendar');
 
+  // localStorage에서 삭제된 이미지 ID 복원
+  useEffect(() => {
+    const savedDeletedImageIds = localStorage.getItem(
+      `deletedImageIds_${entryId}`,
+    );
+    if (savedDeletedImageIds) {
+      try {
+        const parsedIds = JSON.parse(savedDeletedImageIds);
+        parsedIds.forEach((imageId: string) => {
+          addDeletedImageId(imageId);
+        });
+        console.log(
+          '📝 ViewPost: localStorage에서 삭제된 이미지 ID 복원:',
+          parsedIds,
+        );
+      } catch (error) {
+        console.error('📝 ViewPost: localStorage 파싱 오류:', error);
+      }
+    }
+  }, [entryId, addDeletedImageId]);
+
   useEffect(() => {
     // 1. URL 쿼리 파라미터에서 from 경로 확인
     const urlParams = new URLSearchParams(window.location.search);
@@ -365,6 +386,18 @@ export default function ViewPostPage({
     // 삭제된 이미지 ID를 추적
     addDeletedImageId(imageId);
 
+    // localStorage에 삭제된 이미지 ID 저장
+    const currentDeletedIds = Array.from(deletedImageIds);
+    const updatedDeletedIds = [...currentDeletedIds, imageId];
+    localStorage.setItem(
+      `deletedImageIds_${entryId}`,
+      JSON.stringify(updatedDeletedIds),
+    );
+    console.log(
+      '📝 ViewPost: localStorage에 삭제된 이미지 ID 저장:',
+      updatedDeletedIds,
+    );
+
     // entry 상태도 즉시 업데이트하여 UI 반응성 향상
     const updatedEntryWithImages = {
       ...entry,
@@ -457,6 +490,12 @@ export default function ViewPostPage({
           useDiaryStore.setState({
             deletedImageIds: updatedDeletedImageIds,
           });
+
+          // localStorage에서도 해당 다이어리의 삭제된 이미지 ID 제거
+          localStorage.removeItem(`deletedImageIds_${entryId}`);
+          console.log(
+            '📝 ViewPost: localStorage에서 삭제된 이미지 ID 제거 완료',
+          );
 
           // 이미지 복원 시 상태 잠금 해제
           setIsImageDeleted(false);
@@ -875,7 +914,14 @@ export default function ViewPostPage({
             </div>
 
             {/* 썸네일 이미지 섹션 */}
-            {entry.images && entry.images.length > 0 && (
+            {(() => {
+              const imagesToShow = isEditing ? editedImages : entry.images;
+              const filteredImages =
+                imagesToShow?.filter(
+                  (img) => img.thumbnail_path && !deletedImageIds.has(img.id),
+                ) || [];
+              return filteredImages.length > 0;
+            })() && (
               <div className="mb-6">
                 <div className="flex items-center justify-between mb-3">
                   <span className="text-base font-medium text-sage-100">
@@ -894,8 +940,11 @@ export default function ViewPostPage({
                   )}
                 </div>
                 <div className="flex flex-wrap gap-4">
-                  {entry.images
-                    .filter((img) => img.thumbnail_path)
+                  {(isEditing ? editedImages : entry.images)
+                    .filter(
+                      (img) =>
+                        img.thumbnail_path && !deletedImageIds.has(img.id),
+                    )
                     .map((image, index) => (
                       <div key={index} className="relative group">
                         <img
@@ -929,7 +978,7 @@ export default function ViewPostPage({
             )}
 
             {/* 수정 모드에서 이미지가 없을 때 업로드 섹션 표시 */}
-            {isEditing && (!entry.images || entry.images.length === 0) && (
+            {isEditing && (!editedImages || editedImages.length === 0) && (
               <div className="mb-6">
                 <div className="flex items-center justify-between mb-3">
                   <span className="text-base font-medium text-sage-100">
