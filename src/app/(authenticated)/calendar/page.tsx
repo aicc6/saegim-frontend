@@ -420,17 +420,21 @@ export default function CalendarPage() {
       newDate: date,
       oldMonth: viewDate.getMonth() + 1,
       newMonth: date.getMonth() + 1,
+      oldYear: viewDate.getFullYear(),
+      newYear: date.getFullYear(),
     });
 
-    // 같은 월이면 데이터 로드하지 않음
-    if (
+    // 월과 년도만 정확하게 비교 (시간은 무시)
+    const isSameMonth =
       viewDate.getMonth() === date.getMonth() &&
-      viewDate.getFullYear() === date.getFullYear()
-    ) {
-      console.log('📝 CalendarPage: 같은 월이므로 데이터 로드 스킵');
+      viewDate.getFullYear() === date.getFullYear();
+
+    if (isSameMonth) {
+      console.log('�� CalendarPage: 같은 월이므로 데이터 로드 스킵');
       return;
     }
 
+    console.log('�� CalendarPage: 다른 월이므로 데이터 로드 시작');
     setViewDate(date);
 
     // 날짜가 변경되면 데이터를 새로 로드

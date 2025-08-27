@@ -404,11 +404,14 @@ export const Calendar = forwardRef<CalendarRef, CalendarProps>(
         setCurrentDate(today);
       }
 
+      // 항상 부모 컴포넌트에 날짜 변경 알림 (중요!)
+      onDateChange?.(today);
+
       // 오늘 날짜 선택
       setSelectedDate(todayStr);
       onDateSelect?.(todayStr);
 
-      // 오늘 날짜가 화면 중앙에 오도록 스크롤 조정
+      // 오늘 날짜가 화면 중앙에 오도록 스크롤 조정 (지연 시간 증가)
       setTimeout(() => {
         const todayElement = document.querySelector(
           `[data-date="${todayStr}"]`,
@@ -425,7 +428,7 @@ export const Calendar = forwardRef<CalendarRef, CalendarProps>(
 
           // 가로 중앙 정렬
           const scrollLeft =
-            window.pageXOffset + rect.left - windowWidth / 2 + rect.width / 2;
+            window.pageYOffset + rect.left - windowWidth / 2 + rect.width / 2;
 
           window.scrollTo({
             top: scrollTop,
@@ -433,7 +436,7 @@ export const Calendar = forwardRef<CalendarRef, CalendarProps>(
             behavior: 'smooth',
           });
         }
-      }, 100);
+      }, 500); // 지연 시간을 500ms로 증가하여 데이터 로드 완료 후 스크롤
     };
 
     // useImperativeHandle을 사용하여 ref를 통해 함수 노출
