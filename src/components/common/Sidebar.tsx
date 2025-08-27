@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
 import { useTheme } from 'next-themes';
 import {
@@ -279,14 +280,14 @@ export function Sidebar() {
         }`}
       >
         <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-2">
-            <span
-              className={`text-xl font-bold ${
-                isDark ? 'text-white' : 'text-sage-100'
-              }`}
-            >
-              새김
-            </span>
+          <div className="flex items-center">
+            <Image
+              src="/images/logoop.png"
+              alt="새김 로고"
+              width={48}
+              height={48}
+              className="w-12 h-12"
+            />
           </div>
 
           <div className="flex items-center space-x-2">
