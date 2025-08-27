@@ -50,24 +50,17 @@ export default function Header() {
           {/* 로고 */}
           <button
             onClick={handleLogoClick}
-            className="flex items-center space-x-3 hover:opacity-80 transition-opacity"
+            className="hover:opacity-80 transition-opacity"
           >
-            <div className="w-8 h-8 rounded-full flex items-center justify-center">
+            <div className="w-18 h-18 rounded-full flex items-center justify-center">
               <Image
                 src="/images/logoop.png"
                 alt="새김 로고"
-                width={32}
-                height={32}
-                className="w-8 h-8"
+                width={72}
+                height={72}
+                className="w-18 h-18"
               />
             </div>
-            <span
-              className={`text-xl font-bold ${
-                isDark ? 'text-white' : 'text-sage-100'
-              }`}
-            >
-              새김
-            </span>
           </button>
 
           {/* 데스크톱 메뉴 */}

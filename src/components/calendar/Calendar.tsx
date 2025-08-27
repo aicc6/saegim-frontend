@@ -20,6 +20,8 @@ interface CalendarDay {
   isToday: boolean;
   isSelected: boolean;
   thumbnailPath: string | null; // 썸네일 경로 추가
+  allImages: string[]; // 모든 이미지 경로 추가
+  currentImageIndex: number; // 현재 표시 중인 이미지 인덱스 추가
 }
 
 interface CalendarProps {
@@ -37,6 +39,7 @@ export function Calendar({
 }: CalendarProps) {
   const [currentDate, setCurrentDate] = useState(currentViewDate || new Date());
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [imageIndices, setImageIndices] = useState<Record<string, number>>({});
 
   const { diaries, isLoading, error, fetchCalendarDiaries, deletedImageIds } =
     useDiaryStore();
@@ -164,6 +167,7 @@ export function Calendar({
       let dominantEmotion: EmotionType | null = null;
       let topKeywords: string[] = [];
       let thumbnailPath: string | null = null;
+      const allImages: string[] = [];
 
       if (dayEntries.length > 0) {
         // 감정별 빈도 계산
@@ -195,6 +199,21 @@ export function Calendar({
             topKeywords = firstEntry.keywords.slice(0, 2);
           }
         }
+
+        // 모든 이미지 수집 (삭제된 이미지 제외)
+        dayEntries.forEach((entry) => {
+          if (entry.images && entry.images.length > 0) {
+            const validImages = entry.images.filter(
+              (img) => img.thumbnail_path && !deletedImageIds.has(img.id),
+            );
+
+            validImages.forEach((img) => {
+              if (img.thumbnail_path) {
+                allImages.push(img.thumbnail_path);
+              }
+            });
+          }
+        });
 
         // 썸네일 이미지가 있는 첫 번째 다이어리에서 썸네일 경로 가져오기
         // deletedImageIds를 명확하게 구독하여 필터링
@@ -233,6 +252,8 @@ export function Calendar({
         isToday: dateStr === todayStr,
         isSelected: dateStr === selectedDate,
         thumbnailPath, // 썸네일 경로 추가
+        allImages, // 모든 이미지 경로 추가
+        currentImageIndex: 0, // 현재 표시 중인 이미지 인덱스 초기화
       });
 
       current.setDate(current.getDate() + 1);
@@ -301,6 +322,20 @@ export function Calendar({
 
     setSelectedDate(dateStr);
     onDateSelect?.(dateStr);
+
+    // 선택된 날짜의 기록이 화면 중앙에 오도록 스크롤 조정
+    setTimeout(() => {
+      const selectedDateElement = document.querySelector(
+        `[data-date="${dateStr}"]`,
+      );
+      if (selectedDateElement) {
+        selectedDateElement.scrollIntoView({
+          behavior: 'smooth',
+          block: 'center',
+          inline: 'center',
+        });
+      }
+    }, 100); // 약간의 지연을 두어 DOM 업데이트 후 스크롤 실행
   };
 
   // 로딩 상태 표시
@@ -439,24 +474,6 @@ export function Calendar({
                 : {}),
             }}
           >
-            {/* 썸네일 배경 이미지 */}
-            {day.thumbnailPath && (
-              <div className="absolute inset-0 w-full h-full flex items-center justify-center overflow-hidden">
-                <img
-                  src={`${
-                    process.env.NEXT_PUBLIC_API_BASE_URL ||
-                    'http://localhost:8000'
-                  }${day.thumbnailPath}`}
-                  alt="다이어리 썸네일"
-                  className="w-full h-full object-contain opacity-25 hover:opacity-35 transition-opacity duration-200"
-                  style={{
-                    maxWidth: '100%',
-                    maxHeight: '100%',
-                  }}
-                />
-              </div>
-            )}
-
             {/* 날짜 숫자 - 오른쪽 위로 이동 */}
             <div
               className={cn(
@@ -472,76 +489,143 @@ export function Calendar({
                 fontWeight: day.isCurrentMonth ? 'bold' : 'normal',
                 // 선택된 날짜는 다크모드에서도 검은색 글씨
                 ...(day.isSelected ? { color: '#000000' } : {}),
-                // 썸네일이 있을 때 텍스트 가독성 향상
-                ...(day.thumbnailPath
-                  ? {
-                      textShadow: '0 0 3px rgba(255, 255, 255, 0.8)',
-                      backgroundColor: 'rgba(255, 255, 255, 0.7)',
-                      borderRadius: '4px',
-                      padding: '2px 4px',
-                    }
-                  : {}),
               }}
             >
               {day.date.getDate()}
             </div>
 
-            {/* 감정 표시 - 중앙에 위치 */}
-            {day.dominantEmotion && (
-              <div className="flex justify-center items-center h-full relative z-10">
-                <div
-                  className={cn(
-                    'w-6 h-6 rounded-full flex items-center justify-center text-xs',
-                    EMOTION_COLORS[day.dominantEmotion],
-                  )}
-                  style={{
-                    // 썸네일이 있을 때 배경 가독성 향상
-                    ...(day.thumbnailPath
-                      ? {
-                          backgroundColor: 'rgba(255, 255, 255, 0.9)',
-                          boxShadow: '0 0 4px rgba(0, 0, 0, 0.2)',
+            {/* 이미지 썸네일 뷰 - 상단에 배치 */}
+            {day.allImages && day.allImages.length > 0 && (
+              <div className="absolute top-1 left-1 right-1 relative z-10">
+                <div className="flex justify-center overflow-hidden">
+                  {/* 한 번에 하나의 이미지만 표시 */}
+                  <button
+                    className="flex-shrink-0 relative group cursor-pointer"
+                    style={{
+                      width: '65px',
+                      height: '65px',
+                    }}
+                    onClick={(e) => {
+                      // 이벤트 전파를 막아서 날짜 선택이 되지 않도록 함
+                      e.stopPropagation();
+
+                      // 다음 이미지로 넘어가는 로직
+                      if (day.allImages.length > 1) {
+                        const currentIndex = imageIndices[day.dateStr] || 0;
+                        const nextIndex =
+                          (currentIndex + 1) % day.allImages.length;
+
+                        // 상태 업데이트로 리렌더링 트리거
+                        setImageIndices((prev) => ({
+                          ...prev,
+                          [day.dateStr]: nextIndex,
+                        }));
+
+                        console.log(
+                          '다음 이미지로 넘어감:',
+                          nextIndex,
+                          day.allImages[nextIndex],
+                        );
+                      }
+                    }}
+                    onKeyDown={(e) => {
+                      // 이벤트 전파를 막아서 날짜 선택이 되지 않도록 함
+                      e.stopPropagation();
+
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        // 다음 이미지로 넘어가는 로직
+                        if (day.allImages.length > 1) {
+                          const currentIndex = imageIndices[day.dateStr] || 0;
+                          const nextIndex =
+                            (currentIndex + 1) % day.allImages.length;
+
+                          setImageIndices((prev) => ({
+                            ...prev,
+                            [day.dateStr]: nextIndex,
+                          }));
+
+                          console.log(
+                            '다음 이미지로 넘어감 (키보드):',
+                            nextIndex,
+                            day.allImages[nextIndex],
+                          );
                         }
-                      : {}),
-                  }}
-                >
-                  {EMOTION_EMOJIS[day.dominantEmotion]}
+                      }
+                    }}
+                    aria-label="다음 이미지로 넘어가기"
+                  >
+                    <img
+                      src={`${
+                        process.env.NEXT_PUBLIC_API_BASE_URL ||
+                        'http://localhost:8000'
+                      }/api/public/image-proxy?url=${encodeURIComponent(day.allImages[imageIndices[day.dateStr] || 0])}`}
+                      alt="다이어리 이미지"
+                      className="w-full h-full object-cover rounded-sm border border-white shadow-sm transition-all duration-200"
+                      style={{
+                        minWidth: '65px',
+                        minHeight: '65px',
+                      }}
+                      onError={(e) => {
+                        // 이미지 로드 실패 시 처리
+                        console.warn(
+                          `캘린더 썸네일 이미지 로드 실패: ${day.allImages[imageIndices[day.dateStr] || 0]}`,
+                        );
+                        e.currentTarget.style.display = 'none';
+                      }}
+                    />
+                    {/* 마우스 호버 시에만 화살표 표시 (2개 이상 이미지일 때) */}
+                    {day.allImages.length > 1 && (
+                      <div className="absolute inset-0 bg-black bg-opacity-60 text-white text-xs flex items-center justify-center rounded-sm opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                        →
+                      </div>
+                    )}
+                  </button>
                 </div>
               </div>
             )}
 
-            {/* 키워드 표시 - 칸 안쪽에 위치 */}
-            {day.keywords && day.keywords.length > 0 && (
-              <div className="absolute bottom-2 left-1 right-1 relative z-10">
-                <div className="flex flex-wrap gap-1 justify-center">
-                  {day.keywords
-                    .slice(0, 2)
-                    .map((keyword: string, index: number) => (
-                      <span
-                        key={index}
-                        className={cn(
-                          'text-[9px] px-1 py-0.5 rounded bg-interactive-secondary text-text-primary',
-                          day.isCurrentMonth ? 'font-medium' : 'font-normal',
-                        )}
-                        style={{
-                          fontSize: '9px',
-                          lineHeight: '1.1',
-                          // 선택된 날짜는 다크모드에서도 검은색 글씨
-                          ...(day.isSelected ? { color: '#000000' } : {}),
-                          // 썸네일이 있을 때 가독성 향상
-                          ...(day.thumbnailPath
-                            ? {
-                                backgroundColor: 'rgba(255, 255, 255, 0.9)',
-                                boxShadow: '0 0 2px rgba(0, 0, 0, 0.1)',
-                              }
-                            : {}),
-                        }}
-                      >
-                        #{keyword}
-                      </span>
-                    ))}
-                </div>
+            {/* 키워드와 감정을 칸 아래쪽에 가로로 배치 */}
+            <div className="absolute top-3 left-1 right-1 relative z-10">
+              <div className="flex items-center justify-center gap-1">
+                {/* 키워드 표시 */}
+                {day.keywords && day.keywords.length > 0 && (
+                  <div className="flex gap-0.5">
+                    {day.keywords
+                      .slice(0, 2)
+                      .map((keyword: string, index: number) => (
+                        <span
+                          key={index}
+                          className={cn(
+                            'text-[10px] px-0.5 py-0.5 rounded bg-interactive-secondary text-text-primary',
+                            day.isCurrentMonth ? 'font-medium' : 'font-normal',
+                          )}
+                          style={{
+                            fontSize: '10px',
+                            lineHeight: '1.1',
+                            // 선택된 날짜는 다크모드에서도 검은색 글씨
+                            ...(day.isSelected ? { color: '#000000' } : {}),
+                          }}
+                        >
+                          #{keyword}
+                        </span>
+                      ))}
+                  </div>
+                )}
+
+                {/* 감정 표시 */}
+                {day.dominantEmotion && (
+                  <div
+                    className={cn(
+                      'w-5 h-5 rounded-full flex items-center justify-center text-xs ml-1',
+                      EMOTION_COLORS[day.dominantEmotion],
+                    )}
+                    style={{}}
+                  >
+                    {EMOTION_EMOJIS[day.dominantEmotion]}
+                  </div>
+                )}
               </div>
-            )}
+            </div>
 
             {/* 호버 툴팁 */}
             {day.entries.length > 0 && (
@@ -553,7 +637,9 @@ export function Calendar({
                       ({EMOTION_EMOJIS[day.dominantEmotion]})
                     </span>
                   )}
-                  {day.thumbnailPath && <span className="ml-1">📷</span>}
+                  {day.allImages && day.allImages.length > 0 && (
+                    <span className="ml-1">📷 {day.allImages.length}장</span>
+                  )}
                 </div>
               </div>
             )}

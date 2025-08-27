@@ -473,7 +473,10 @@ export default function CalendarPage() {
 
               {/* 선택된 날짜 정보 */}
               {selectedDate && (
-                <div className="mt-6 bg-background-primary rounded-lg border border-border-subtle p-6">
+                <div
+                  className="mt-6 bg-background-primary rounded-lg border border-border-subtle p-6"
+                  data-date={selectedDate}
+                >
                   <div className="flex items-center justify-between mb-4">
                     <h3 className="text-h4 font-bold text-text-primary">
                       {selectedDate} 기록
@@ -569,7 +572,7 @@ export default function CalendarPage() {
                                                   .NEXT_PUBLIC_API_BASE_URL ||
                                                 'http://localhost:8000'
                                               }/api/public/image-proxy?url=${encodeURIComponent(
-                                                image.thumbnail_path
+                                                image.thumbnail_path,
                                               )}`
                                             : ''
                                         }
