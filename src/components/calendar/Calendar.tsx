@@ -26,20 +26,25 @@ interface CalendarProps {
   className?: string;
   onDateSelect?: (date: string) => void;
   onDateChange?: (date: Date) => void;
+  currentViewDate?: Date; // 현재 보고 있는 날짜 추가
 }
 
 export function Calendar({
   className,
   onDateSelect,
   onDateChange,
+  currentViewDate, // props 추가
 }: CalendarProps) {
-  const [currentDate, setCurrentDate] = useState(new Date());
+  const [currentDate, setCurrentDate] = useState(currentViewDate || new Date());
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
 
-  const { diaries, isLoading, error, fetchCalendarDiaries } = useDiaryStore();
+  const { diaries, isLoading, error, fetchCalendarDiaries, deletedImageIds } =
+    useDiaryStore();
 
-  const year = currentDate.getFullYear();
-  const month = currentDate.getMonth();
+  // props로 전달받은 날짜가 있으면 사용, 없으면 내부 상태 사용
+  const effectiveDate = currentViewDate || currentDate;
+  const year = effectiveDate.getFullYear();
+  const month = effectiveDate.getMonth();
 
   // 해당 월의 첫째 날과 마지막 날
   const firstDay = new Date(year, month, 1);
@@ -55,18 +60,28 @@ export function Calendar({
 
   // 날짜 범위 계산 - useMemo로 최적화하여 불필요한 재계산 방지
   const dateRange = useMemo(() => {
-    const startDate = new Date(year, month - 1, 1);
-    const endDate = new Date(year, month, 0);
+    // year와 month는 이미 올바른 값이므로 그대로 사용
+    const startDate = new Date(year, month, 1); // month - 1 제거
+    const endDate = new Date(year, month + 1, 0); // month + 1로 다음 월의 0일 = 현재 월의 마지막 날
 
     const startDateStr = startDate.toISOString().split('T')[0];
     const endDateStr = endDate.toISOString().split('T')[0];
+
+    console.log('📅 Calendar: 날짜 범위 계산', {
+      year,
+      month,
+      startDate: startDateStr,
+      endDate: endDateStr,
+      startDateObj: startDate,
+      endDateObj: endDate,
+    });
 
     return { startDate: startDateStr, endDate: endDateStr };
   }, [year, month]);
 
   // 월이 변경될 때마다 해당 월의 다이어리 데이터 가져오기 - 의존성 배열 최적화
   useEffect(() => {
-    console.log('🔍 Calendar: API 호출 시작', {
+    console.log('🔍 Calendar: 데이터 상태 확인', {
       startDate: dateRange.startDate,
       endDate: dateRange.endDate,
     });
@@ -102,8 +117,8 @@ export function Calendar({
             });
           }
         } else if (response.status === 401) {
-          console.log('❌ Calendar: 인증 실패, 랜딩 페이지로 리다이렉트');
-          window.location.href = '/?status=auth_failed';
+          console.log('❌ Calendar: 인증 실패, 로그인 페이지로 리다이렉트');
+          window.location.href = '/login';
         }
       } catch (error) {
         console.error('❌ Calendar: API 호출 실패', error);
@@ -123,9 +138,11 @@ export function Calendar({
       diariesCount: diaries.length,
       isLoading,
       error,
+      deletedImageIdsCount: deletedImageIds.size,
+      deletedImageIds: Array.from(deletedImageIds),
       diaries: diaries.slice(0, 3), // 처음 3개만 로그
     });
-  }, [diaries, isLoading, error]);
+  }, [diaries, isLoading, error, deletedImageIds]);
 
   // 달력에 표시할 날짜들
   const calendarDays = useMemo(() => {
@@ -180,13 +197,22 @@ export function Calendar({
         }
 
         // 썸네일 이미지가 있는 첫 번째 다이어리에서 썸네일 경로 가져오기
+        // deletedImageIds를 명확하게 구독하여 필터링
         for (const entry of dayEntries) {
           if (entry.images && entry.images.length > 0) {
-            const imageWithThumbnail = entry.images.find(
-              (img) => img.thumbnail_path,
+            // 삭제된 이미지는 제외하고 필터링 - deletedImageIds 상태를 직접 참조
+            const validImages = entry.images.filter(
+              (img) => img.thumbnail_path && !deletedImageIds.has(img.id),
             );
-            if (imageWithThumbnail?.thumbnail_path) {
-              thumbnailPath = imageWithThumbnail.thumbnail_path;
+
+            if (validImages.length > 0) {
+              thumbnailPath = validImages[0].thumbnail_path;
+              console.log('📷 Calendar: 썸네일 이미지 설정', {
+                date: dateStr,
+                imageId: validImages[0].id,
+                thumbnailPath: validImages[0].thumbnail_path,
+                deletedImageIds: Array.from(deletedImageIds),
+              });
               break;
             }
           }
@@ -203,7 +229,7 @@ export function Calendar({
         entries: dayEntries,
         dominantEmotion,
         keywords: topKeywords,
-        isCurrentMonth: current.getMonth() === currentDate.getMonth(),
+        isCurrentMonth: current.getMonth() === effectiveDate.getMonth(),
         isToday: dateStr === todayStr,
         isSelected: dateStr === selectedDate,
         thumbnailPath, // 썸네일 경로 추가
@@ -213,13 +239,39 @@ export function Calendar({
     }
 
     return days;
-  }, [startDate, endDate, diaries, month, selectedDate, currentDate]);
+  }, [
+    startDate,
+    endDate,
+    diaries,
+    month,
+    selectedDate,
+    currentDate,
+    effectiveDate,
+    deletedImageIds, // 이미지 삭제 상태 변화 감지 - 명시적으로 구독
+  ]);
 
   const navigateMonth = (direction: 'prev' | 'next') => {
-    setCurrentDate((prev) => {
-      const newDate = new Date(prev);
-      newDate.setMonth(prev.getMonth() + (direction === 'next' ? 1 : -1));
-      return newDate;
+    const newDate = new Date(effectiveDate);
+
+    if (direction === 'prev') {
+      newDate.setMonth(newDate.getMonth() - 1);
+    } else {
+      newDate.setMonth(newDate.getMonth() + 1);
+    }
+
+    setCurrentDate(newDate);
+
+    // 부모 컴포넌트에 날짜 변경 알림
+    if (onDateChange) {
+      onDateChange(newDate);
+    }
+
+    console.log('📅 Calendar: 월 변경', {
+      direction,
+      oldDate: effectiveDate,
+      newDate,
+      oldMonth: effectiveDate.getMonth() + 1,
+      newMonth: newDate.getMonth() + 1,
     });
   };
 
