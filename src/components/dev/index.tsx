@@ -4,6 +4,7 @@
 
 export { default as FCMTestPanel } from './fcm-test-panel';
 export { default as FCMManager } from './fcm-manager';
+export { default as UnifiedFCMPanel } from './unified-fcm-panel';
 
 // 개발 환경에서만 사용할 수 있도록 체크하는 유틸리티
 export const isDevelopment = () => {

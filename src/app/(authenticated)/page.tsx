@@ -1,5 +1,6 @@
 'use client';
 
+<<<<<<< HEAD
 import { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuthStore } from '@/stores/auth';
@@ -137,6 +138,13 @@ function HomeContent() {
   }
 
   // 토큰이 있으면 메인 콘텐츠 표시 (서버 인증 결과와 관계없이)
+=======
+import { Suspense } from 'react';
+import CreateAi from '@/components/individual/shw/CreateAi';
+
+function HomeContent() {
+  // AuthGuard가 이미 인증을 확인하므로 여기서는 단순히 메인 콘텐츠만 렌더링
+>>>>>>> 3a807f54b9efb608a68e4b7a8845f6479b526772
   console.log('🎨 CreateAi 컴포넌트 렌더링 시작');
 
   return (

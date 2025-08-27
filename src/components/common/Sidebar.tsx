@@ -20,6 +20,10 @@ import { useSidebar } from '@/contexts/sidebar-context';
 import { useAuthStore } from '@/stores/auth';
 import { authApi } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
+import { useNotifications } from '@/hooks/use-notifications';
+import { useFCMStore } from '@/stores/fcm';
+import ThemeToggle from '../ui/custom/ThemeToggle';
+import NotificationPopover from './NotificationPopover';
 
 interface UserInfo {
   email: string;
@@ -44,6 +48,16 @@ export function Sidebar() {
   const router = useRouter();
   const { logout } = useAuthStore();
   const { toast } = useToast();
+
+  // 알림 관련 상태
+  const { notifications, markAsRead, markAllAsRead, deleteNotification } =
+    useNotifications();
+  const {
+    unreadCount: fcmUnreadCount,
+    notifications: fcmNotifications,
+    markAsRead: fcmMarkAsRead,
+    markAllAsRead: fcmMarkAllAsRead,
+  } = useFCMStore();
 
   // 사용자 정보 가져오기
   useEffect(() => {
@@ -80,8 +94,12 @@ export function Sidebar() {
         variant: 'default',
       });
 
-      // 로그인 페이지로 리다이렉트
-      router.push('/login');
+      // 랜딩 페이지로 리다이렉트 후 강제 새로고침
+      router.push('/landing?status=logout');
+      // 클라이언트 상태 완전 정리를 위해 새로고침
+      setTimeout(() => {
+        window.location.reload();
+      }, 100);
     } catch (error) {
       console.error('로그아웃 처리 중 오류:', error);
       // 에러가 발생해도 클라이언트 상태는 정리하고 로그인 페이지로 이동
@@ -94,7 +112,11 @@ export function Sidebar() {
         variant: 'default',
       });
 
-      router.push('/login');
+      router.push('/landing?status=logout');
+      // 클라이언트 상태 완전 정리를 위해 새로고침
+      setTimeout(() => {
+        window.location.reload();
+      }, 100);
     }
   };
 
@@ -233,7 +255,7 @@ export function Sidebar() {
         variant="ghost"
         size="sm"
         onClick={() => setIsCollapsed(!isCollapsed)}
-        className={`hidden lg:block fixed top-6 z-[60] p-2 rounded-full shadow-md transition-all duration-300 ${
+        className={`!hidden lg:!block fixed top-6 z-40 p-2 rounded-full shadow-md transition-all duration-300 ${
           isDark
             ? 'bg-gray-800 border-gray-600 text-gray-300 hover:text-white'
             : 'bg-white border-sage-20 text-sage-70 hover:text-sage-100'
@@ -266,18 +288,32 @@ export function Sidebar() {
               새김
             </span>
           </div>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            className={isDark ? 'text-gray-300 hover:text-white' : ''}
-          >
-            {isMobileMenuOpen ? (
-              <X className="h-6 w-6" />
-            ) : (
-              <Menu className="h-6 w-6" />
-            )}
-          </Button>
+
+          <div className="flex items-center space-x-2">
+            <NotificationPopover
+              notifications={notifications}
+              fcmNotifications={fcmNotifications}
+              fcmUnreadCount={fcmUnreadCount}
+              onMarkAsRead={markAsRead}
+              onMarkAllAsRead={markAllAsRead}
+              onDeleteNotification={deleteNotification}
+              onFCMMarkAsRead={fcmMarkAsRead}
+              onFCMMarkAllAsRead={fcmMarkAllAsRead}
+            />
+
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              className={isDark ? 'text-gray-300 hover:text-white' : ''}
+            >
+              {isMobileMenuOpen ? (
+                <X className="h-6 w-6" />
+              ) : (
+                <Menu className="h-6 w-6" />
+              )}
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -308,46 +344,24 @@ export function Sidebar() {
                 {!isLoading && displayName}
               </Link>
 
-              <button
-                onClick={() => {
-                  handleLogout();
-                  setIsMobileMenuOpen(false);
-                }}
-                className={`group flex items-center p-2 text-base font-medium rounded-md transition-colors ${
-                  isDark
-                    ? 'text-gray-300 hover:bg-gray-800 hover:text-red-400'
-                    : 'text-sage-70 hover:bg-sage-10 hover:text-red-500'
-                }`}
-                title="로그아웃"
-              >
-                <LogOut className="h-6 w-6" />
-              </button>
-            </div>
-
-            {/* 기존 네비게이션 링크들 */}
-            {navigation.slice(0, 5).map((item) => {
-              const isActive = pathname === item.href;
-              const Icon = item.icon;
-              return (
-                <Link
-                  key={item.name}
-                  href={item.href}
-                  className={`group flex items-center px-3 py-2 text-base font-medium rounded-md transition-colors ${
-                    isActive
-                      ? isDark
-                        ? 'bg-gray-700 text-white'
-                        : 'bg-sage-20 text-sage-100'
-                      : isDark
-                        ? 'text-gray-300 hover:bg-gray-800 hover:text-white'
-                        : 'text-sage-70 hover:bg-sage-10 hover:text-sage-100'
+              <div className="flex items-center space-x-2">
+                <ThemeToggle />
+                <button
+                  onClick={() => {
+                    handleLogout();
+                    setIsMobileMenuOpen(false);
+                  }}
+                  className={`group flex items-center p-2 text-base font-medium rounded-md transition-colors ${
+                    isDark
+                      ? 'text-gray-300 hover:bg-gray-800 hover:text-red-400'
+                      : 'text-sage-70 hover:bg-sage-10 hover:text-red-500'
                   }`}
-                  onClick={() => setIsMobileMenuOpen(false)}
+                  title="로그아웃"
                 >
-                  <Icon className="mr-4 h-6 w-6" />
-                  {item.name}
-                </Link>
-              );
-            })}
+                  <LogOut className="h-6 w-6" />
+                </button>
+              </div>
+            </div>
           </nav>
         </div>
       )}

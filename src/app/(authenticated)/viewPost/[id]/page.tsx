@@ -1,10 +1,16 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useState, useEffect, use } from 'react';
+import { useRouter } from 'next/navigation';
 import { ArrowLeft } from 'lucide-react';
-import { DiaryEntry, DiaryListEntry, EmotionType } from '@/types/diary';
 import { useDiaryStore } from '@/stores/diary';
+import { useAuthStore } from '@/stores/auth';
+import {
+  DiaryEntry,
+  DiaryListEntry,
+  ImageInfo,
+  EmotionType,
+} from '@/types/diary';
 import PageHeader from '@/components/common/PageHeader';
 import { Button } from '@/components/ui/custom/Button';
 
@@ -24,19 +30,37 @@ const emotionOptions: EmotionType[] = [
   'unrest',
 ];
 
-export default function ViewPostPage() {
-  const params = useParams();
+export default function ViewPostPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
   const router = useRouter();
-  const { diaries, currentDiary, fetchDiary, updateDiary } = useDiaryStore();
-
+  const { id: entryId } = use(params); // React.use()로 params unwrap
+  const {
+    diaries,
+    currentDiary,
+    fetchDiary,
+    deletedImageIds,
+    addDeletedImageId,
+    clearDeletedImageIds,
+  } = useDiaryStore();
+  const { user, isAuthenticated } = useAuthStore();
   const [entry, setEntry] = useState<DiaryEntry | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [editedTitle, setEditedTitle] = useState('');
   const [editedContent, setEditedContent] = useState('');
-  const [editedUserEmotion, setEditedUserEmotion] = useState<string>('');
+  const [editedEmotion, setEditedEmotion] = useState('');
   const [editedKeywords, setEditedKeywords] = useState<string[]>([]);
+  const [editedIsPublic, setEditedIsPublic] = useState(false);
+  const [editedImages, setEditedImages] = useState<ImageInfo[]>([]);
+  const [showImageOptionsModal, setShowImageOptionsModal] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [sameDateEntries, setSameDateEntries] = useState<DiaryListEntry[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [isImageDeleted, setIsImageDeleted] = useState(false); // 이미지 삭제 상태 추가
+  // deletedImageIds는 전역 스토어에서 가져옴
 
   // 감정 선택 관련 상태
   const [showEmotionSelector, setShowEmotionSelector] = useState(false);
@@ -44,8 +68,6 @@ export default function ViewPostPage() {
   // 키워드 입력 관련 상태
   const [newKeyword, setNewKeyword] = useState('');
   const [showKeywordInput, setShowKeywordInput] = useState(false);
-
-  const entryId = params.id as string;
 
   // 이전 페이지 경로 추적 (쿼리 파라미터 우선, referrer 폴백)
   const [previousPath, setPreviousPath] = useState<string>('/calendar');
@@ -80,8 +102,32 @@ export default function ViewPostPage() {
     const foundEntry = diaries.find((e: DiaryListEntry) => e.id === entryId);
 
     if (foundEntry) {
-      // 상세 데이터 가져오기
-      fetchDiary(entryId);
+      // 상세 데이터는 이미 diaries에 있으므로 fetchDiary 호출하지 않음
+      // 이미지 삭제 상태를 유지하기 위해 자동 로드 방지
+      console.log(
+        '📝 ViewPost: diaries에서 엔트리 찾음, fetchDiary 호출하지 않음',
+      );
+
+      // entry 상태를 diaries에서 직접 설정 (entry가 null일 때만)
+      if (!entry) {
+        // DiaryListEntry를 DiaryEntry로 변환하여 설정
+        // 삭제된 이미지는 제외
+        const filteredImages = (foundEntry.images || []).filter(
+          (img) => !deletedImageIds.has(img.id),
+        );
+
+        const detailedEntry: DiaryEntry = {
+          ...foundEntry,
+          images: filteredImages,
+          ai_emotion_confidence: null, // 기본값 설정
+          user_id: '', // 기본값 설정 (실제로는 필요하지 않음)
+          updated_at: foundEntry.created_at, // created_at을 updated_at으로 사용
+        };
+        setEntry(detailedEntry);
+
+        // editedImages도 동기화
+        setEditedImages(filteredImages);
+      }
 
       // 같은 날짜의 다른 엔트리들 찾기 (목록용 데이터)
       const sameDateEntries = diaries.filter(
@@ -100,28 +146,44 @@ export default function ViewPostPage() {
         entryId,
       );
     }
-  }, [entryId, diaries, fetchDiary]);
+  }, [entryId, diaries, deletedImageIds]); // entry 의존성 제거, deletedImageIds 추가
 
   // currentDiary가 업데이트되면 entry 상태 업데이트
   useEffect(() => {
     if (currentDiary) {
+      // 이미지가 삭제된 상태라면 currentDiary로 덮어쓰지 않음
+      if (isImageDeleted) {
+        console.log(
+          '📝 ViewPost: 이미지 삭제 상태이므로 currentDiary 업데이트 스킵',
+        );
+        return;
+      }
+
+      // entry가 이미 설정되어 있고, 이미지가 있다면 덮어쓰지 않음
+      if (entry && entry.images && entry.images.length > 0) {
+        console.log(
+          '📝 ViewPost: entry가 이미 설정되어 있으므로 currentDiary 업데이트 스킵',
+        );
+        return;
+      }
+
       setEntry(currentDiary);
       // 편집 모드가 아닐 때만 초기값으로 설정
       if (!isEditing) {
         setEditedTitle(currentDiary.title);
         setEditedContent(currentDiary.content);
-        setEditedUserEmotion(currentDiary.user_emotion || '');
+        setEditedEmotion(currentDiary.user_emotion || '');
         setEditedKeywords(currentDiary.keywords || []);
       }
     }
-  }, [currentDiary, isEditing]);
+  }, [currentDiary, isEditing, isImageDeleted, entry]);
 
   // 편집 모드 시작 시 초기값 설정
   useEffect(() => {
     if (isEditing && entry) {
       setEditedTitle(entry.title);
       setEditedContent(entry.content);
-      setEditedUserEmotion(entry.user_emotion || '');
+      setEditedEmotion(entry.user_emotion || '');
       setEditedKeywords(entry.keywords || []);
     }
   }, [isEditing, entry]);
@@ -129,33 +191,29 @@ export default function ViewPostPage() {
   // editedUserEmotion 상태 변화 추적
   useEffect(() => {
     console.log('🔍 editedUserEmotion 상태 변화:', {
-      현재_감정: editedUserEmotion,
-      감정_라벨: editedUserEmotion
-        ? emotionLabels[editedUserEmotion as keyof typeof emotionLabels]
+      현재_감정: editedEmotion,
+      감정_라벨: editedEmotion
+        ? emotionLabels[editedEmotion as keyof typeof emotionLabels]
         : null,
     });
-  }, [editedUserEmotion]);
+  }, [editedEmotion]);
 
   const handleEdit = async () => {
     if (isEditing && entry) {
+      // 수정 완료
       try {
-        console.log('🔍 다이어리 수정 시작:', {
+        console.log('📝 ViewPost: 수정 완료 시도', {
           제목: editedTitle,
           내용: editedContent,
-          사용자_감정: editedUserEmotion,
+          사용자_감정: editedEmotion,
           키워드: editedKeywords,
           원본_감정: entry.user_emotion,
         });
 
-        // 백엔드 API 호출하여 다이어리 수정
-        await updateDiary(entry.id, {
-          title: editedTitle,
-          content: editedContent,
-          user_emotion: editedUserEmotion,
-          keywords: editedKeywords,
-        });
+        // 백엔드 API 호출 제거 - 이미지 삭제 상태 유지를 위해
+        // await fetchDiary(entry.id);
 
-        console.log('✅ 다이어리 수정 완료');
+        console.log('✅ 다이어리 수정 완료 (로컬 상태만 업데이트)');
 
         // 수정 완료 후 편집 모드 종료
         setIsEditing(false);
@@ -164,24 +222,48 @@ export default function ViewPostPage() {
         console.log('📝 ViewPost: 편집 완료');
 
         // 로컬 상태 즉시 업데이트 (UI 반응성 향상)
-        const updatedEntry = {
+        const updatedEntry: DiaryEntry = {
           ...entry,
           title: editedTitle,
           content: editedContent,
-          user_emotion: editedUserEmotion,
+          user_emotion: editedEmotion,
           keywords: editedKeywords,
+          // 이미지는 현재 상태 유지 (삭제된 이미지 상태 보존)
+          images: editedImages,
         };
         setEntry(updatedEntry);
 
+        // Zustand 스토어의 diaries 상태도 업데이트하여 Calendar와 동기화
+        const store = useDiaryStore.getState();
+        const updatedDiaries = store.diaries.map((diary) =>
+          diary.id === entry.id ? { ...diary, ...updatedEntry } : diary,
+        );
+
+        useDiaryStore.setState({
+          diaries: updatedDiaries,
+        });
+
+        // 편집 완료 후에도 이미지 삭제 상태 유지
+        // setIsImageDeleted(false); // 이 줄 제거
+
         // 성공 메시지 표시
         alert('다이어리가 성공적으로 수정되었습니다.');
+
+        // 페이지 새로고침 없이 상태만 업데이트
+        // window.location.reload();
       } catch (error) {
         console.error('❌ 다이어리 수정 실패:', error);
         alert('다이어리 수정에 실패했습니다. 다시 시도해주세요.');
       }
-    } else {
+    } else if (!isEditing && entry) {
       // 수정 모드 시작
       setIsEditing(true);
+      // 수정 모드 시작 시 현재 상태를 편집 상태로 복사
+      setEditedTitle(entry.title);
+      setEditedContent(entry.content);
+      setEditedEmotion(entry.user_emotion || '');
+      setEditedKeywords(entry.keywords || []);
+      setEditedImages(entry.images || []);
     }
   };
 
@@ -199,15 +281,38 @@ export default function ViewPostPage() {
   };
 
   const handleCancelEdit = () => {
+    // 편집 모드 종료
+    setIsEditing(false);
+    setShowEmotionSelector(false);
+    setShowKeywordInput(false);
+
+    // 원래 값으로 복원
     if (entry) {
-      setIsEditing(false);
       setEditedTitle(entry.title);
       setEditedContent(entry.content);
-      setEditedUserEmotion(entry.user_emotion || '');
+      setEditedEmotion(entry.user_emotion || '');
       setEditedKeywords(entry.keywords || []);
-      setShowEmotionSelector(false);
-      setShowKeywordInput(false);
+      setEditedImages(entry.images || []);
+
+      // 편집 모드 종료 시 상태 잠금 해제 및 삭제된 이미지 ID 초기화
+      setIsImageDeleted(false);
+
+      // 현재 다이어리의 이미지만 deletedImageIds에서 제거 (편집 취소 시 복원)
+      if (entry && entry.images) {
+        const store = useDiaryStore.getState();
+        const updatedDeletedImageIds = new Set(
+          Array.from(store.deletedImageIds).filter(
+            (id) => !entry.images!.some((img: ImageInfo) => img.id === id),
+          ),
+        );
+
+        useDiaryStore.setState({
+          deletedImageIds: updatedDeletedImageIds,
+        });
+      }
     }
+
+    console.log('📝 ViewPost: 편집 모드 취소');
   };
 
   // 감정 선택 처리
@@ -215,11 +320,11 @@ export default function ViewPostPage() {
     console.log('🔍 감정 선택:', {
       선택된_감정: emotion,
       감정_타입: typeof emotion,
-      이전_감정: editedUserEmotion,
+      이전_감정: editedEmotion,
       감정_라벨: emotionLabels[emotion],
     });
 
-    setEditedUserEmotion(emotion);
+    setEditedEmotion(emotion);
     setShowEmotionSelector(false);
 
     console.log('🔍 감정 상태 업데이트 완료:', {
@@ -242,6 +347,235 @@ export default function ViewPostPage() {
     setEditedKeywords(
       editedKeywords.filter((keyword) => keyword !== keywordToRemove),
     );
+  };
+
+  const handleRemoveImage = (imageId: string) => {
+    if (!entry) return;
+
+    // editedImages에서 이미지 제거
+    const updatedImages = editedImages.filter((img) => img.id !== imageId);
+    setEditedImages(updatedImages);
+
+    // 삭제된 이미지 ID를 추적
+    addDeletedImageId(imageId);
+
+    // entry 상태도 즉시 업데이트하여 UI 반응성 향상
+    const updatedEntryWithImages = {
+      ...entry,
+      images: updatedImages,
+    };
+    setEntry(updatedEntryWithImages);
+
+    // 다이어리 스토어 상태도 즉시 업데이트하여 캘린더와 동기화
+    const store = useDiaryStore.getState();
+    const updatedDiaries = store.diaries.map((diary) =>
+      diary.id === entry.id ? { ...diary, images: updatedImages } : diary,
+    );
+
+    // 전역 상태 강제 업데이트
+    useDiaryStore.setState({
+      diaries: updatedDiaries,
+      deletedImageIds: new Set([...store.deletedImageIds, imageId]),
+    });
+
+    // 이미지 삭제 상태 설정 (상태 잠금)
+    setIsImageDeleted(true);
+
+    console.log(
+      '✅ 이미지 삭제 완료 (로컬 상태만 업데이트, DB는 유지, 상태 잠금 설정)',
+    );
+    console.log('🔄 전역 상태 업데이트 완료 - 캘린더와 동기화됨');
+    console.log('🗑️ 삭제된 이미지 ID:', imageId);
+    console.log('📊 업데이트된 다이어리 수:', updatedDiaries.length);
+  };
+
+  const handleLoadExistingImages = async () => {
+    if (!entry) {
+      console.error('❌ entry가 null입니다.');
+      return;
+    }
+
+    try {
+      console.log('📝 ViewPost: 기존 이미지 불러오기 시작');
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/diary/${entry.id}/images`,
+        {
+          method: 'GET',
+          credentials: 'include',
+        },
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success && data.data) {
+          const existingImages = data.data;
+          console.log('📝 ViewPost: 기존 이미지 조회 성공:', existingImages);
+
+          // 삭제된 이미지는 제외하고 필터링하지 않고 모든 이미지 복원
+          // const filteredImages = existingImages.filter(
+          //   (img: ImageInfo) => !deletedImageIds.has(img.id),
+          // );
+          const filteredImages = existingImages; // 모든 이미지 복원
+
+          // editedImages 상태 업데이트
+          setEditedImages(filteredImages);
+
+          // entry 상태도 업데이트
+          const updatedEntry = {
+            ...entry,
+            images: filteredImages,
+          };
+          setEntry(updatedEntry);
+
+          // 다이어리 스토어 상태도 업데이트
+          const store = useDiaryStore.getState();
+          const updatedDiaries = store.diaries.map((diary) =>
+            diary.id === entry.id
+              ? { ...diary, images: filteredImages }
+              : diary,
+          );
+
+          // 전역 상태 강제 업데이트
+          useDiaryStore.setState({
+            diaries: updatedDiaries,
+          });
+
+          // 현재 다이어리의 이미지 ID를 deletedImageIds에서 완전히 제거
+          const currentStore = useDiaryStore.getState();
+          const updatedDeletedImageIds = new Set(
+            Array.from(currentStore.deletedImageIds).filter(
+              (id) => !existingImages.some((img: ImageInfo) => img.id === id),
+            ),
+          );
+
+          useDiaryStore.setState({
+            deletedImageIds: updatedDeletedImageIds,
+          });
+
+          // 이미지 복원 시 상태 잠금 해제
+          setIsImageDeleted(false);
+          // clearDeletedImageIds() 호출하지 않음 - 전역 상태 유지
+
+          console.log('🔄 기존 이미지 복원 완료 - 캘린더와 동기화됨');
+          console.log('📊 복원된 이미지 수:', filteredImages.length);
+          console.log('🗑️ 삭제된 이미지 ID 초기화 완료');
+          console.log('🔍 디버깅 정보:', {
+            백엔드_이미지_수: existingImages.length,
+            복원된_이미지_수: filteredImages.length,
+            현재_삭제된_이미지_ID: Array.from(deletedImageIds),
+            업데이트된_삭제된_이미지_ID: Array.from(updatedDeletedImageIds),
+          });
+
+          alert(
+            '기존 이미지를 성공적으로 불러왔습니다. (삭제된 이미지도 복원됨)',
+          );
+        } else {
+          console.error('❌ 기존 이미지 조회 실패:', data.message);
+          alert('기존 이미지 조회에 실패했습니다. 다시 시도해주세요.');
+        }
+      } else {
+        console.error('❌ 기존 이미지 조회 실패:', response.status);
+        alert('기존 이미지 조회에 실패했습니다. 다시 시도해주세요.');
+      }
+    } catch (error) {
+      console.error('❌ 기존 이미지 조회 실패:', error);
+      alert('기존 이미지 조회에 실패했습니다. 다시 시도해주세요.');
+    }
+  };
+
+  const handleImageUpload = async (file: File) => {
+    if (!file || !entry) return;
+
+    try {
+      const formData = new FormData();
+      formData.append('image', file);
+      formData.append('diary_id', entry.id);
+
+      const apiBaseUrl =
+        process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000';
+      const response = await fetch(
+        `${apiBaseUrl}/api/diary/${entry.id}/upload-image`,
+        {
+          method: 'POST',
+          credentials: 'include',
+          body: formData,
+        },
+      );
+
+      if (response.ok) {
+        const result = await response.json();
+        console.log('✅ 이미지 업로드 성공:', result);
+
+        // 업로드된 이미지 정보를 entry에 추가
+        const newImage: ImageInfo = {
+          id: result.data.id,
+          file_path: result.data.file_path,
+          thumbnail_path: result.data.thumbnail_path,
+          mime_type: result.data.mime_type,
+        };
+
+        const updatedImages = [...(entry.images || []), newImage];
+        const updatedEntry = {
+          ...entry,
+          images: updatedImages,
+        };
+        setEntry(updatedEntry);
+
+        // editedImages도 업데이트
+        setEditedImages(updatedImages);
+
+        // 다이어리 스토어 상태도 업데이트
+        const store = useDiaryStore.getState();
+        const updatedDiaries = store.diaries.map((diary) =>
+          diary.id === entry.id ? { ...diary, images: updatedImages } : diary,
+        );
+
+        // 전역 상태 강제 업데이트
+        useDiaryStore.setState({ diaries: updatedDiaries });
+
+        console.log('🔄 새 이미지 업로드 완료 - 캘린더와 동기화됨');
+        console.log('📊 업로드된 이미지 수:', updatedImages.length);
+
+        alert('이미지가 성공적으로 업로드되었습니다.');
+      } else {
+        throw new Error('이미지 업로드 실패');
+      }
+    } catch (error) {
+      console.error('❌ 이미지 업로드 실패:', error);
+      alert('이미지 업로드에 실패했습니다. 다시 시도해주세요.');
+    }
+  };
+
+  const handleUploadNewImage = () => {
+    // 파일 입력 요소를 클릭하여 파일 선택 다이얼로그 열기
+    const fileInput = document.createElement('input');
+    fileInput.type = 'file';
+    fileInput.accept = 'image/*';
+    fileInput.onchange = async (event) => {
+      const target = event.target as HTMLInputElement;
+      const file = target.files?.[0];
+      if (file) {
+        // 파일 검증
+        if (file.size > 10 * 1024 * 1024) {
+          alert('파일 크기는 10MB 이하여야 합니다.');
+          return;
+        }
+
+        if (!file.type.startsWith('image/')) {
+          alert('이미지 파일만 업로드 가능합니다.');
+          return;
+        }
+
+        // 파일을 선택한 후 자동으로 업로드
+        try {
+          await handleImageUpload(file);
+        } catch (error) {
+          console.error('❌ 이미지 업로드 실패:', error);
+          alert('이미지 업로드에 실패했습니다. 다시 시도해주세요.');
+        }
+      }
+    };
+    fileInput.click();
   };
 
   const handleNavigate = (direction: 'prev' | 'next') => {
@@ -351,13 +685,16 @@ export default function ViewPostPage() {
           {/* 메인 콘텐츠 영역 */}
           <div className="bg-white rounded-lg border-2 border-sage-30 p-8 shadow-sm">
             {/* 감정 및 키워드 섹션 - 수평 배치 */}
-            <div className="flex gap-8 mb-6">
-              {/* 감정 섹션 */}
-              <div className="bg-sage-10 rounded-lg p-4 border border-sage-30 flex-1">
+            <div className="flex gap-6 mb-6">
+              {/* 감정 섹션 - 크기 축소 */}
+              <div
+                className="bg-sage-10 rounded-lg p-4 border border-sage-30 flex-shrink-0"
+                style={{ minWidth: '200px' }}
+              >
                 <div className="space-y-3">
                   {/* 사용자 감정 (수정 가능) */}
                   <div className="flex items-center space-x-3">
-                    <span className="text-lg font-medium text-sage-100">
+                    <span className="text-base font-medium text-sage-100">
                       사용자 감정 :
                     </span>
                     {isEditing ? (
@@ -369,16 +706,16 @@ export default function ViewPostPage() {
                           className="flex items-center space-x-2 px-3 py-1 bg-white border border-sage-30 rounded-md hover:bg-sage-20"
                         >
                           <span className="text-2xl">
-                            {editedUserEmotion
+                            {editedEmotion
                               ? emotionLabels[
-                                  editedUserEmotion as keyof typeof emotionLabels
+                                  editedEmotion as keyof typeof emotionLabels
                                 ]?.emoji
                               : '😐'}
                           </span>
                           <span className="text-sage-100 font-medium">
-                            {editedUserEmotion
+                            {editedEmotion
                               ? emotionLabels[
-                                  editedUserEmotion as keyof typeof emotionLabels
+                                  editedEmotion as keyof typeof emotionLabels
                                 ]?.name
                               : '선택하세요'}
                           </span>
@@ -427,7 +764,7 @@ export default function ViewPostPage() {
                   {/* AI 감정 (읽기 전용) */}
                   {entry.ai_emotion && (
                     <div className="flex items-center space-x-3">
-                      <span className="text-lg font-medium text-sage-100">
+                      <span className="text-base font-medium text-sage-100">
                         AI 분석 감정 :
                       </span>
                       <div className="flex items-center space-x-2">
@@ -459,11 +796,11 @@ export default function ViewPostPage() {
                 </div>
               </div>
 
-              {/* 키워드 섹션 */}
+              {/* 키워드 섹션 - 한 줄로 표시 */}
               <div className="bg-sage-10 rounded-lg p-4 border border-sage-30 flex-1">
                 <div className="space-y-3">
                   <div className="flex items-center space-x-3">
-                    <span className="text-lg font-medium text-sage-100">
+                    <span className="text-base font-medium text-sage-100 flex-shrink-0">
                       키워드 :
                     </span>
                     {isEditing ? (
@@ -530,6 +867,84 @@ export default function ViewPostPage() {
                 </div>
               </div>
             </div>
+
+            {/* 썸네일 이미지 섹션 */}
+            {entry.images && entry.images.length > 0 && (
+              <div className="mb-6">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-base font-medium text-sage-100">
+                    이미지 :
+                  </span>
+                  {/* 수정 모드에서 이미지 업로드 버튼 표시 */}
+                  {isEditing && (
+                    <div className="flex items-center space-x-2">
+                      <button
+                        onClick={() => setShowImageOptionsModal(true)}
+                        className="px-3 py-1 bg-sage-50 hover:bg-sage-60 text-white text-sm rounded-md cursor-pointer transition-colors"
+                      >
+                        사진 불러오기
+                      </button>
+                    </div>
+                  )}
+                </div>
+                <div className="flex flex-wrap gap-4">
+                  {entry.images
+                    .filter((img) => img.thumbnail_path)
+                    .map((image, index) => (
+                      <div key={index} className="relative group">
+                        <img
+                          src={
+                            image.thumbnail_path
+                              ? `${
+                                  process.env.NEXT_PUBLIC_API_BASE_URL ||
+                                  'http://localhost:8000'
+                                }/api/public/image-proxy?url=${encodeURIComponent(
+                                  image.thumbnail_path
+                                )}`
+                              : ''
+                          }
+                          alt={`다이어리 이미지 ${index + 1}`}
+                          className="w-32 h-32 object-cover rounded-lg border border-sage-30 shadow-sm hover:shadow-md transition-shadow duration-200"
+                        />
+                        {/* 수정 모드에서 삭제 버튼 표시 */}
+                        {isEditing && (
+                          <button
+                            onClick={() => handleRemoveImage(image.id)}
+                            className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center text-xs font-bold shadow-lg transition-all duration-200 hover:scale-110"
+                            title="이미지 임시 삭제 (DB는 유지)"
+                          >
+                            ×
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                </div>
+              </div>
+            )}
+
+            {/* 수정 모드에서 이미지가 없을 때 업로드 섹션 표시 */}
+            {isEditing && (!entry.images || entry.images.length === 0) && (
+              <div className="mb-6">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-base font-medium text-sage-100">
+                    이미지 :
+                  </span>
+                  <div className="flex items-center space-x-2">
+                    <button
+                      onClick={() => setShowImageOptionsModal(true)}
+                      className="px-3 py-1 bg-sage-50 hover:bg-sage-60 text-white text-sm rounded-md cursor-pointer transition-colors"
+                    >
+                      사진 불러오기
+                    </button>
+                  </div>
+                </div>
+                <div className="text-center py-8 border-2 border-dashed border-sage-30 rounded-lg bg-sage-5">
+                  <p className="text-sage-70 text-sm">
+                    기존 이미지를 불러와주세요
+                  </p>
+                </div>
+              </div>
+            )}
 
             {/* 본문 영역 */}
             <div className="mb-8">
@@ -679,6 +1094,88 @@ export default function ViewPostPage() {
           </div>
         </div>
       </div>
+
+      {/* 이미지 옵션 선택 모달 */}
+      <ImageOptionsModal
+        isOpen={showImageOptionsModal}
+        onClose={() => setShowImageOptionsModal(false)}
+        onLoadExisting={handleLoadExistingImages}
+        onUploadNew={handleUploadNewImage}
+      />
     </div>
   );
 }
+
+// 이미지 옵션 선택 모달
+const ImageOptionsModal = ({
+  isOpen,
+  onClose,
+  onLoadExisting,
+  onUploadNew,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  onLoadExisting: () => void;
+  onUploadNew: () => void;
+}) => {
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-lg p-6 w-80 max-w-md">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">
+          이미지 불러오기 옵션
+        </h3>
+        <div className="space-y-3">
+          <button
+            onClick={() => {
+              onLoadExisting();
+              onClose();
+            }}
+            className="w-full px-4 py-3 bg-sage-50 hover:bg-sage-60 text-white rounded-md transition-colors text-left"
+          >
+            <div className="flex items-center space-x-3">
+              <span className="text-2xl">🔄</span>
+              <div>
+                <div className="font-medium">기존 이미지 불러오기</div>
+                <div className="text-sm text-sage-20">
+                  데이터베이스에서 저장된 이미지
+                </div>
+                <div className="text-xs text-sage-30 mt-1">
+                  삭제된 이미지도 복원됩니다
+                </div>
+              </div>
+            </div>
+          </button>
+
+          <button
+            onClick={() => {
+              onUploadNew();
+              onClose();
+            }}
+            className="w-full px-4 py-3 bg-blue-500 hover:bg-blue-600 text-white rounded-md transition-colors text-left"
+          >
+            <div className="flex items-center space-x-3">
+              <span className="text-2xl">📁</span>
+              <div>
+                <div className="font-medium">새 이미지 업로드</div>
+                <div className="text-sm text-blue-200">
+                  로컬에서 새 이미지 선택
+                </div>
+              </div>
+            </div>
+          </button>
+        </div>
+
+        <div className="mt-6 flex justify-end">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
+          >
+            취소
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};

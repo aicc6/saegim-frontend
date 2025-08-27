@@ -88,8 +88,8 @@ class ApiClient {
         url: response.url,
       });
 
-      // 401 에러 시 토큰 갱신 시도 (쿠키 기반)
-      if (response.status === 401) {
+      // 401 에러 시 토큰 갱신 시도 (쿠키 기반) - 로그인 요청 제외
+      if (response.status === 401 && !endpoint.includes('/api/auth/login')) {
         console.log('🔄 토큰 만료, 갱신 시도...');
         const refreshed = await this.refreshToken();
         
@@ -98,6 +98,16 @@ class ApiClient {
           const retryResponse = await fetch(url, defaultOptions);
           
           if (!retryResponse.ok) {
+            // 재시도도 실패하면 토큰 갱신이 무효화된 것으로 간주
+            console.log('❌ 토큰 갱신 후 재시도 실패, 랜딩 페이지로 리다이렉트');
+            if (typeof window !== 'undefined') {
+              // 탈퇴 관련 요청인지 확인하여 적절한 상태로 리다이렉트
+              const isWithdrawRequest = endpoint.includes('/api/auth/withdraw');
+              // 탈퇴 요청의 경우 랜딩 페이지로 리다이렉트하지 않음 (프론트엔드에서 처리)
+              if (!isWithdrawRequest) {
+                window.location.href = '/landing?status=token_expired';
+              }
+            }
             throw new Error(`HTTP error! status: ${retryResponse.status}`);
           }
           
@@ -156,9 +166,9 @@ class ApiClient {
         return true;
       } else {
         console.log('❌ 토큰 갱신 실패');
-        // 갱신 실패 시 로그인 페이지로 리다이렉트
+        // 갱신 실패 시 랜딩 페이지로 리다이렉트
         if (typeof window !== 'undefined') {
-          window.location.href = '/login';
+          window.location.href = '/landing?status=token_expired';
         }
         return false;
       }
@@ -197,6 +207,17 @@ class ApiClient {
   ): Promise<ApiResponse<T>> {
     return this.request<T>(endpoint, {
       method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  // PATCH 요청
+  async patch<T>(
+    endpoint: string,
+    data: Record<string, unknown>,
+  ): Promise<ApiResponse<T>> {
+    return this.request<T>(endpoint, {
+      method: 'PATCH',
       body: JSON.stringify(data),
     });
   }
@@ -297,6 +318,19 @@ export const authApi = {
     new_password: string 
   }) => {
     return apiClient.post('/api/auth/forgot-password/reset', data);
+  },
+
+  // 계정 복구 이메일 발송
+  sendRestoreEmail: async (email: string) => {
+    return apiClient.post('/api/auth/restore/send-restore-email', { email });
+  },
+
+  // 계정 복구
+  restoreAccount: async (data: { 
+    email: string; 
+    verification_code: string 
+  }) => {
+    return apiClient.post('/api/auth/restore', data);
   },
 };
 

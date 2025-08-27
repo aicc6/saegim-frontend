@@ -20,6 +20,7 @@ interface DiaryState {
   totalCount: number;
   currentPage: number;
   pageSize: number;
+  deletedImageIds: Set<string>; // 삭제된 이미지 ID 추적
 
   // 액션
   fetchDiaries: (filters?: DiaryFilters) => Promise<void>;
@@ -38,6 +39,9 @@ interface DiaryState {
   clearError: () => void;
   setPage: (page: number) => void;
   setPageSize: (size: number) => void;
+  addDeletedImageId: (imageId: string) => void; // 이미지 삭제 ID 추가
+  removeDeletedImageId: (imageId: string) => void; // 이미지 삭제 ID 제거
+  clearDeletedImageIds: () => void; // 모든 삭제된 이미지 ID 초기화
 }
 
 export const useDiaryStore = create<DiaryState>((set, get) => ({
@@ -49,6 +53,7 @@ export const useDiaryStore = create<DiaryState>((set, get) => ({
   totalCount: 0,
   currentPage: 1,
   pageSize: 20,
+  deletedImageIds: new Set(), // 초기화
 
   // 다이어리 목록 조회
   fetchDiaries: async (filters?: DiaryFilters) => {
@@ -60,11 +65,13 @@ export const useDiaryStore = create<DiaryState>((set, get) => ({
         page_size: (filters?.page_size || get().pageSize).toString(),
       };
 
+      if (filters?.searchTerm) params.searchTerm = filters.searchTerm;
       if (filters?.emotion) params.emotion = filters.emotion;
       if (filters?.is_public !== undefined)
         params.is_public = filters.is_public.toString();
       if (filters?.start_date) params.start_date = filters.start_date;
       if (filters?.end_date) params.end_date = filters.end_date;
+      if (filters?.sort_order) params.sort_order = filters.sort_order;
 
       const response = await diaryApi.getDiaries(params);
 
@@ -200,4 +207,25 @@ export const useDiaryStore = create<DiaryState>((set, get) => ({
 
   // 페이지 크기 설정
   setPageSize: (size: number) => set({ pageSize: size }),
+
+  // 이미지 삭제 ID 추가
+  addDeletedImageId: (imageId: string) => {
+    set((state) => ({
+      deletedImageIds: new Set([...state.deletedImageIds, imageId]),
+    }));
+  },
+
+  // 이미지 삭제 ID 제거
+  removeDeletedImageId: (imageId: string) => {
+    set((state) => ({
+      deletedImageIds: new Set(
+        [...state.deletedImageIds].filter((id) => id !== imageId),
+      ),
+    }));
+  },
+
+  // 모든 삭제된 이미지 ID 초기화
+  clearDeletedImageIds: () => {
+    set({ deletedImageIds: new Set() });
+  },
 }));

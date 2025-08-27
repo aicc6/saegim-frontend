@@ -19,7 +19,8 @@ import { cn } from '@/lib/utils';
 
 export default function CalendarPage() {
   const router = useRouter();
-  const { diaries, fetchDiaries, fetchCalendarDiaries } = useDiaryStore();
+  const { diaries, fetchDiaries, fetchCalendarDiaries, deletedImageIds } =
+    useDiaryStore();
   const { user, isAuthenticated } = useAuthStore();
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [viewDate, setViewDate] = useState(new Date());
@@ -52,13 +53,25 @@ export default function CalendarPage() {
       return;
     }
 
+    // 이미 로딩 중이면 중복 호출 방지 (데이터가 있어도 날짜 변경 시에는 로드)
+    if (isLoading) {
+      console.log('📝 CalendarPage: 이미 로딩 중이어서 중복 호출 방지', {
+        isLoading,
+        diariesCount: diaries.length,
+      });
+      return;
+    }
+
     try {
-      console.log('📅 CalendarPage: 월별 데이터 로딩', {
+      console.log('📅 CalendarPage: 월별 데이터 로딩 시작', {
         year: viewDate.getFullYear(),
         month: viewDate.getMonth() + 1,
         startDate: dateRange.startDate,
         endDate: dateRange.endDate,
       });
+
+      // 로딩 상태 설정
+      useDiaryStore.setState({ isLoading: true, error: null });
 
       // 쿠키 기반 API 호출
       const apiBaseUrl =
@@ -85,12 +98,32 @@ export default function CalendarPage() {
 
         // 스토어 상태 업데이트
         if (result.data && Array.isArray(result.data)) {
-          useDiaryStore.setState({
-            diaries: result.data,
-            totalCount: result.data.length,
-            isLoading: false,
-            error: null,
-          });
+          // 현재 상태와 비교하여 변경사항이 있을 때만 업데이트
+          const currentData = useDiaryStore.getState().diaries;
+          const hasChanged =
+            JSON.stringify(currentData) !== JSON.stringify(result.data);
+
+          if (hasChanged) {
+            // 삭제된 이미지를 제외하고 필터링하지 않고 원본 데이터 그대로 저장
+            useDiaryStore.setState({
+              diaries: result.data,
+              isLoading: false,
+              error: null,
+            });
+
+            console.log('✅ CalendarPage: 데이터 로딩 완료', {
+              diariesCount: result.data.length,
+            });
+          } else {
+            // 데이터가 변경되지 않았으면 로딩 상태만 해제
+            useDiaryStore.setState({
+              isLoading: false,
+              error: null,
+            });
+            console.log(
+              '📝 CalendarPage: 데이터 변경사항 없음 (로딩 상태만 해제)',
+            );
+          }
         }
       } else if (response.status === 401) {
         console.log('❌ CalendarPage: 인증 실패, 로그인 페이지로 리다이렉트');
@@ -104,7 +137,7 @@ export default function CalendarPage() {
         isLoading: false,
       });
     }
-  }, [isAuthenticated, viewDate, dateRange, router]);
+  }, [isAuthenticated, viewDate, dateRange, router, isLoading]);
 
   // 현재 보고 있는 월의 데이터
   const currentMonthData = useMemo(() => {
@@ -179,11 +212,40 @@ export default function CalendarPage() {
     };
   }, [diaries, viewDate]);
 
+  // 필터링된 다이어리 목록 (삭제된 이미지 제외)
+  const filteredDiaries = useMemo(() => {
+    console.log('🔄 CalendarPage: 다이어리 필터링 시작', {
+      총_다이어리_수: diaries.length,
+      삭제된_이미지_ID_수: deletedImageIds.size,
+      삭제된_이미지_ID들: Array.from(deletedImageIds),
+    });
+
+    const filtered = diaries.map((diary) => ({
+      ...diary,
+      images: (diary.images || []).filter(
+        (img) => !deletedImageIds.has(img.id),
+      ),
+    }));
+
+    console.log('✅ CalendarPage: 다이어리 필터링 완료', {
+      필터링_전_이미지_수: diaries.reduce(
+        (sum, d) => sum + (d.images?.length || 0),
+        0,
+      ),
+      필터링_후_이미지_수: filtered.reduce(
+        (sum, d) => sum + (d.images?.length || 0),
+        0,
+      ),
+    });
+
+    return filtered;
+  }, [diaries, deletedImageIds]);
+
   // 선택된 날짜의 다이어리
   const selectedDateEntries = useMemo(() => {
     if (!selectedDate) return [];
 
-    return diaries.filter((diary) => {
+    return filteredDiaries.filter((diary) => {
       const diaryDate = new Date(diary.created_at);
       const selectedDateObj = new Date(selectedDate);
       return (
@@ -192,7 +254,7 @@ export default function CalendarPage() {
         diaryDate.getDate() === selectedDateObj.getDate()
       );
     });
-  }, [diaries, selectedDate]);
+  }, [selectedDate, filteredDiaries]);
 
   // 인증 상태 확인 - 메인 페이지와 동일한 로직
   useEffect(() => {
@@ -298,19 +360,23 @@ export default function CalendarPage() {
   useEffect(() => {
     const handleFocus = () => {
       console.log('📅 CalendarPage: 페이지 포커스 감지, 데이터 새로고침');
-      loadMonthData();
+      // 포커스 시에만 데이터 새로고침 (중복 방지)
+      if (isAuthenticated && !isLoading) {
+        loadMonthData();
+      }
     };
 
     window.addEventListener('focus', handleFocus);
     return () => window.removeEventListener('focus', handleFocus);
-  }, [loadMonthData]);
+  }, [loadMonthData, isAuthenticated, isLoading]);
 
-  // 월 변경 시 데이터 로드
+  // 월 변경 시 데이터 로드 (한 번만 실행)
   useEffect(() => {
-    if (isAuthenticated) {
+    if (isAuthenticated && !hasChecked && !isLoading) {
+      console.log('📅 CalendarPage: 초기 데이터 로드 (한 번만)');
       loadMonthData();
     }
-  }, [loadMonthData, isAuthenticated]);
+  }, [isAuthenticated, hasChecked, isLoading, loadMonthData]);
 
   // 인증 확인 완료 후 인증되지 않았을 때만 리다이렉트
   if (!isAuthenticated || !user) {
@@ -346,7 +412,32 @@ export default function CalendarPage() {
   };
 
   const handleDateChange = (date: Date) => {
+    console.log('📅 CalendarPage: Calendar에서 날짜 변경 감지', {
+      oldDate: viewDate,
+      newDate: date,
+      oldMonth: viewDate.getMonth() + 1,
+      newMonth: date.getMonth() + 1,
+    });
+
+    // 같은 월이면 데이터 로드하지 않음
+    if (
+      viewDate.getMonth() === date.getMonth() &&
+      viewDate.getFullYear() === date.getFullYear()
+    ) {
+      console.log('📝 CalendarPage: 같은 월이므로 데이터 로드 스킵');
+      return;
+    }
+
     setViewDate(date);
+
+    // 날짜가 변경되면 데이터를 새로 로드
+    // 기존 데이터를 초기화하여 중복 호출 방지 로직을 우회
+    useDiaryStore.setState({ diaries: [], isLoading: false, error: null });
+
+    // 새로운 날짜로 데이터 로드
+    setTimeout(() => {
+      loadMonthData();
+    }, 100);
   };
 
   const clearSelection = () => {
@@ -376,6 +467,7 @@ export default function CalendarPage() {
               <Calendar
                 onDateSelect={handleDateSelect}
                 onDateChange={handleDateChange}
+                currentViewDate={viewDate}
                 className="h-fit"
               />
 
@@ -454,6 +546,68 @@ export default function CalendarPage() {
                                   </span>
                                 ),
                               )}
+                            </div>
+                          )}
+
+                          {/* 썸네일 이미지 표시 */}
+                          {entry.images && entry.images.length > 0 && (
+                            <div className="mb-3">
+                              <div className="flex flex-wrap gap-1.5 justify-center">
+                                {entry.images
+                                  .filter((img) => img.thumbnail_path)
+                                  .slice(0, 4) // 최대 4개 이미지 표시
+                                  .map((image, index) => (
+                                    <div
+                                      key={index}
+                                      className="relative flex-shrink-0"
+                                    >
+                                      <img
+                                        src={
+                                          image.thumbnail_path
+                                            ? `${
+                                                process.env
+                                                  .NEXT_PUBLIC_API_BASE_URL ||
+                                                'http://localhost:8000'
+                                              }/api/public/image-proxy?url=${encodeURIComponent(
+                                                image.thumbnail_path
+                                              )}`
+                                            : ''
+                                        }
+                                        alt={`다이어리 이미지 ${index + 1}`}
+                                        className="rounded-md border border-border-subtle shadow-sm hover:shadow-md transition-all duration-200 hover:scale-105"
+                                        style={{
+                                          width: '70px',
+                                          height: '70px',
+                                          objectFit: 'cover',
+                                        }}
+                                        onError={(e) => {
+                                          // 이미지 로드 실패 시 처리
+                                          console.warn(
+                                            `이미지 로드 실패: ${image.thumbnail_path}`,
+                                          );
+                                          e.currentTarget.style.display =
+                                            'none';
+                                        }}
+                                      />
+                                      {/* 이미지 인덱스 표시 (여러 이미지일 때) */}
+                                      {entry.images &&
+                                        entry.images.length > 1 && (
+                                          <div className="absolute -top-1 -right-1 bg-black bg-opacity-70 text-white text-xs px-1 py-0.5 rounded-full min-w-[20px] text-center">
+                                            {index + 1}
+                                          </div>
+                                        )}
+                                    </div>
+                                  ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* 이미지가 없을 때 표시할 내용 */}
+                          {(!entry.images || entry.images.length === 0) && (
+                            <div className="mb-3 text-center py-3 border border-dashed border-border-subtle rounded-md bg-background-hover">
+                              <p className="text-caption text-text-secondary">
+                                📷 이미지 없음
+                              </p>
                             </div>
                           )}
 

@@ -2,6 +2,13 @@
  * 다이어리 관련 타입 정의
  */
 
+export interface ImageInfo {
+  id: string;
+  file_path: string;
+  thumbnail_path: string | null;
+  mime_type: string | null;
+}
+
 export interface DiaryEntry {
   id: string;
   title: string;
@@ -15,6 +22,7 @@ export interface DiaryEntry {
   keywords: string[] | null; // keywords를 리스트 타입으로 수정
   created_at: string;
   updated_at: string | null;
+  images?: ImageInfo[]; // 이미지 정보 추가
 }
 
 export interface DiaryListEntry {
@@ -27,6 +35,7 @@ export interface DiaryListEntry {
   created_at: string;
   is_public: boolean;
   keywords: string[] | null; // keywords를 리스트 타입으로 수정
+  images?: ImageInfo[]; // 이미지 정보 추가
 }
 
 export interface DiaryFilters {
