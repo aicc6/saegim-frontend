@@ -1,24 +1,21 @@
 'use client';
 
 import DiaryListView from '@/app/(authenticated)/list/DiaryListView';
+import PageHeader from '@/components/common/PageHeader';
 
 export default function ListPage() {
   return (
-    <div className="bg-background-primary flex flex-col">
+    <div className="min-h-screen bg-background-primary flex flex-col">
+      {/* 페이지 헤더 */}
+      <PageHeader
+        title="글목록"
+        subtitle="작성한 모든 일기를 한눈에 확인하세요"
+      />
+
       <div className="flex flex-1">
         <main className="flex-1">
           <div className="container mx-auto px-6 py-8">
             <div className="max-w-4xl mx-auto">
-              {/* 페이지 헤더 */}
-              <div className="mb-8">
-                <h1 className="text-h2 font-bold text-text-primary mb-2">
-                  글목록
-                </h1>
-                <p className="text-body text-text-secondary">
-                  작성한 모든 일기를 한눈에 확인하세요
-                </p>
-              </div>
-
               {/* 기능 준비중 메시지
               <div className="bg-background-secondary rounded-2xl border border-border-subtle p-12 text-center">
                 <div className="text-6xl mb-6">📋</div>
