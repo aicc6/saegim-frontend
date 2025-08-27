@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { Calendar } from '@/components/calendar';
+import { Calendar, CalendarRef } from '@/components/calendar';
 import { EmotionPieChart } from '@/components/charts/EmotionPieChart';
 import { KeywordBarChart } from '@/components/charts/KeywordBarChart';
 import PageHeader from '@/components/common/PageHeader';
@@ -26,6 +26,9 @@ export default function CalendarPage() {
   const [viewDate, setViewDate] = useState(new Date());
   const [isLoading, setIsLoading] = useState(true);
   const [hasChecked, setHasChecked] = useState(false);
+
+  // Calendar 컴포넌트에 대한 ref 추가
+  const calendarRef = useRef<CalendarRef>(null);
 
   // 로그인한 사용자의 ID
   const userId = user?.id;
@@ -464,7 +467,26 @@ export default function CalendarPage() {
           <div className="grid grid-cols-1 2xl:grid-cols-3 gap-6">
             {/* 캘린더 영역 - 2XL에서는 2/3, 작은 화면에서는 전체 */}
             <div className="2xl:col-span-2">
+              {/* 현재 날짜로 가기 버튼 */}
+              <div className="flex justify-end mb-4">
+                <button
+                  onClick={() => {
+                    // Calendar 컴포넌트의 goToToday 함수 호출
+                    if (calendarRef.current) {
+                      calendarRef.current.goToToday();
+                    }
+                  }}
+                  className="border-2 px-4 py-2 rounded-lg transition-colors duration-200 hover:opacity-80 text-text-primary border-sage-40"
+                >
+                  <span className="text-sm font-bold">
+                    {`${new Date().getMonth() + 1} / ${new Date().getDate()}`}
+                  </span>
+                </button>
+              </div>
+
               <Calendar
+                ref={calendarRef}
+                key={viewDate.toISOString()}
                 onDateSelect={handleDateSelect}
                 onDateChange={handleDateChange}
                 currentViewDate={viewDate}
