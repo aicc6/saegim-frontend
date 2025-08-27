@@ -64,18 +64,28 @@ const DEFAULT_CONFIG: CreateConfig = {
 };
 
 // ===== API 함수들 =====
-async function generateAIText(
+export async function generateAIText(
   prompt: string,
   style: string,
   length: string,
   emotion: string = '',
-  regeneration_count: number = 1,
+  regeneration_count: number = 0,
+  sessionId?: string,
+  images?: File[],
 ): Promise<AIGenerationResult> {
   try {
     console.log('🚀 API 호출 시작:', {
       url: '/api/ai-generate',
       method: 'POST',
-      body: { prompt, style, length, emotion, regeneration_count },
+      body: {
+        prompt,
+        style,
+        length,
+        emotion,
+        regeneration_count,
+        sessionId,
+        images,
+      },
     });
 
     const response = await apiClient.post<AIGenerationResult>(
@@ -86,10 +96,10 @@ async function generateAIText(
         length,
         emotion,
         regeneration_count,
+        sessionId,
+        images,
       },
     );
-
-    console.log('✅ API 성공 응답:', response);
 
     // ApiResponse<AIGenerationResult>에서 data 추출
     return response.data;
@@ -159,7 +169,7 @@ export const useCreateStore = create<CreateState>()(
       error: null,
       generatedText: null,
       generatedKeywords: null,
-      sessionId: null, // session_id 초기화
+      sessionId: '',
 
       // 기본 액션들
       setPrompt: (prompt) =>
@@ -206,17 +216,10 @@ export const useCreateStore = create<CreateState>()(
 
           // 결과 저장
           set((state) => {
-            console.log('response', response);
             state.generatedText = response.ai_generated_text;
             state.generatedKeywords = response.keywords;
             state.sessionId = response.session_id; // session_id 저장
             state.isGenerating = false;
-          });
-
-          console.log('✅ AI 텍스트 생성 완료:', {
-            text: response.ai_generated_text,
-            keywords: response.keywords,
-            tokens: response.tokens_used,
           });
         } catch (error) {
           const errorMessage =

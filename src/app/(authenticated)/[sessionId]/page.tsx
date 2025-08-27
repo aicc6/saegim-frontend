@@ -1,9 +1,10 @@
 import CreateChat from '@/components/creatAi/CreateChat';
 
-export default function SessionPage({
-  params,
-}: {
-  params: { sessionId: string };
-}) {
-  return <CreateChat sessionId={params.sessionId} />;
+interface SessionPageProps {
+  params: Promise<{ sessionId: string }>;
+}
+
+export default async function SessionPage({ params }: SessionPageProps) {
+  const { sessionId } = await params;
+  return <CreateChat sessionId={sessionId} />;
 }

@@ -26,7 +26,6 @@ export default function CreateAi() {
     setLength,
     generateText,
     clearError,
-    sessionId,
   } = useCreateStore();
 
   const {
@@ -88,12 +87,8 @@ export default function CreateAi() {
     if (!prompt.trim() || isGenerating) return;
 
     try {
-      console.log('글 생성 시작:', { prompt, emotion }); // 디버그 로그
-
       // generateText 실행 (이미 세션 생성 로직 포함)
       await generateText(emotion);
-
-      console.log('글 생성 완료'); // 디버그 로그
 
       // 생성된 세션 ID 가져오기
       const { sessionId } = useCreateStore.getState();
