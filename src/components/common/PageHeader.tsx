@@ -29,7 +29,7 @@ export default function PageHeader({
 
   return (
     <div
-      className={`hidden lg:flex border-b px-12 h-18 items-center sticky top-18 z-40 ${
+      className={`hidden lg:flex border-b px-12 h-18 items-center sticky top-0 z-30 ${
         isDark ? 'bg-gray-900 border-gray-700' : 'bg-white border-sage-20'
       } ${className}`}
     >
