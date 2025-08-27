@@ -27,9 +27,14 @@ export default function AuthenticatedHeader() {
 
   const { notifications, markAsRead, markAllAsRead, deleteNotification } =
     useNotifications();
-  
+
   // FCM 알림 상태 가져오기
-  const { unreadCount: fcmUnreadCount, notifications: fcmNotifications, markAsRead: fcmMarkAsRead, markAllAsRead: fcmMarkAllAsRead } = useFCMStore();
+  const {
+    unreadCount: fcmUnreadCount,
+    notifications: fcmNotifications,
+    markAsRead: fcmMarkAsRead,
+    markAllAsRead: fcmMarkAllAsRead,
+  } = useFCMStore();
 
   // 클라이언트 사이드에서만 테마 렌더링 (hydration 에러 방지)
   useEffect(() => {
@@ -74,7 +79,7 @@ export default function AuthenticatedHeader() {
 
   return (
     <div
-      className={`border-b h-18 px-12 w-full flex items-center ${
+      className={`hidden lg:flex border-b h-18 px-12 w-full items-center ${
         isDark ? 'bg-gray-900 border-gray-700' : 'bg-white border-sage-20'
       }`}
     >

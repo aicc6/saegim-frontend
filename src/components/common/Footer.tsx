@@ -17,7 +17,7 @@ export default function Footer() {
 
   return (
     <footer
-      className={`py-12 ${
+      className={`hidden lg:block py-12 ${
         isDark ? 'bg-gray-800 text-gray-300' : 'bg-sage-100 text-white'
       }`}
     >
