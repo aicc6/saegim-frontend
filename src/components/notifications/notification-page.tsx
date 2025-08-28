@@ -123,7 +123,7 @@ export function NotificationPage() {
               created_at:
                 apiNotification.created_at || new Date().toISOString(),
               fcm_response: apiNotification.fcm_response || {},
-              isRead: apiNotification.status === 'opened',
+              isRead: ['opened', 'read'].includes(apiNotification.status || ''),
               actionUrl:
                 (apiNotification.fcm_response?.url as string) || undefined,
             };
@@ -537,7 +537,9 @@ export function NotificationPage() {
                         onKeyDown={(e) => {
                           if (e.key === 'Enter' || e.key === ' ') {
                             e.preventDefault();
-                            !notification.isRead && markAsRead(notification.id);
+                            if (!notification.isRead) {
+                              markAsRead(notification.id);
+                            }
                           }
                         }}
                         aria-label={`알림: ${notification.title}. ${isUnread ? '읽지 않음' : '읽음'}`}
