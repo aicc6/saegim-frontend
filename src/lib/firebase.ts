@@ -28,17 +28,19 @@ let messagingInitialized = false;
 
 // 브라우저 환경에서만 messaging 초기화
 if (typeof window !== 'undefined') {
-  isSupported().then((supported) => {
-    if (supported) {
-      messaging = getMessaging(app);
-      messagingInitialized = true;
-      console.log('Firebase Messaging 초기화 완료');
-    } else {
-      console.warn('FCM이 지원되지 않는 브라우저입니다.');
-    }
-  }).catch((error) => {
-    console.error('FCM 지원 확인 중 오류:', error);
-  });
+  isSupported()
+    .then((supported) => {
+      if (supported) {
+        messaging = getMessaging(app);
+        messagingInitialized = true;
+        console.log('Firebase Messaging 초기화 완료');
+      } else {
+        console.warn('FCM이 지원되지 않는 브라우저입니다.');
+      }
+    })
+    .catch((error) => {
+      console.error('FCM 지원 확인 중 오류:', error);
+    });
 }
 
 // FCM 토큰 요청 함수
@@ -46,13 +48,13 @@ export const requestFCMToken = async (): Promise<string | null> => {
   // messaging 인스턴스가 초기화될 때까지 대기
   if (!messagingInitialized) {
     console.log('FCM 초기화를 기다리는 중...');
-    
+
     // 최대 5초간 초기화 대기
     for (let i = 0; i < 50; i++) {
       if (messagingInitialized && messaging) break;
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise((resolve) => setTimeout(resolve, 100));
     }
-    
+
     if (!messagingInitialized || !messaging) {
       console.warn('FCM이 지원되지 않는 환경이거나 초기화에 실패했습니다.');
       return null;
