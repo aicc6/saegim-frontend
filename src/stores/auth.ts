@@ -15,40 +15,6 @@ interface AuthState {
   checkSessionExpiry: () => boolean;
 }
 
-// 보안을 위한 sessionStorage 사용 사용자 정의 저장소
-const createSessionStorage = () => {
-  return {
-    getItem: (name: string) => {
-      if (typeof window === 'undefined') return null;
-      try {
-        const item = sessionStorage.getItem(name);
-        if (!item) return null;
-        // 데이터 무결성 검증을 위한 기본적인 검증
-        const parsed = JSON.parse(item);
-        if (parsed && typeof parsed === 'object') {
-          return item;
-        }
-        return null;
-      } catch {
-        return null;
-      }
-    },
-    setItem: (name: string, value: string) => {
-      if (typeof window === 'undefined') return;
-      try {
-        sessionStorage.setItem(name, value);
-      } catch {
-        // sessionStorage 공간 부족 또는 기타 오류 시 무시
-        console.warn('sessionStorage 저장 실패');
-      }
-    },
-    removeItem: (name: string) => {
-      if (typeof window === 'undefined') return;
-      sessionStorage.removeItem(name);
-    },
-  };
-};
-
 // 세션 만료 시간 설정 (8시간)
 const SESSION_TIMEOUT = 8 * 60 * 60 * 1000; // 8시간
 
@@ -180,7 +146,18 @@ export const useAuthStore = create<AuthState>()(
       }),
       {
         name: 'auth-storage',
-        storage: createSessionStorage(), // sessionStorage 사용
+        storage: {
+          getItem: (name: string) => {
+            const value = sessionStorage.getItem(name);
+            return value ? JSON.parse(value) : null;
+          },
+          setItem: (name: string, value: unknown) => {
+            sessionStorage.setItem(name, JSON.stringify(value));
+          },
+          removeItem: (name: string) => {
+            sessionStorage.removeItem(name);
+          },
+        },
         partialize: (state) => ({
           user: state.user,
           isAuthenticated: state.isAuthenticated,

@@ -41,18 +41,32 @@ export default function AuthGuard({ children }: AuthGuardProps) {
         setIsAuthorized(true);
         setIsLoading(false);
       } catch (error: unknown) {
-        console.error('❌ AuthGuard: 서버 인증 실패:', error);
+        const errorMessage =
+          error instanceof Error ? error.message : '알 수 없는 오류';
+        console.error('❌ AuthGuard: 서버 인증 실패:', errorMessage);
 
         // 로컬 스토리지 완전 정리
         clearStorage();
 
-        // 탈퇴된 계정인지 확인
+        // 탈퇴된 계정인지 확인 (API 에러 응답 처리)
+        const apiError = error as {
+          response?: {
+            status: number;
+            data?: {
+              detail?: {
+                error?: string;
+                restore_available?: boolean;
+                days_remaining?: number;
+              };
+            };
+          };
+        };
         if (
-          error.response?.status === 403 &&
-          error.response?.data?.detail?.error === 'ACCOUNT_DELETED'
+          apiError.response?.status === 403 &&
+          apiError.response?.data?.detail?.error === 'ACCOUNT_DELETED'
         ) {
-          const detail = error.response.data.detail;
-          if (detail.restore_available) {
+          const detail = apiError.response.data.detail;
+          if (detail?.restore_available) {
             router.push(
               `/landing?status=withdraw&message=탈퇴된 계정입니다. ${detail.days_remaining}일 이내에 복구할 수 있습니다.`,
             );

@@ -1,15 +1,14 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { 
-  Bell, 
-  BellOff, 
-  Settings, 
-  TestTube, 
-  CheckCircle, 
+import {
+  Bell,
+  Settings,
+  TestTube,
+  CheckCircle,
   XCircle,
   Activity,
-  Smartphone
+  Smartphone,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -22,7 +21,6 @@ import {
 import { Switch } from '@/components/ui/switch';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useFCMStore, initializeFCM } from '@/stores/fcm';
 import { notificationApi } from '@/lib/notification-api';
@@ -80,25 +78,25 @@ export default function UnifiedFCMPanel() {
   const getPermissionInfo = () => {
     switch (permission) {
       case 'granted':
-        return { 
-          icon: CheckCircle, 
-          color: 'text-green-600', 
+        return {
+          icon: CheckCircle,
+          color: 'text-green-600',
           text: '허용됨',
-          variant: 'default' as const
+          variant: 'default' as const,
         };
       case 'denied':
-        return { 
-          icon: XCircle, 
-          color: 'text-red-600', 
+        return {
+          icon: XCircle,
+          color: 'text-red-600',
           text: '거부됨',
-          variant: 'destructive' as const
+          variant: 'destructive' as const,
         };
       default:
-        return { 
-          icon: Bell, 
-          color: 'text-yellow-600', 
+        return {
+          icon: Bell,
+          color: 'text-yellow-600',
           text: '미설정',
-          variant: 'secondary' as const
+          variant: 'secondary' as const,
         };
     }
   };
@@ -148,7 +146,7 @@ export default function UnifiedFCMPanel() {
         ...settings,
         diaryReminder: !originalValue,
       });
-      
+
       // 1초 후 원래 값으로 복원
       setTimeout(() => {
         updateSettings({
@@ -229,7 +227,12 @@ export default function UnifiedFCMPanel() {
     }
   };
 
-  const { icon: PermissionIcon, color, text: permissionText, variant } = getPermissionInfo();
+  const {
+    icon: PermissionIcon,
+    color,
+    text: permissionText,
+    variant,
+  } = getPermissionInfo();
 
   if (!isInitialized) {
     return (
@@ -274,9 +277,7 @@ export default function UnifiedFCMPanel() {
                 <PermissionIcon className={`h-4 w-4 ${color}`} />
                 <span className="font-medium">알림 권한</span>
               </div>
-              <Badge variant={variant}>
-                {permissionText}
-              </Badge>
+              <Badge variant={variant}>{permissionText}</Badge>
             </div>
 
             {/* 토큰 등록 상태 */}
@@ -324,8 +325,8 @@ export default function UnifiedFCMPanel() {
               {/* 권한 요청 섹션 */}
               {permission !== 'granted' && (
                 <div className="space-y-2">
-                  <Button 
-                    onClick={requestPermission} 
+                  <Button
+                    onClick={requestPermission}
                     disabled={isLoading}
                     className="w-full"
                   >
@@ -338,7 +339,9 @@ export default function UnifiedFCMPanel() {
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
                 <Button
                   onClick={registerToken}
-                  disabled={isLoading || !isSupported || permission !== 'granted'}
+                  disabled={
+                    isLoading || !isSupported || permission !== 'granted'
+                  }
                   variant={isTokenRegistered ? 'secondary' : 'default'}
                 >
                   <Settings className="h-4 w-4 mr-2" />
@@ -381,7 +384,7 @@ export default function UnifiedFCMPanel() {
                     <span className="font-medium">전체 알림</span>
                     <Switch
                       checked={settings.enabled}
-                      onCheckedChange={(checked) => 
+                      onCheckedChange={(checked) =>
                         updateSettings({ ...settings, enabled: checked })
                       }
                       disabled={isLoading}
@@ -434,7 +437,8 @@ export default function UnifiedFCMPanel() {
                 <div>
                   <CardTitle>API 연동 테스트</CardTitle>
                   <CardDescription>
-                    백엔드 FCM API와의 연동 상태를 확인하고 테스트할 수 있습니다.
+                    백엔드 FCM API와의 연동 상태를 확인하고 테스트할 수
+                    있습니다.
                   </CardDescription>
                 </div>
                 <Button onClick={runAllTests} disabled={isLoading}>
@@ -551,7 +555,9 @@ export default function UnifiedFCMPanel() {
                               </Badge>
                             )}
                             <span className="text-xs text-muted-foreground">
-                              {new Date(notification.sentAt).toLocaleString('ko-KR')}
+                              {new Date(notification.sentAt).toLocaleString(
+                                'ko-KR',
+                              )}
                             </span>
                           </div>
                         </div>

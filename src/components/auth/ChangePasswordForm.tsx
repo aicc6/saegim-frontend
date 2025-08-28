@@ -35,7 +35,7 @@ export default function ChangePasswordForm() {
     const minLength = password.length >= 9;
     const hasLetter = /[a-zA-Z]/.test(password);
     const hasNumber = /\d/.test(password);
-    const hasSpecial = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>/?]/.test(password);
+    const hasSpecial = /[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/.test(password);
 
     return minLength && hasLetter && hasNumber && hasSpecial;
   };

@@ -77,6 +77,37 @@ const nextConfig: NextConfig = {
     ],
   },
 
+  // 보안 헤더 설정
+  async headers() {
+    return [
+      {
+        source: '/(.*)',
+        headers: [
+          // X-Frame-Options: 클릭재킹 방지
+          {
+            key: 'X-Frame-Options',
+            value: 'DENY',
+          },
+          // X-Content-Type-Options: MIME 타입 스니핑 방지
+          {
+            key: 'X-Content-Type-Options',
+            value: 'nosniff',
+          },
+          // Referrer-Policy: 리퍼러 정보 제한
+          {
+            key: 'Referrer-Policy',
+            value: 'origin-when-cross-origin',
+          },
+          // Permissions-Policy: 브라우저 기능 제한
+          {
+            key: 'Permissions-Policy',
+            value: 'camera=(), microphone=(), geolocation=()',
+          },
+        ],
+      },
+    ];
+  },
+
   // webpack 설정
   webpack: (config: unknown, { isServer }: { isServer: boolean }) => {
     if (!isServer) {

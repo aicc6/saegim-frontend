@@ -27,24 +27,27 @@ function RestoreAccountContent() {
     try {
       setIsLoading(true);
       await authApi.sendRestoreEmail(email);
-      
+
       setIsCodeSent(true);
       toast({
         title: '복구 이메일 발송 완료',
         description: '입력한 이메일로 복구 인증 코드를 발송했습니다.',
         variant: 'default',
       });
-    } catch (error: any) {
-      console.error('복구 이메일 발송 실패:', error);
-      
-      let errorMessage = '복구 이메일 발송에 실패했습니다.';
-      if (error.response?.data?.detail) {
-        errorMessage = error.response.data.detail;
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error ? error.message : '알 수 없는 오류';
+      console.error('복구 이메일 발송 실패:', errorMessage);
+
+      let displayMessage = '복구 이메일 발송에 실패했습니다.';
+      const apiError = error as { response?: { data?: { detail?: string } } };
+      if (apiError.response?.data?.detail) {
+        displayMessage = apiError.response.data.detail;
       }
-      
+
       toast({
         title: '발송 실패',
-        description: errorMessage,
+        description: displayMessage,
         variant: 'destructive',
       });
     } finally {
@@ -68,28 +71,31 @@ function RestoreAccountContent() {
         email: email,
         verification_code: verificationCode,
       });
-      
+
       toast({
         title: '계정 복구 완료',
         description: '계정이 성공적으로 복구되었습니다. 다시 로그인해주세요.',
         variant: 'default',
       });
-      
+
       // 로그인 페이지로 이동
       setTimeout(() => {
         router.push('/login');
       }, 2000);
-    } catch (error: any) {
-      console.error('계정 복구 실패:', error);
-      
-      let errorMessage = '계정 복구에 실패했습니다.';
-      if (error.response?.data?.detail) {
-        errorMessage = error.response.data.detail;
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error ? error.message : '알 수 없는 오류';
+      console.error('계정 복구 실패:', errorMessage);
+
+      let displayMessage = '계정 복구에 실패했습니다.';
+      const apiError = error as { response?: { data?: { detail?: string } } };
+      if (apiError.response?.data?.detail) {
+        displayMessage = apiError.response.data.detail;
       }
-      
+
       toast({
         title: '복구 실패',
-        description: errorMessage,
+        description: displayMessage,
         variant: 'destructive',
       });
     } finally {
@@ -103,7 +109,10 @@ function RestoreAccountContent() {
         <div className="max-w-md mx-auto">
           <div className="bg-background-primary dark:bg-background-dark-secondary rounded-2xl shadow-2xl p-10 border border-border-subtle dark:border-border-dark transition-colors">
             <div className="text-center">
-              <h2 className="text-3xl font-serif mb-5 tracking-tight" style={{ color: '#5C8D89' }}>
+              <h2
+                className="text-3xl font-serif mb-5 tracking-tight"
+                style={{ color: '#5C8D89' }}
+              >
                 🔄 계정 복구
               </h2>
               <div className="mb-10 space-y-2 text-[#7BA098] dark:text-background-dark-brand/80 transition-colors">
@@ -216,7 +225,13 @@ function RestoreAccountContent() {
 
 export default function RestoreAccountPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen bg-background-primary dark:bg-background-dark flex items-center justify-center"><div>로딩 중...</div></div>}>
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-background-primary dark:bg-background-dark flex items-center justify-center">
+          <div>로딩 중...</div>
+        </div>
+      }
+    >
       <RestoreAccountContent />
     </Suspense>
   );

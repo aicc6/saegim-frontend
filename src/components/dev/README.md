@@ -25,7 +25,7 @@ import { FCMTestPanel, FCMManager, DevOnly } from '@/components/dev';
 <DevOnly>
   <FCMTestPanel />
   <FCMManager />
-</DevOnly>
+</DevOnly>;
 ```
 
 ## 주의사항

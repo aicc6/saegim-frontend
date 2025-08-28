@@ -156,14 +156,20 @@ export default function LoginForm({ redirectTo }: LoginFormProps) {
         // 탈퇴된 계정 처리
         if (
           apiError.response?.status === 403 &&
-          typeof backendError === 'object'
+          typeof backendError === 'object' &&
+          backendError !== null
         ) {
+          const accountError = backendError as {
+            error?: string;
+            restore_available?: boolean;
+            days_remaining?: number;
+          };
           if (
-            backendError.error === 'ACCOUNT_DELETED' &&
-            backendError.restore_available
+            accountError.error === 'ACCOUNT_DELETED' &&
+            accountError.restore_available
           ) {
             errorTitle = '탈퇴된 계정';
-            errorDescription = `탈퇴된 계정입니다. ${backendError.days_remaining}일 이내에 복구할 수 있습니다.`;
+            errorDescription = `탈퇴된 계정입니다. ${accountError.days_remaining}일 이내에 복구할 수 있습니다.`;
 
             // 복구 가능한 경우 복구 페이지로 이동 옵션 제공
             toast({
@@ -182,7 +188,7 @@ export default function LoginForm({ redirectTo }: LoginFormProps) {
               ),
             });
             return; // 다른 에러 처리 중단
-          } else if (backendError.error === 'ACCOUNT_PERMANENTLY_DELETED') {
+          } else if (accountError.error === 'ACCOUNT_PERMANENTLY_DELETED') {
             errorTitle = '영구 삭제된 계정';
             errorDescription = '탈퇴 후 30일이 경과되어 복구할 수 없습니다.';
           }
@@ -190,8 +196,9 @@ export default function LoginForm({ redirectTo }: LoginFormProps) {
 
         // 비밀번호 변경 관련 특별 처리
         if (
-          backendError.includes('비밀번호') ||
-          backendError.includes('password')
+          typeof backendError === 'string' &&
+          (backendError.includes('비밀번호') ||
+            backendError.includes('password'))
         ) {
           errorTitle = '비밀번호 변경됨';
           errorDescription =

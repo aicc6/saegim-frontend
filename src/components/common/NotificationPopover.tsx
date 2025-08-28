@@ -58,23 +58,30 @@ export default function NotificationPopover({
   const isDark = resolvedTheme === 'dark';
   const unreadNotifications = notifications.filter((n) => !n.isRead);
   const localUnreadCount = unreadNotifications.length;
-  
+
   // FCM 읽지 않은 알림 우선적으로 사용
   const totalUnreadCount = fcmUnreadCount || localUnreadCount;
-  
+
   // FCM 알림을 로컬 알림 형태로 변환
-  const convertedFCMNotifications: Notification[] = fcmNotifications.map((fcm) => ({
-    id: `fcm_${fcm.id}`,
-    title: fcm.title,
-    message: fcm.body,
-    timestamp: new Date(fcm.sentAt),
-    isRead: fcm.isRead,
-    type: fcm.type === 'diary' ? 'info' : 'info' as 'info' | 'success' | 'warning' | 'error',
-  }));
-  
+  const convertedFCMNotifications: Notification[] = fcmNotifications.map(
+    (fcm) => ({
+      id: `fcm_${fcm.id}`,
+      title: fcm.title,
+      message: fcm.body,
+      timestamp: new Date(fcm.sentAt),
+      isRead: fcm.isRead,
+      type:
+        fcm.type === 'diary'
+          ? 'info'
+          : ('info' as 'info' | 'success' | 'warning' | 'error'),
+    }),
+  );
+
   // 모든 알림 합치기 (FCM 알림을 우선으로)
-  const allNotifications = [...convertedFCMNotifications, ...notifications]
-    .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
+  const allNotifications = [
+    ...convertedFCMNotifications,
+    ...notifications,
+  ].sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
 
   const formatTime = (date: Date) => {
     const now = new Date();
@@ -188,7 +195,7 @@ export default function NotificationPopover({
             </div>
           ) : (
             <div className="divide-y divide-gray-200 dark:divide-gray-600">
-              {allNotifications.map((notification, index) => (
+              {allNotifications.map((notification, _index) => (
                 <div
                   key={notification.id}
                   className={`p-4 hover:bg-gray-50 dark:hover:bg-gray-700 ${
@@ -237,7 +244,10 @@ export default function NotificationPopover({
                           size="sm"
                           onClick={() => {
                             // FCM 알림인지 확인해서 적절한 액션 호출
-                            if (notification.id.startsWith('fcm_') && onFCMMarkAsRead) {
+                            if (
+                              notification.id.startsWith('fcm_') &&
+                              onFCMMarkAsRead
+                            ) {
                               const fcmId = notification.id.replace('fcm_', '');
                               onFCMMarkAsRead(fcmId);
                             } else {

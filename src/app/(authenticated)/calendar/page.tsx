@@ -19,8 +19,12 @@ import { cn } from '@/lib/utils';
 
 export default function CalendarPage() {
   const router = useRouter();
-  const { diaries, fetchDiaries, fetchCalendarDiaries, deletedImageIds } =
-    useDiaryStore();
+  const {
+    diaries,
+    fetchDiaries: _fetchDiaries,
+    fetchCalendarDiaries: _fetchCalendarDiaries,
+    deletedImageIds,
+  } = useDiaryStore();
   const { user, isAuthenticated } = useAuthStore();
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [viewDate, setViewDate] = useState(new Date());
@@ -31,7 +35,7 @@ export default function CalendarPage() {
   const calendarRef = useRef<CalendarRef>(null);
 
   // 로그인한 사용자의 ID
-  const userId = user?.id;
+  const _userId = user?.id;
 
   // 날짜 범위 계산 - useMemo로 최적화하여 불필요한 재계산 방지
   const dateRange = useMemo(() => {
