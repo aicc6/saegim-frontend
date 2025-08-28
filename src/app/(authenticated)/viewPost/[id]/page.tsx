@@ -2,9 +2,9 @@
 
 import { useState, useEffect, use } from 'react';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 import { ArrowLeft } from 'lucide-react';
 import { useDiaryStore } from '@/stores/diary';
-import { useAuthStore } from '@/stores/auth';
 import {
   DiaryEntry,
   DiaryListEntry,
@@ -43,22 +43,17 @@ export default function ViewPostPage({
     fetchDiary,
     deletedImageIds,
     addDeletedImageId,
-    clearDeletedImageIds,
   } = useDiaryStore();
-  const { user, isAuthenticated } = useAuthStore();
   const [entry, setEntry] = useState<DiaryEntry | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [editedTitle, setEditedTitle] = useState('');
   const [editedContent, setEditedContent] = useState('');
   const [editedEmotion, setEditedEmotion] = useState('');
   const [editedKeywords, setEditedKeywords] = useState<string[]>([]);
-  const [editedIsPublic, setEditedIsPublic] = useState(false);
   const [editedImages, setEditedImages] = useState<ImageInfo[]>([]);
   const [showImageOptionsModal, setShowImageOptionsModal] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [sameDateEntries, setSameDateEntries] = useState<DiaryListEntry[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [isImageDeleted, setIsImageDeleted] = useState(false); // 이미지 삭제 상태 추가
   // deletedImageIds는 전역 스토어에서 가져옴
 
@@ -67,7 +62,7 @@ export default function ViewPostPage({
 
   // 키워드 입력 관련 상태
   const [newKeyword, setNewKeyword] = useState('');
-  const [showKeywordInput, setShowKeywordInput] = useState(false);
+  const [_showKeywordInput, setShowKeywordInput] = useState(false);
 
   // 이전 페이지 경로 추적 (쿼리 파라미터 우선, referrer 폴백)
   const [previousPath, setPreviousPath] = useState<string>('/calendar');
@@ -173,7 +168,8 @@ export default function ViewPostPage({
         fetchDiary(entryId);
       }
     }
-  }, [entryId, diaries, deletedImageIds]); // entry 의존성 제거, deletedImageIds 추가
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [entryId, diaries, deletedImageIds]);
 
   // currentDiary가 업데이트되면 entry 상태 업데이트
   useEffect(() => {
@@ -186,10 +182,10 @@ export default function ViewPostPage({
         return;
       }
 
-      // entry가 이미 설정되어 있고, 이미지가 있다면 덮어쓰지 않음
-      if (entry && entry.images && entry.images.length > 0) {
+      // entry가 이미 currentDiary와 같은 ID라면 덮어쓰지 않음
+      if (entry && entry.id === currentDiary.id) {
         console.log(
-          '📝 ViewPost: entry가 이미 설정되어 있으므로 currentDiary 업데이트 스킵',
+          '📝 ViewPost: entry가 이미 같은 ID로 설정되어 있으므로 currentDiary 업데이트 스킵',
         );
         return;
       }
@@ -203,7 +199,7 @@ export default function ViewPostPage({
         setEditedKeywords(currentDiary.keywords || []);
       }
     }
-  }, [currentDiary, isEditing, isImageDeleted, entry]);
+  }, [currentDiary, isEditing, isImageDeleted]);
 
   // 편집 모드 시작 시 초기값 설정
   useEffect(() => {
@@ -703,8 +699,6 @@ export default function ViewPostPage({
 
   const emotion =
     emotionLabels[entry.user_emotion as keyof typeof emotionLabels];
-  const aiEmotion =
-    emotionLabels[entry.ai_emotion as keyof typeof emotionLabels];
 
   return (
     <div className="min-h-screen bg-background-primary flex flex-col">
@@ -940,14 +934,14 @@ export default function ViewPostPage({
                   )}
                 </div>
                 <div className="flex flex-wrap gap-4">
-                  {(isEditing ? editedImages : entry.images)
+                  {(isEditing ? editedImages : entry.images || [])
                     .filter(
                       (img) =>
                         img.thumbnail_path && !deletedImageIds.has(img.id),
                     )
                     .map((image, index) => (
                       <div key={index} className="relative group">
-                        <img
+                        <Image
                           src={
                             image.thumbnail_path
                               ? `${
@@ -959,6 +953,8 @@ export default function ViewPostPage({
                               : ''
                           }
                           alt={`다이어리 이미지 ${index + 1}`}
+                          width={200}
+                          height={200}
                           className="w-32 h-32 object-cover rounded-lg border border-sage-30 shadow-sm hover:shadow-md transition-shadow duration-200"
                         />
                         {/* 수정 모드에서 삭제 버튼 표시 */}

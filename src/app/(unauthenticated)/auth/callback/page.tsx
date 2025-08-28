@@ -23,24 +23,34 @@ function AuthCallbackContent() {
         // 로그인 실패 시
         if (error) {
           console.error('로그인 실패:', message);
-          
+
           // 탈퇴된 계정 에러 처리
-          if (error === 'account_deleted' || error === 'account_permanently_deleted') {
-            const restoreAvailable = searchParams.get('restore_available') === 'true';
+          if (
+            error === 'account_deleted' ||
+            error === 'account_permanently_deleted'
+          ) {
+            const restoreAvailable =
+              searchParams.get('restore_available') === 'true';
             const daysRemaining = searchParams.get('days_remaining');
-            
+
             if (restoreAvailable) {
               // 복구 가능한 경우 복구 페이지로 이동
-              router.push(`/restore-account?email=${searchParams.get('email') || ''}&message=${encodeURIComponent(message || '')}&days_remaining=${daysRemaining || 0}`);
+              router.push(
+                `/restore-account?email=${searchParams.get('email') || ''}&message=${encodeURIComponent(message || '')}&days_remaining=${daysRemaining || 0}`,
+              );
             } else {
               // 복구 불가능한 경우 로그인 페이지로 이동
-              router.push(`/login?error=account_permanently_deleted&message=${encodeURIComponent(message || '')}`);
+              router.push(
+                `/login?error=account_permanently_deleted&message=${encodeURIComponent(message || '')}`,
+              );
             }
           } else {
             // 기타 에러는 로그인 페이지로 이동
-            router.push(`/login?error=${error}&message=${encodeURIComponent(message || '')}`);
+            router.push(
+              `/login?error=${error}&message=${encodeURIComponent(message || '')}`,
+            );
           }
-          
+
           setIsLoading(false);
           return;
         }

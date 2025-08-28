@@ -74,12 +74,12 @@ class ApiClient {
       // 타임아웃 설정 (10초)
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 10000);
-      
+
       const response = await fetch(url, {
         ...defaultOptions,
-        signal: controller.signal
+        signal: controller.signal,
       });
-      
+
       clearTimeout(timeoutId);
 
       console.log('📡 ApiClient: 응답 받음', {
@@ -92,14 +92,16 @@ class ApiClient {
       if (response.status === 401 && !endpoint.includes('/api/auth/login')) {
         console.log('🔄 토큰 만료, 갱신 시도...');
         const refreshed = await this.refreshToken();
-        
+
         if (refreshed) {
           // 새로운 토큰으로 재시도 (쿠키가 자동으로 전송됨)
           const retryResponse = await fetch(url, defaultOptions);
-          
+
           if (!retryResponse.ok) {
             // 재시도도 실패하면 토큰 갱신이 무효화된 것으로 간주
-            console.log('❌ 토큰 갱신 후 재시도 실패, 랜딩 페이지로 리다이렉트');
+            console.log(
+              '❌ 토큰 갱신 후 재시도 실패, 랜딩 페이지로 리다이렉트',
+            );
             if (typeof window !== 'undefined') {
               // 탈퇴 관련 요청인지 확인하여 적절한 상태로 리다이렉트
               const isWithdrawRequest = endpoint.includes('/api/auth/withdraw');
@@ -110,7 +112,7 @@ class ApiClient {
             }
             throw new Error(`HTTP error! status: ${retryResponse.status}`);
           }
-          
+
           const retryData = await retryResponse.json();
           return retryData;
         }
@@ -120,8 +122,12 @@ class ApiClient {
 
       if (!response.ok) {
         // 에러 응답을 포함한 에러 객체 생성
-        const error = new Error(`HTTP error! status: ${response.status}`);
-        (error as any).response = { data, status: response.status };
+        const error = new Error(
+          `HTTP error! status: ${response.status}`,
+        ) as Error & {
+          response?: { data: unknown; status: number };
+        };
+        error.response = { data, status: response.status };
         throw error;
       }
 
@@ -134,12 +140,14 @@ class ApiClient {
       return data;
     } catch (error: unknown) {
       console.error('❌ ApiClient: 요청 실패', error);
-      
+
       // 타임아웃 에러 처리
       if (error instanceof Error && error.name === 'AbortError') {
-        throw new Error('요청 시간이 초과되었습니다. 잠시 후 다시 시도해주세요.');
+        throw new Error(
+          '요청 시간이 초과되었습니다. 잠시 후 다시 시도해주세요.',
+        );
       }
-      
+
       throw error;
     }
   }
@@ -149,16 +157,16 @@ class ApiClient {
       // 토큰 갱신에도 타임아웃 설정 (5초)
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 5000);
-      
+
       const response = await fetch(`${this.baseURL}/api/auth/refresh`, {
         method: 'POST',
         credentials: 'include', // 쿠키에서 refresh_token 자동 전송
         headers: {
           'Content-Type': 'application/json',
         },
-        signal: controller.signal
+        signal: controller.signal,
       });
-      
+
       clearTimeout(timeoutId);
 
       if (response.ok) {
@@ -300,22 +308,25 @@ export const authApi = {
 
   // 비밀번호 재설정 이메일 발송
   sendPasswordResetEmail: async (data: { email: string }) => {
-    return apiClient.post<PasswordResetEmailResponse>('/api/auth/forgot-password', data);
+    return apiClient.post<PasswordResetEmailResponse>(
+      '/api/auth/forgot-password',
+      data,
+    );
   },
 
   // 비밀번호 재설정 인증코드 확인
-  verifyPasswordResetCode: async (data: { 
-    email: string; 
-    verification_code: string 
+  verifyPasswordResetCode: async (data: {
+    email: string;
+    verification_code: string;
   }) => {
     return apiClient.post('/api/auth/forgot-password/verify', data);
   },
 
   // 비밀번호 재설정
-  resetPassword: async (data: { 
-    email: string; 
-    verification_code: string; 
-    new_password: string 
+  resetPassword: async (data: {
+    email: string;
+    verification_code: string;
+    new_password: string;
   }) => {
     return apiClient.post('/api/auth/forgot-password/reset', data);
   },
@@ -326,9 +337,9 @@ export const authApi = {
   },
 
   // 계정 복구
-  restoreAccount: async (data: { 
-    email: string; 
-    verification_code: string 
+  restoreAccount: async (data: {
+    email: string;
+    verification_code: string;
   }) => {
     return apiClient.post('/api/auth/restore', data);
   },
