@@ -3,7 +3,7 @@ import { useTheme } from 'next-themes';
 
 export default function ThemeToggle() {
   const [mounted, setMounted] = useState(false);
-  const { theme, setTheme, resolvedTheme } = useTheme();
+  const { setTheme, resolvedTheme } = useTheme();
 
   const toggleTheme = useCallback(() => {
     // 현재 실제로 적용된 테마를 기준으로 토글

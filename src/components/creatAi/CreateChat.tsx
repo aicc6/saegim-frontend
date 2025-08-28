@@ -177,7 +177,7 @@ export default function CreateChat({ sessionId }: CreateChatProps) {
   }, []);
 
   const handleMoveToDiary = useCallback(
-    (messageContent: string, messageEmotion?: string): void => {
+    (messageContent: string, _messageEmotion?: string): void => {
       alert(
         `다이어리로 이동 기능은 아직 구현되지 않았습니다.\n\n생성된 텍스트: ${messageContent.substring(0, 100)}...`,
       );

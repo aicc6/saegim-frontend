@@ -95,10 +95,7 @@ export default function ChangePasswordForm() {
         new_password: passwordData.newPassword,
       };
 
-      const result = await apiClient.post(
-        '/api/auth/change-password/',
-        requestData,
-      );
+      await apiClient.post('/api/auth/change-password/', requestData);
 
       // 6. 성공 처리
       toast({

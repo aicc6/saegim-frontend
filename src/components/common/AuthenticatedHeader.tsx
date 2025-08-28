@@ -20,10 +20,10 @@ interface UserInfo {
 export default function AuthenticatedHeader() {
   const router = useRouter();
   const { resolvedTheme } = useTheme();
-  const { logout, clearStorage } = useAuthStore();
+  const { clearStorage } = useAuthStore();
   const [mounted, setMounted] = useState(false);
-  const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [_userInfo, setUserInfo] = useState<UserInfo | null>(null);
+  const [_isLoading, setIsLoading] = useState(true);
 
   const { notifications, markAsRead, markAllAsRead, deleteNotification } =
     useNotifications();

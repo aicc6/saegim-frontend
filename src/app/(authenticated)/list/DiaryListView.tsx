@@ -148,7 +148,14 @@ export default function DiaryListView() {
   // 초기 데이터 로드 및 필터 변경 시 재로드
   useEffect(() => {
     applyFilters();
-  }, [selectedEmotion, dateFilter, startDate, endDate, sortOrder]);
+  }, [
+    selectedEmotion,
+    dateFilter,
+    startDate,
+    endDate,
+    sortOrder,
+    applyFilters,
+  ]);
 
   // 검색어는 디바운스 적용
   useEffect(() => {

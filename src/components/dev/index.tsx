@@ -14,9 +14,7 @@ export const isDevelopment = () => {
 };
 
 // 개발 컴포넌트 래퍼 - 프로덕션에서는 렌더링하지 않음
-export const DevOnly: React.FC<{ children: React.ReactNode }> = ({
-  children,
-}) => {
+export const DevOnly = ({ children }: { children: React.ReactNode }) => {
   if (!isDevelopment()) {
     return null;
   }
