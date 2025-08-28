@@ -68,7 +68,7 @@ export default function ProfileForm() {
       if (data.valid === 'true') {
         setEmailChangeData({
           token: token,
-          email: data.email,
+          email: data.email || '',
           password: '',
         });
         setIsEmailChangeModalOpen(true);
