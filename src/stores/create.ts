@@ -107,7 +107,7 @@ export async function generateAIText(params: {
     // 🚀 디버깅: 재생성 요청 시 백엔드로 전달되는 정보 확인
     if (regeneration_count > 1) {
       console.log('🔄 재생성 요청 - 백엔드로 전달되는 정보:', {
-        url: '/api/ai-generate',
+        url: '/api/ai/generate',
         method: 'POST',
         requestBody,
         regeneration_count,
@@ -117,7 +117,7 @@ export async function generateAIText(params: {
     }
 
     const response = await apiClient.post<AIGenerationResult>(
-      '/api/ai-generate',
+      '/api/ai/generate',
       requestBody,
     );
 
