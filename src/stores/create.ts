@@ -70,7 +70,7 @@ export async function generateAIText(params: {
   length: string;
   emotion?: string;
   regeneration_count?: number;
-  sessionId?: string | null;
+  sessionId?: string;
   images?: File[];
 }): Promise<AIGenerationResult> {
   try {
@@ -93,9 +93,10 @@ export async function generateAIText(params: {
       regeneration_count,
     };
 
-    // sessionId가 있을 때만 추가
-    if (sessionId && sessionId.trim() !== '') {
+    // sessionId가 있을 때만 추가 (백엔드 호환성을 위해 둘 다 전송)
+    if (sessionId) {
       requestBody.sessionId = sessionId;
+      requestBody.session_id = sessionId; // 백엔드 호환성
     }
 
     // images가 있을 때만 추가
@@ -103,20 +104,71 @@ export async function generateAIText(params: {
       requestBody.images = images;
     }
 
-    console.log('🚀 API 호출 시작:', {
-      url: '/api/ai-generate',
-      method: 'POST',
-      body: requestBody,
-    });
+    // 🚀 디버깅: 재생성 요청 시 백엔드로 전달되는 정보 확인
+    if (regeneration_count > 1) {
+      console.log('🔄 재생성 요청 - 백엔드로 전달되는 정보:', {
+        url: '/api/ai-generate',
+        method: 'POST',
+        requestBody,
+        regeneration_count,
+        sessionId: sessionId || '없음',
+        hasImages: images && images.length > 0,
+      });
+    }
 
     const response = await apiClient.post<AIGenerationResult>(
       '/api/ai-generate',
       requestBody,
     );
 
+    // ✅ 디버깅: API 호출 성공 시 응답 정보
+    if (regeneration_count > 1) {
+      console.log('✅ 재생성 API 호출 성공:', {
+        response_status: 'success',
+        session_id: response.data.session_id,
+        ai_generated_text_length: response.data.ai_generated_text?.length || 0,
+        regeneration_count,
+      });
+    }
+
     return response.data;
   } catch (error) {
     console.error('❌ AI 텍스트 생성 API 호출 실패:', error);
+
+    // 🚀 디버깅: 재생성 요청 실패 시 상세 정보
+    if (params.regeneration_count && params.regeneration_count > 1) {
+      console.error('💥 재생성 요청 실패 상세:', {
+        error_type: 'API_CALL_FAILED',
+        regeneration_count: params.regeneration_count,
+        sessionId: params.sessionId || '없음',
+        request_params: {
+          prompt: params.prompt?.substring(0, 50) + '...',
+          style: params.style,
+          length: params.length,
+          emotion: params.emotion,
+        },
+        error_message: error instanceof Error ? error.message : String(error),
+      });
+
+      // 🚀 디버깅: 422 오류 시 백엔드 응답 상세 정보
+      if (error instanceof Error && error.message.includes('422')) {
+        console.error('💥 422 오류 상세 분석:', {
+          error_type: 'VALIDATION_ERROR',
+          http_status: 422,
+          request_body: {
+            prompt: params.prompt,
+            style: params.style,
+            length: params.length,
+            emotion: params.emotion,
+            regeneration_count: params.regeneration_count,
+            sessionId: params.sessionId,
+            images: params.images ? `${params.images.length}개` : '없음',
+          },
+          validation_issues: '백엔드에서 데이터 검증 실패',
+        });
+      }
+    }
+
     throw error;
   }
 }
@@ -213,13 +265,12 @@ export const useCreateStore = create<CreateState>()(
             regeneration_count: 1,
             // sessionId는 전달하지 않음 (백엔드에서 새로 생성)
           });
-          console.log('response', response);
 
-          // 결과 저장 (새로운 sessionId로 업데이트)
+          // 결과 저장
           set((state) => {
             state.generatedText = response.ai_generated_text;
             state.generatedKeywords = response.keywords;
-            state.sessionId = response.session_id; // 새로운 session_id 저장
+            state.sessionId = response.session_id; // session_id 저장
             state.isGenerating = false;
           });
         } catch (error) {
