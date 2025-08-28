@@ -86,7 +86,11 @@ function ResetPasswordForm() {
         new_password: newPassword,
       });
 
-      if ((response.data as any).success) {
+      if (
+        response.data &&
+        typeof response.data === 'object' &&
+        'success' in response.data
+      ) {
         toast({
           title: '✅ 비밀번호 변경 완료!',
           description:
@@ -99,11 +103,12 @@ function ResetPasswordForm() {
           router.push('/login');
         }, 2000);
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('비밀번호 재설정 오류:', error);
 
-      if (error.response?.data?.detail) {
-        setError(error.response.data.detail);
+      const apiError = error as { response?: { data?: { detail?: string } } };
+      if (apiError.response?.data?.detail) {
+        setError(apiError.response.data.detail);
       } else {
         setError('비밀번호 재설정 중 오류가 발생했습니다. 다시 시도해주세요.');
       }
