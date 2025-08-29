@@ -67,6 +67,33 @@ const DEFAULT_CONFIG: CreateConfig = {
 };
 
 // ===== API 함수들 =====
+export async function getOriginalUserInput(
+  sessionId: string,
+): Promise<string | null> {
+  try {
+    const response = await fetch(
+      `/api/ai/session/${sessionId}/original-input`,
+      {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+      },
+    );
+
+    if (!response.ok) {
+      return null;
+    }
+
+    const result = await response.json();
+    return result.data?.original_input || null;
+  } catch (error) {
+    logger.error('원본 사용자 입력 조회 실패', { error });
+    return null;
+  }
+}
+
 export async function generateAIText(params: {
   prompt: string;
   style: string;
@@ -183,6 +210,7 @@ interface CreateState {
 
   // 입력 상태
   prompt: string;
+  originalPrompt: string;
   style: WritingStyle;
   length: LengthOption;
   emotion: EmotionOption;
@@ -220,6 +248,7 @@ export const useCreateStore = create<CreateState>()(
       // 초기 상태
       config: DEFAULT_CONFIG,
       prompt: '',
+      originalPrompt: '',
       style: 'poem',
       length: 'short',
       emotion: '',
@@ -278,6 +307,7 @@ export const useCreateStore = create<CreateState>()(
             state.generatedText = response.ai_generated_text;
             state.generatedKeywords = response.keywords;
             state.sessionId = response.session_id; // session_id 저장
+            state.originalPrompt = state.prompt; // 원본 입력 보존
             state.isGenerating = false;
             state.wasJustGenerated = true; // 방금 생성되었음을 표시
           });
@@ -309,6 +339,23 @@ export const useCreateStore = create<CreateState>()(
         set((state) => {
           state.wasJustGenerated = false;
         }),
+
+      // 세션ID로 원본 입력 복구
+      restoreOriginalInput: async () => {
+        const { sessionId } = get();
+        if (!sessionId) return;
+
+        try {
+          const originalInput = await getOriginalUserInput(sessionId);
+          if (originalInput) {
+            set((state) => {
+              state.originalPrompt = originalInput;
+            });
+          }
+        } catch (error) {
+          logger.error('원본 입력 복구 실패', { error });
+        }
+      },
       resetToDefaults: () =>
         set((state) => {
           state.prompt = '';

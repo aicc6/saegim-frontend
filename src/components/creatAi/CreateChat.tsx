@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { CiLocationArrow1 } from 'react-icons/ci';
 import Image from 'next/image';
+import { useRouter } from 'next/navigation';
 import { useCreateStore, WritingStyle, LengthOption } from '@/stores/create';
 import {
   EmotionOption,
@@ -74,6 +75,7 @@ export default function CreateChat({ sessionId }: CreateChatProps) {
   >([]);
 
   // refs
+  const router = useRouter();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -82,6 +84,7 @@ export default function CreateChat({ sessionId }: CreateChatProps) {
   const {
     config,
     prompt,
+    originalPrompt,
     style,
     length,
     isGenerating,
@@ -96,6 +99,7 @@ export default function CreateChat({ sessionId }: CreateChatProps) {
     getStyleDisplayName,
     getLengthDisplayName,
     markAsProcessed,
+    restoreOriginalInput,
   } = useCreateStore();
 
   const {
@@ -188,13 +192,13 @@ export default function CreateChat({ sessionId }: CreateChatProps) {
       messageKeywords?: string[],
     ): Promise<void> => {
       try {
-        if (!prompt.trim()) {
+        if (!originalPrompt.trim()) {
           alert('사용자 입력이 없어 다이어리를 저장할 수 없습니다.');
           return;
         }
 
-        await diaryApi.createDiary({
-          content: prompt.trim(),
+        const response = await diaryApi.createDiary({
+          content: originalPrompt.trim(),
           user_emotion: emotion || undefined,
           ai_generated_text: messageContent,
           ai_emotion: messageEmotion || undefined,
@@ -203,13 +207,13 @@ export default function CreateChat({ sessionId }: CreateChatProps) {
           is_public: false,
         });
 
-        alert('다이어리에 성공적으로 저장되었습니다!');
+        router.push(`/viewPost/${response.data.id}`);
       } catch (error) {
         logger.error('다이어리 저장 실패:', error);
         alert('다이어리 저장 중 오류가 발생했습니다. 다시 시도해주세요.');
       }
     },
-    [prompt, emotion],
+    [originalPrompt, emotion],
   );
 
   const handleOptionKeyDown = useCallback(
@@ -445,6 +449,13 @@ export default function CreateChat({ sessionId }: CreateChatProps) {
   useEffect(() => {
     adjustTextareaHeight();
   }, [prompt, adjustTextareaHeight]);
+
+  // 페이지 로드 시 originalPrompt 복구
+  useEffect(() => {
+    if (storeSessionId && !originalPrompt && generatedText) {
+      restoreOriginalInput();
+    }
+  }, [storeSessionId, originalPrompt, generatedText, restoreOriginalInput]);
 
   useEffect(() => {
     if (prompt === '' && textareaRef.current) {
