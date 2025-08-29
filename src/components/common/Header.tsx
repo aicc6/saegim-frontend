@@ -13,7 +13,7 @@ import ThemeToggle from '../ui/custom/ThemeToggle';
 export default function Header() {
   const router = useRouter();
   const { resolvedTheme } = useTheme();
-  const { isAuthenticated, logout, clearStorage } = useAuthStore();
+  const { isAuthenticated, clearStorage } = useAuthStore();
   const [mounted, setMounted] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 

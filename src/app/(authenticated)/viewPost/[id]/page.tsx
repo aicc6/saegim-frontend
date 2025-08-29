@@ -199,7 +199,7 @@ export default function ViewPostPage({
         setEditedKeywords(currentDiary.keywords || []);
       }
     }
-  }, [currentDiary, isEditing, isImageDeleted]);
+  }, [currentDiary, isEditing, isImageDeleted, entry]);
 
   // 편집 모드 시작 시 초기값 설정
   useEffect(() => {

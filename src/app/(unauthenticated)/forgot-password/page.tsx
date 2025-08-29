@@ -5,7 +5,7 @@ import ForgotPasswordForm from '@/components/auth/ForgotPasswordForm';
 
 export default function ForgotPasswordPage() {
   const { resolvedTheme } = useTheme();
-  const isDark = resolvedTheme === 'dark';
+  const _isDark = resolvedTheme === 'dark';
 
   return (
     <div className="min-h-screen bg-background-secondary dark:bg-background-dark transition-colors">

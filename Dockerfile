@@ -18,7 +18,9 @@ WORKDIR /app
 COPY package.json package-lock.json* ./
 
 # 의존성 설치 (프로덕션 의존성만)
-RUN npm ci --only=production && npm cache clean --force
+# HUSKY=0으로 설정하여 Git hooks 비활성화 (Docker 빌드 환경용)
+ENV HUSKY=0
+RUN npm ci --only=production --ignore-scripts && npm cache clean --force
 
 # =============================================================================
 # Stage 2: Builder
@@ -37,7 +39,9 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY package.json package-lock.json* ./
 
 # 개발 의존성 설치 (빌드에 필요)
-RUN npm install
+# Docker 빌드 환경에서 Git hooks 비활성화
+ENV HUSKY=0
+RUN npm install --ignore-scripts
 
 # 소스 코드 복사
 COPY . .

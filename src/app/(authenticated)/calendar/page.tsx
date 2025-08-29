@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 import { Calendar, CalendarRef } from '@/components/calendar';
 import { EmotionPieChart } from '@/components/charts/EmotionPieChart';
 import { KeywordBarChart } from '@/components/charts/KeywordBarChart';
@@ -19,8 +20,12 @@ import { cn } from '@/lib/utils';
 
 export default function CalendarPage() {
   const router = useRouter();
-  const { diaries, fetchDiaries, fetchCalendarDiaries, deletedImageIds } =
-    useDiaryStore();
+  const {
+    diaries,
+    fetchDiaries: _fetchDiaries,
+    fetchCalendarDiaries: _fetchCalendarDiaries,
+    deletedImageIds,
+  } = useDiaryStore();
   const { user, isAuthenticated } = useAuthStore();
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [viewDate, setViewDate] = useState(new Date());
@@ -31,7 +36,7 @@ export default function CalendarPage() {
   const calendarRef = useRef<CalendarRef>(null);
 
   // 로그인한 사용자의 ID
-  const userId = user?.id;
+  const _userId = user?.id;
 
   // 날짜 범위 계산 - useMemo로 최적화하여 불필요한 재계산 방지
   const dateRange = useMemo(() => {
@@ -45,7 +50,7 @@ export default function CalendarPage() {
     const endDateStr = endDate.toISOString().split('T')[0];
 
     return { startDate: startDateStr, endDate: endDateStr };
-  }, [viewDate.getFullYear(), viewDate.getMonth()]);
+  }, [viewDate]);
 
   // 월별 데이터 로딩 함수
   const loadMonthData = useCallback(async () => {
@@ -140,7 +145,7 @@ export default function CalendarPage() {
         isLoading: false,
       });
     }
-  }, [isAuthenticated, viewDate, dateRange, router, isLoading]);
+  }, [isAuthenticated, viewDate, dateRange, router, isLoading, diaries.length]);
 
   // 현재 보고 있는 월의 데이터
   const currentMonthData = useMemo(() => {
@@ -357,7 +362,7 @@ export default function CalendarPage() {
       console.log('🧹 CalendarPage useEffect 정리 - 타이머 취소');
       clearTimeout(timer);
     };
-  }, []); // 의존성 배열을 비워서 컴포넌트 마운트 시에만 실행
+  }, [hasChecked, isAuthenticated, router, user]);
 
   // 페이지 포커스 시 데이터 새로고침 (다이어리 수정 후 돌아왔을 때)
   useEffect(() => {
@@ -590,7 +595,7 @@ export default function CalendarPage() {
                                       key={index}
                                       className="relative flex-shrink-0"
                                     >
-                                      <img
+                                      <Image
                                         src={
                                           image.thumbnail_path
                                             ? `${
@@ -604,9 +609,9 @@ export default function CalendarPage() {
                                         }
                                         alt={`다이어리 이미지 ${index + 1}`}
                                         className="rounded-md border border-border-subtle shadow-sm hover:shadow-md transition-all duration-200 hover:scale-105"
+                                        width={70}
+                                        height={70}
                                         style={{
-                                          width: '70px',
-                                          height: '70px',
                                           objectFit: 'cover',
                                         }}
                                         onError={(e) => {

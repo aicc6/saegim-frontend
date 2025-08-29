@@ -7,6 +7,7 @@ import {
   useImperativeHandle,
   forwardRef,
 } from 'react';
+import Image from 'next/image';
 import { useDiaryStore } from '@/stores/diary';
 import {
   EmotionType,
@@ -59,8 +60,7 @@ export const Calendar = forwardRef<CalendarRef, CalendarProps>(
       {},
     );
 
-    const { diaries, isLoading, error, fetchCalendarDiaries, deletedImageIds } =
-      useDiaryStore();
+    const { diaries, isLoading, error, deletedImageIds } = useDiaryStore();
 
     // props로 전달받은 날짜가 있으면 사용, 없으면 내부 상태 사용
     const effectiveDate = currentViewDate || currentDate;
@@ -603,7 +603,7 @@ export const Calendar = forwardRef<CalendarRef, CalendarProps>(
 
               {/* 이미지 썸네일 뷰 - 상단 가운데에 배치 */}
               {day.allImages && day.allImages.length > 0 && (
-                <div className="absolute top-1 left-1/2 transform -translate-x-1/2 relative z-10">
+                <div className="top-1 left-1/2 transform -translate-x-1/2 relative z-10">
                   <div className="flex justify-center overflow-hidden">
                     {/* 한 번에 하나의 이미지만 표시 */}
                     <div
@@ -665,7 +665,7 @@ export const Calendar = forwardRef<CalendarRef, CalendarProps>(
                       tabIndex={0}
                       aria-label="다음 이미지로 넘어가기"
                     >
-                      <img
+                      <Image
                         src={`${
                           process.env.NEXT_PUBLIC_API_BASE_URL ||
                           'http://localhost:8000'
@@ -701,7 +701,7 @@ export const Calendar = forwardRef<CalendarRef, CalendarProps>(
               {/* 감정과 키워드를 하단에 배치 */}
               {(day.dominantEmotion ||
                 (day.keywords && day.keywords.length > 0)) && (
-                <div className="absolute bottom-1 left-1/2 transform -translate-x-1/2 relative z-10">
+                <div className="bottom-1 left-1/2 transform -translate-x-1/2 relative z-10">
                   <div className="flex flex-col items-center gap-1">
                     {/* 이모티콘 */}
                     {day.dominantEmotion && (

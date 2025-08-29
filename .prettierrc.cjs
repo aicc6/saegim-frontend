@@ -1,4 +1,4 @@
-const prettierConfig = {
+module.exports = {
   semi: true,
   singleQuote: true,
   tabWidth: 2,
@@ -7,5 +7,3 @@ const prettierConfig = {
   printWidth: 80,
   endOfLine: 'lf',
 };
-
-export default prettierConfig;

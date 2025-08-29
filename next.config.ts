@@ -57,12 +57,12 @@ const nextConfig: NextConfig = {
   // 서버 외부 패키지 설정 (Next.js 15에서 이동됨)
   serverExternalPackages: [],
 
-  // ESLint 설정 (빌드 중 일시적으로 무시)
+  // ESLint 설정 (빌드 시 비활성화)
   eslint: {
     ignoreDuringBuilds: true,
   },
 
-  // TypeScript 설정 (빌드 중 일시적으로 무시)
+  // TypeScript 설정 (빌드 시 비활성화)
   typescript: {
     ignoreBuildErrors: true,
   },
@@ -75,6 +75,37 @@ const nextConfig: NextConfig = {
         hostname: '**',
       },
     ],
+  },
+
+  // 보안 헤더 설정
+  async headers() {
+    return [
+      {
+        source: '/(.*)',
+        headers: [
+          // X-Frame-Options: 클릭재킹 방지
+          {
+            key: 'X-Frame-Options',
+            value: 'DENY',
+          },
+          // X-Content-Type-Options: MIME 타입 스니핑 방지
+          {
+            key: 'X-Content-Type-Options',
+            value: 'nosniff',
+          },
+          // Referrer-Policy: 리퍼러 정보 제한
+          {
+            key: 'Referrer-Policy',
+            value: 'origin-when-cross-origin',
+          },
+          // Permissions-Policy: 브라우저 기능 제한
+          {
+            key: 'Permissions-Policy',
+            value: 'camera=(), microphone=(), geolocation=()',
+          },
+        ],
+      },
+    ];
   },
 
   // webpack 설정

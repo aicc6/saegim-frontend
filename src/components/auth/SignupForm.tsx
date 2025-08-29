@@ -71,7 +71,7 @@ export default function SignupForm() {
     setIsLoading(true);
 
     try {
-      const response = await authApi.signup({
+      const _response = await authApi.signup({
         email: formData.email,
         password: formData.password,
         nickname: formData.nickname,
@@ -85,12 +85,18 @@ export default function SignupForm() {
 
       // 로그인 페이지로 이동
       router.push('/login');
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const apiError = error as {
+        response?: {
+          data?: { detail?: string };
+        };
+        [key: string]: unknown;
+      };
       console.error('회원가입 실패:', error);
       toast({
         title: '회원가입 실패',
         description:
-          error.response?.data?.detail || '회원가입 중 오류가 발생했습니다.',
+          apiError.response?.data?.detail || '회원가입 중 오류가 발생했습니다.',
         variant: 'destructive',
       });
     } finally {
@@ -114,7 +120,12 @@ export default function SignupForm() {
       // 먼저 이메일 중복 확인
       const emailCheckResponse = await authApi.checkEmail(formData.email);
 
-      if (!(emailCheckResponse.data as any).available) {
+      const emailCheckData = emailCheckResponse.data as {
+        available?: boolean;
+        [key: string]: unknown;
+      };
+
+      if (!emailCheckData.available) {
         toast({
           title: '이메일 중복',
           description: '이미 사용 중인 이메일입니다.',
@@ -132,12 +143,18 @@ export default function SignupForm() {
         description: '이메일로 인증 코드가 발송되었습니다.',
         variant: 'default',
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const apiError = error as {
+        response?: {
+          data?: { detail?: string };
+        };
+        [key: string]: unknown;
+      };
       console.error('인증 코드 발송 실패:', error);
       toast({
         title: '인증 코드 발송 실패',
         description:
-          error.response?.data?.detail ||
+          apiError.response?.data?.detail ||
           '인증 코드 발송 중 오류가 발생했습니다.',
         variant: 'destructive',
       });
@@ -179,12 +196,18 @@ export default function SignupForm() {
         description: '이메일 인증이 완료되었습니다.',
         variant: 'default',
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const apiError = error as {
+        response?: {
+          data?: { detail?: string };
+        };
+        [key: string]: unknown;
+      };
       console.error('인증 코드 확인 실패:', error);
       toast({
         title: '인증 실패',
         description:
-          error.response?.data?.detail || '인증 코드가 올바르지 않습니다.',
+          apiError.response?.data?.detail || '인증 코드가 올바르지 않습니다.',
         variant: 'destructive',
       });
     } finally {
@@ -216,7 +239,12 @@ export default function SignupForm() {
     try {
       const response = await authApi.checkNickname(formData.nickname);
 
-      if ((response.data as any).available) {
+      const responseData = response.data as {
+        available?: boolean;
+        [key: string]: unknown;
+      };
+
+      if (responseData.available) {
         setNicknameChecked(true);
         toast({
           title: '닉네임 확인 완료',
@@ -230,7 +258,7 @@ export default function SignupForm() {
           variant: 'destructive',
         });
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('닉네임 확인 실패:', error);
       toast({
         title: '닉네임 확인 실패',

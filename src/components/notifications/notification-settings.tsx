@@ -1,9 +1,24 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { Bell, BellOff, Smartphone, Settings, Sparkles, TrendingUp, ChevronDown, ChevronUp } from 'lucide-react';
+import { useState } from 'react';
+import {
+  Bell,
+  BellOff,
+  Smartphone,
+  Settings,
+  Sparkles,
+  TrendingUp,
+  ChevronDown,
+  ChevronUp,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
@@ -72,13 +87,15 @@ export default function NotificationSettings() {
         <CardHeader className="pb-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
-              <div className={`p-3 rounded-xl shadow-sm ${
-                permission === 'granted' 
-                  ? 'bg-gradient-to-br from-green-100 to-green-200 dark:from-green-900/40 dark:to-green-800/30' 
-                  : permission === 'denied'
-                  ? 'bg-gradient-to-br from-red-100 to-red-200 dark:from-red-900/40 dark:to-red-800/30'
-                  : 'bg-gradient-to-br from-orange-100 to-orange-200 dark:from-orange-900/40 dark:to-orange-800/30'
-              }`}>
+              <div
+                className={`p-3 rounded-xl shadow-sm ${
+                  permission === 'granted'
+                    ? 'bg-gradient-to-br from-green-100 to-green-200 dark:from-green-900/40 dark:to-green-800/30'
+                    : permission === 'denied'
+                      ? 'bg-gradient-to-br from-red-100 to-red-200 dark:from-red-900/40 dark:to-red-800/30'
+                      : 'bg-gradient-to-br from-orange-100 to-orange-200 dark:from-orange-900/40 dark:to-orange-800/30'
+                }`}
+              >
                 {statusInfo.icon}
               </div>
               <div>
@@ -91,14 +108,14 @@ export default function NotificationSettings() {
               </div>
             </div>
             <div className="flex flex-col items-end space-y-2">
-              <Badge 
+              <Badge
                 variant={statusInfo.variant}
                 className={`px-3 py-1 text-sm font-semibold shadow-sm ${
                   permission === 'granted'
                     ? 'bg-gradient-to-r from-green-100 to-green-200 text-green-800 dark:from-green-900/50 dark:to-green-800/40 dark:text-green-300'
                     : permission === 'denied'
-                    ? 'bg-gradient-to-r from-red-100 to-red-200 text-red-800 dark:from-red-900/50 dark:to-red-800/40 dark:text-red-300'
-                    : 'bg-gradient-to-r from-orange-100 to-orange-200 text-orange-800 dark:from-orange-900/50 dark:to-orange-800/40 dark:text-orange-300'
+                      ? 'bg-gradient-to-r from-red-100 to-red-200 text-red-800 dark:from-red-900/50 dark:to-red-800/40 dark:text-red-300'
+                      : 'bg-gradient-to-r from-orange-100 to-orange-200 text-orange-800 dark:from-orange-900/50 dark:to-orange-800/40 dark:text-orange-300'
                 }`}
               >
                 {statusInfo.status}
@@ -112,7 +129,7 @@ export default function NotificationSettings() {
             </div>
           </div>
         </CardHeader>
-        
+
         <CardContent className="space-y-6 pt-2">
           {/* 권한 요청 섹션 */}
           {permission !== 'granted' && isSupported && (
@@ -123,16 +140,17 @@ export default function NotificationSettings() {
                     <Bell className="h-5 w-5 text-blue-600 dark:text-blue-400" />
                   </div>
                   <AlertDescription className="text-sage-80 dark:text-gray-200 font-medium">
-                    다이어리 작성 리마인더, AI 분석 결과 등 유용한 알림을 받아보세요! 📱✨
+                    다이어리 작성 리마인더, AI 분석 결과 등 유용한 알림을
+                    받아보세요! 📱✨
                   </AlertDescription>
                 </div>
               </Alert>
-              
+
               <Button
                 onClick={requestPermission}
                 disabled={isLoading || permission === 'denied'}
                 className={`w-full py-3 text-base font-semibold rounded-xl transition-all duration-300 ${
-                  permission === 'denied' 
+                  permission === 'denied'
                     ? 'bg-gray-100 dark:bg-gray-700 text-gray-400 cursor-not-allowed'
                     : 'bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white shadow-lg hover:shadow-xl hover:scale-105'
                 }`}
@@ -149,14 +167,15 @@ export default function NotificationSettings() {
                   </div>
                 )}
               </Button>
-              
+
               {permission === 'denied' && (
                 <div className="text-center p-4 bg-red-50 dark:bg-red-950/30 rounded-xl">
                   <p className="text-sm text-red-700 dark:text-red-300 font-medium mb-2">
                     🚫 알림이 차단되어 있습니다
                   </p>
                   <p className="text-sm text-red-600 dark:text-red-400 leading-relaxed">
-                    브라우저 주소창 옆의 알림 아이콘을 클릭하거나<br />
+                    브라우저 주소창 옆의 알림 아이콘을 클릭하거나
+                    <br />
                     설정에서 알림을 허용해주세요.
                   </p>
                 </div>
@@ -171,30 +190,33 @@ export default function NotificationSettings() {
               <div className="p-4 bg-gradient-to-r from-sage-10 to-sage-15 dark:from-gray-700 dark:to-gray-650 rounded-xl border border-sage-20 dark:border-gray-600">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-3">
-                    <div className={`p-2 rounded-lg ${
-                      isTokenRegistered 
-                        ? 'bg-green-100 dark:bg-green-900/50' 
-                        : 'bg-orange-100 dark:bg-orange-900/50'
-                    }`}>
-                      <Smartphone className={`w-5 h-5 ${
-                        isTokenRegistered 
-                          ? 'text-green-600 dark:text-green-400' 
-                          : 'text-orange-600 dark:text-orange-400'
-                      }`} />
+                    <div
+                      className={`p-2 rounded-lg ${
+                        isTokenRegistered
+                          ? 'bg-green-100 dark:bg-green-900/50'
+                          : 'bg-orange-100 dark:bg-orange-900/50'
+                      }`}
+                    >
+                      <Smartphone
+                        className={`w-5 h-5 ${
+                          isTokenRegistered
+                            ? 'text-green-600 dark:text-green-400'
+                            : 'text-orange-600 dark:text-orange-400'
+                        }`}
+                      />
                     </div>
                     <div>
                       <span className="text-sm font-semibold text-sage-90 dark:text-gray-200">
                         디바이스 등록 상태
                       </span>
                       <p className="text-xs text-sage-60 dark:text-gray-400">
-                        {isTokenRegistered 
-                          ? '이 디바이스에서 알림을 받을 수 있습니다' 
-                          : '디바이스 등록이 필요합니다'
-                        }
+                        {isTokenRegistered
+                          ? '이 디바이스에서 알림을 받을 수 있습니다'
+                          : '디바이스 등록이 필요합니다'}
                       </p>
                     </div>
                   </div>
-                  <Badge 
+                  <Badge
                     variant={isTokenRegistered ? 'default' : 'secondary'}
                     className={`px-3 py-1 font-semibold ${
                       isTokenRegistered
@@ -211,9 +233,11 @@ export default function NotificationSettings() {
               <div className="space-y-4">
                 <div className="flex items-center space-x-2 mb-4">
                   <Settings className="w-5 h-5 text-sage-60 dark:text-gray-400" />
-                  <h4 className="text-lg font-semibold text-sage-90 dark:text-gray-200">알림 유형</h4>
+                  <h4 className="text-lg font-semibold text-sage-90 dark:text-gray-200">
+                    알림 유형
+                  </h4>
                 </div>
-                
+
                 <div className="grid gap-4">
                   {/* 다이어리 작성 리마인더 */}
                   <div className="p-4 bg-gradient-to-r from-blue-50/50 to-indigo-50/30 dark:from-blue-950/20 dark:to-indigo-950/10 rounded-xl border border-blue-100 dark:border-blue-900/30 transition-all duration-200 hover:shadow-sm">
@@ -223,7 +247,10 @@ export default function NotificationSettings() {
                           <Bell className="w-4 h-4 text-blue-600 dark:text-blue-400" />
                         </div>
                         <div className="space-y-1">
-                          <label className="text-sm font-semibold text-sage-90 dark:text-gray-200 cursor-pointer">
+                          <label
+                            htmlFor="diary-reminder"
+                            className="text-sm font-semibold text-sage-90 dark:text-gray-200 cursor-pointer"
+                          >
                             📝 다이어리 작성 리마인더
                           </label>
                           <p className="text-xs text-sage-60 dark:text-gray-400 leading-relaxed">
@@ -232,9 +259,13 @@ export default function NotificationSettings() {
                         </div>
                       </div>
                       <Switch
+                        id="diary-reminder"
                         checked={settings.diaryReminder}
                         onCheckedChange={(checked) =>
-                          updateSettings({ ...settings, diaryReminder: checked })
+                          updateSettings({
+                            ...settings,
+                            diaryReminder: checked,
+                          })
                         }
                         disabled={isLoading}
                         className="bg-sage-20 dark:bg-gray-600 data-[state=checked]:bg-sage-60 dark:data-[state=checked]:bg-sage-70 border border-sage-30 dark:border-gray-500"
@@ -250,7 +281,10 @@ export default function NotificationSettings() {
                           <Sparkles className="w-4 h-4 text-purple-600 dark:text-purple-400" />
                         </div>
                         <div className="space-y-1">
-                          <label className="text-sm font-semibold text-sage-90 dark:text-gray-200 cursor-pointer">
+                          <label
+                            htmlFor="ai-content"
+                            className="text-sm font-semibold text-sage-90 dark:text-gray-200 cursor-pointer"
+                          >
                             ✨ AI 콘텐츠 알림
                           </label>
                           <p className="text-xs text-sage-60 dark:text-gray-400 leading-relaxed">
@@ -259,9 +293,13 @@ export default function NotificationSettings() {
                         </div>
                       </div>
                       <Switch
+                        id="ai-content"
                         checked={settings.aiContentReady}
                         onCheckedChange={(checked) =>
-                          updateSettings({ ...settings, aiContentReady: checked })
+                          updateSettings({
+                            ...settings,
+                            aiContentReady: checked,
+                          })
                         }
                         disabled={isLoading}
                         className="bg-sage-20 dark:bg-gray-600 data-[state=checked]:bg-sage-60 dark:data-[state=checked]:bg-sage-70 border border-sage-30 dark:border-gray-500"
@@ -277,7 +315,10 @@ export default function NotificationSettings() {
                           <TrendingUp className="w-4 h-4 text-green-600 dark:text-green-400" />
                         </div>
                         <div className="space-y-1">
-                          <label className="text-sm font-semibold text-sage-90 dark:text-gray-200 cursor-pointer">
+                          <label
+                            htmlFor="emotion-trend"
+                            className="text-sm font-semibold text-sage-90 dark:text-gray-200 cursor-pointer"
+                          >
                             📊 감정 트렌드 분석
                           </label>
                           <p className="text-xs text-sage-60 dark:text-gray-400 leading-relaxed">
@@ -286,6 +327,7 @@ export default function NotificationSettings() {
                         </div>
                       </div>
                       <Switch
+                        id="emotion-trend"
                         checked={settings.emotionTrend}
                         onCheckedChange={(checked) =>
                           updateSettings({ ...settings, emotionTrend: checked })
@@ -329,7 +371,10 @@ export default function NotificationSettings() {
                               <span className="text-sm">🎉</span>
                             </div>
                             <div className="space-y-1">
-                              <label className="text-sm font-semibold text-sage-90 dark:text-gray-200 cursor-pointer">
+                              <label
+                                htmlFor="anniversary"
+                                className="text-sm font-semibold text-sage-90 dark:text-gray-200 cursor-pointer"
+                              >
                                 🎂 기념일 알림
                               </label>
                               <p className="text-xs text-sage-60 dark:text-gray-400 leading-relaxed">
@@ -338,9 +383,13 @@ export default function NotificationSettings() {
                             </div>
                           </div>
                           <Switch
+                            id="anniversary"
                             checked={settings.anniversary}
                             onCheckedChange={(checked) =>
-                              updateSettings({ ...settings, anniversary: checked })
+                              updateSettings({
+                                ...settings,
+                                anniversary: checked,
+                              })
                             }
                             disabled={isLoading}
                             className="bg-sage-20 dark:bg-gray-600 data-[state=checked]:bg-sage-60 dark:data-[state=checked]:bg-sage-70 border border-sage-30 dark:border-gray-500"
@@ -356,7 +405,10 @@ export default function NotificationSettings() {
                               <span className="text-sm">🌙</span>
                             </div>
                             <div className="space-y-1">
-                              <label className="text-sm font-semibold text-sage-90 dark:text-gray-200 cursor-pointer">
+                              <label
+                                htmlFor="quiet-hours"
+                                className="text-sm font-semibold text-sage-90 dark:text-gray-200 cursor-pointer"
+                              >
                                 🔕 방해 금지 시간
                               </label>
                               <p className="text-xs text-sage-60 dark:text-gray-400 leading-relaxed">
@@ -365,11 +417,15 @@ export default function NotificationSettings() {
                             </div>
                           </div>
                           <Switch
+                            id="quiet-hours"
                             checked={settings.quietHours.enabled}
                             onCheckedChange={(checked) =>
                               updateSettings({
                                 ...settings,
-                                quietHours: { ...settings.quietHours, enabled: checked },
+                                quietHours: {
+                                  ...settings.quietHours,
+                                  enabled: checked,
+                                },
                               })
                             }
                             disabled={isLoading}
@@ -380,10 +436,14 @@ export default function NotificationSettings() {
                         {settings.quietHours.enabled && (
                           <div className="grid grid-cols-2 gap-4 pt-3 border-t border-slate-200 dark:border-slate-700 animate-in slide-in-from-top-2 duration-200">
                             <div className="space-y-2">
-                              <label className="text-xs font-semibold text-sage-70 dark:text-gray-300">
+                              <label
+                                htmlFor="start-time"
+                                className="text-xs font-semibold text-sage-70 dark:text-gray-300"
+                              >
                                 시작 시간
                               </label>
                               <input
+                                id="start-time"
                                 type="time"
                                 value={settings.quietHours.startTime}
                                 onChange={(e) =>
@@ -400,10 +460,14 @@ export default function NotificationSettings() {
                               />
                             </div>
                             <div className="space-y-2">
-                              <label className="text-xs font-semibold text-sage-70 dark:text-gray-300">
+                              <label
+                                htmlFor="end-time"
+                                className="text-xs font-semibold text-sage-70 dark:text-gray-300"
+                              >
                                 종료 시간
                               </label>
                               <input
+                                id="end-time"
                                 type="time"
                                 value={settings.quietHours.endTime}
                                 onChange={(e) =>

@@ -69,15 +69,19 @@ export default function LoginForm({ redirectTo }: LoginFormProps) {
       });
 
       // 로그인 성공 시 사용자 정보를 스토어에 저장
-      const userData = response.data as any;
-      login({
-        id: userData.user_id,
-        email: userData.email,
-        name: userData.nickname, // 백엔드에서는 nickname, 프론트엔드에서는 name
-        profileImage: '',
-        provider: 'email',
-        createdAt: new Date().toISOString(),
-      });
+      const userData = response.data;
+      if (userData && typeof userData === 'object' && 'user_id' in userData) {
+        login({
+          id: userData.user_id as string,
+          email: userData.email as string,
+          name: userData.nickname as string, // 백엔드에서는 nickname, 프론트엔드에서는 name
+          profileImage: '',
+          provider: 'email',
+          createdAt: new Date().toISOString(),
+        });
+      } else {
+        throw new Error('잘못된 응답 형식입니다.');
+      }
 
       toast({
         title: '로그인 성공',
@@ -88,20 +92,24 @@ export default function LoginForm({ redirectTo }: LoginFormProps) {
       // 리다이렉트 경로가 있으면 해당 경로로, 없으면 메인 페이지로
       const redirectPath = redirectTo === 'records' ? '/list' : '/';
       router.push(redirectPath);
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const errorInfo =
+        error instanceof Error
+          ? {
+              message: error.message,
+              name: error.name,
+              stack: error.stack,
+            }
+          : { message: '알 수 없는 오류' };
+
       console.error('로그인 실패:', error);
-      console.error('에러 상세 정보:', {
-        message: error.message,
-        status: error.status,
-        response: error.response,
-        stack: error.stack,
-      });
+      console.error('에러 상세 정보:', errorInfo);
 
       // 상세한 에러 메시지 처리
       let errorTitle = '로그인 실패';
       let errorDescription = '로그인 중 오류가 발생했습니다.';
 
-      if (error.message) {
+      if (error instanceof Error && error.message) {
         const errorMessage = error.message.toLowerCase();
 
         if (
@@ -136,20 +144,32 @@ export default function LoginForm({ redirectTo }: LoginFormProps) {
       }
 
       // 백엔드에서 전달된 상세 에러 메시지가 있으면 우선 사용
-      if (error.response?.data?.detail) {
-        const backendError = error.response.data.detail;
+      const apiError = error as {
+        response?: {
+          data?: { detail?: unknown };
+          status?: number;
+        };
+      };
+      if (apiError?.response?.data?.detail) {
+        const backendError = apiError.response.data.detail;
 
         // 탈퇴된 계정 처리
         if (
-          error.response?.status === 403 &&
-          typeof backendError === 'object'
+          apiError.response?.status === 403 &&
+          typeof backendError === 'object' &&
+          backendError !== null
         ) {
+          const accountError = backendError as {
+            error?: string;
+            restore_available?: boolean;
+            days_remaining?: number;
+          };
           if (
-            backendError.error === 'ACCOUNT_DELETED' &&
-            backendError.restore_available
+            accountError.error === 'ACCOUNT_DELETED' &&
+            accountError.restore_available
           ) {
             errorTitle = '탈퇴된 계정';
-            errorDescription = `탈퇴된 계정입니다. ${backendError.days_remaining}일 이내에 복구할 수 있습니다.`;
+            errorDescription = `탈퇴된 계정입니다. ${accountError.days_remaining}일 이내에 복구할 수 있습니다.`;
 
             // 복구 가능한 경우 복구 페이지로 이동 옵션 제공
             toast({
@@ -168,7 +188,7 @@ export default function LoginForm({ redirectTo }: LoginFormProps) {
               ),
             });
             return; // 다른 에러 처리 중단
-          } else if (backendError.error === 'ACCOUNT_PERMANENTLY_DELETED') {
+          } else if (accountError.error === 'ACCOUNT_PERMANENTLY_DELETED') {
             errorTitle = '영구 삭제된 계정';
             errorDescription = '탈퇴 후 30일이 경과되어 복구할 수 없습니다.';
           }
@@ -176,8 +196,9 @@ export default function LoginForm({ redirectTo }: LoginFormProps) {
 
         // 비밀번호 변경 관련 특별 처리
         if (
-          backendError.includes('비밀번호') ||
-          backendError.includes('password')
+          typeof backendError === 'string' &&
+          (backendError.includes('비밀번호') ||
+            backendError.includes('password'))
         ) {
           errorTitle = '비밀번호 변경됨';
           errorDescription =

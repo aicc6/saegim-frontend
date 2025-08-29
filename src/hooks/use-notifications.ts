@@ -72,10 +72,20 @@ export function useNotifications(): UseNotificationsReturn {
         if (saved) {
           const parsed = JSON.parse(saved);
           // timestamp를 Date 객체로 변환
-          const converted = parsed.map((notification: any) => ({
-            ...notification,
-            timestamp: new Date(notification.timestamp),
-          }));
+          const converted = parsed.map(
+            (notification: {
+              id: string;
+              title: string;
+              message: string;
+              timestamp: string;
+              type: string;
+              isRead: boolean;
+              [key: string]: unknown;
+            }) => ({
+              ...notification,
+              timestamp: new Date(notification.timestamp),
+            }),
+          );
           setNotifications(converted);
         } else {
           // 초기 더미 데이터 설정 (개발용)

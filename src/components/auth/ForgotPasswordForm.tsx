@@ -47,13 +47,14 @@ export default function ForgotPasswordForm() {
         description: `${email}로 비밀번호 재설정 링크를 발송했습니다.\n\n이메일을 확인하여 링크를 클릭해주세요.`,
         duration: 5000,
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('비밀번호 재설정 이메일 발송 실패:', error);
+      const apiError = error as { response?: { data?: { detail?: string } } };
       const errorMsg =
-        error.response?.data?.detail || '이메일 발송에 실패했습니다.';
+        apiError.response?.data?.detail || '이메일 발송에 실패했습니다.';
 
       console.log('에러 메시지:', errorMsg);
-      console.log('에러 응답:', error.response?.data);
+      console.log('에러 응답:', apiError.response?.data);
 
       // 소셜 계정 사용자인 경우 에러 페이지로 리다이렉트
       if (

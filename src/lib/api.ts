@@ -4,8 +4,36 @@
 
 import { DiaryListEntry } from '@/types/diary';
 
-export const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000';
+// HTTPS 강제 - 보안상 HTTP 프로토콜 사용 금지
+const ensureHttps = (url: string): string => {
+  // 개발 환경에서만 localhost HTTP 허용
+  if (process.env.NODE_ENV === 'development' && url.includes('localhost')) {
+    return url;
+  }
+  // 프로덕션에서는 HTTP를 HTTPS로 강제 변환
+  return url.replace(/^http:/, 'https:');
+};
+
+// 개발 환경에서만 로깅하는 유틸리티 함수
+const logger = {
+  log: (...args: unknown[]) => {
+    if (process.env.NODE_ENV === 'development') {
+      console.log(...args);
+    }
+  },
+  error: (...args: unknown[]) => {
+    if (process.env.NODE_ENV === 'development') {
+      console.error(...args);
+    } else {
+      // 프로덕션에서는 민감한 정보 제외하고 기본 메시지만
+      console.error(args[0] || '오류가 발생했습니다.');
+    }
+  },
+};
+
+export const API_BASE_URL = ensureHttps(
+  process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000',
+);
 
 export interface ApiResponse<T> {
   success: boolean;
@@ -53,7 +81,7 @@ class ApiClient {
   ): Promise<ApiResponse<T>> {
     const url = `${this.baseURL}${endpoint}`;
 
-    console.log('🌐 ApiClient: 요청 시작', {
+    logger.log('🌐 ApiClient: 요청 시작', {
       url,
       method: options.method || 'GET',
       hasAuthHeader: !!options.headers && 'Authorization' in options.headers,
@@ -82,7 +110,7 @@ class ApiClient {
 
       clearTimeout(timeoutId);
 
-      console.log('📡 ApiClient: 응답 받음', {
+      logger.log('📡 ApiClient: 응답 받음', {
         status: response.status,
         ok: response.ok,
         url: response.url,
@@ -90,7 +118,7 @@ class ApiClient {
 
       // 401 에러 시 토큰 갱신 시도 (쿠키 기반) - 로그인 요청 제외
       if (response.status === 401 && !endpoint.includes('/api/auth/login')) {
-        console.log('🔄 토큰 만료, 갱신 시도...');
+        logger.log('🔄 토큰 만료, 갱신 시도...');
         const refreshed = await this.refreshToken();
 
         if (refreshed) {
@@ -99,9 +127,7 @@ class ApiClient {
 
           if (!retryResponse.ok) {
             // 재시도도 실패하면 토큰 갱신이 무효화된 것으로 간주
-            console.log(
-              '❌ 토큰 갱신 후 재시도 실패, 랜딩 페이지로 리다이렉트',
-            );
+            logger.log('❌ 토큰 갱신 후 재시도 실패, 랜딩 페이지로 리다이렉트');
             if (typeof window !== 'undefined') {
               // 탈퇴 관련 요청인지 확인하여 적절한 상태로 리다이렉트
               const isWithdrawRequest = endpoint.includes('/api/auth/withdraw');
@@ -131,7 +157,7 @@ class ApiClient {
         throw error;
       }
 
-      console.log('📊 ApiClient: 응답 데이터', {
+      logger.log('📊 ApiClient: 응답 데이터', {
         hasData: !!data,
         dataType: typeof data,
         success: data?.success,
@@ -139,7 +165,7 @@ class ApiClient {
 
       return data;
     } catch (error: unknown) {
-      console.error('❌ ApiClient: 요청 실패', error);
+      logger.error('❌ ApiClient: 요청 실패', error);
 
       // 타임아웃 에러 처리
       if (error instanceof Error && error.name === 'AbortError') {
@@ -170,10 +196,10 @@ class ApiClient {
       clearTimeout(timeoutId);
 
       if (response.ok) {
-        console.log('✅ 토큰 갱신 성공');
+        logger.log('✅ 토큰 갱신 성공');
         return true;
       } else {
-        console.log('❌ 토큰 갱신 실패');
+        logger.log('❌ 토큰 갱신 실패');
         // 갱신 실패 시 랜딩 페이지로 리다이렉트
         if (typeof window !== 'undefined') {
           window.location.href = '/landing?status=token_expired';
@@ -181,7 +207,7 @@ class ApiClient {
         return false;
       }
     } catch (error) {
-      console.error('❌ 토큰 갱신 중 오류:', error);
+      logger.error('❌ 토큰 갱신 중 오류:', error);
       return false;
     }
   }

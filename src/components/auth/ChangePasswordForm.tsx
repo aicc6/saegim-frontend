@@ -35,7 +35,7 @@ export default function ChangePasswordForm() {
     const minLength = password.length >= 9;
     const hasLetter = /[a-zA-Z]/.test(password);
     const hasNumber = /\d/.test(password);
-    const hasSpecial = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>/?]/.test(password);
+    const hasSpecial = /[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/.test(password);
 
     return minLength && hasLetter && hasNumber && hasSpecial;
   };
@@ -95,10 +95,7 @@ export default function ChangePasswordForm() {
         new_password: passwordData.newPassword,
       };
 
-      const result = await apiClient.post(
-        '/api/auth/change-password/',
-        requestData,
-      );
+      await apiClient.post('/api/auth/change-password/', requestData);
 
       // 6. 성공 처리
       toast({

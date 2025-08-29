@@ -5,7 +5,7 @@ import ResetPasswordErrorForm from '@/components/auth/ResetPasswordErrorForm';
 
 export default function ResetPasswordErrorPage() {
   const { resolvedTheme } = useTheme();
-  const isDark = resolvedTheme === 'dark';
+  const _isDark = resolvedTheme === 'dark';
 
   return (
     <div className="min-h-screen bg-background-secondary dark:bg-background-dark transition-colors">

@@ -187,7 +187,8 @@ export const useDiaryStore = create<DiaryState>((set, get) => ({
     try {
       set({ isLoading: true, error: null });
       const response = await diaryApi.updateDiary(id, data);
-      set({ currentDiary: response.data, isLoading: false, error: null });
+      const diaryData = response.data as DiaryEntry;
+      set({ currentDiary: diaryData, isLoading: false, error: null });
     } catch (error) {
       set({
         error:
