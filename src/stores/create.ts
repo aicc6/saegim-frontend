@@ -298,15 +298,11 @@ export const useCreateStore = create<CreateState>()(
       // 유틸리티 함수들
       getStyleDisplayName: (style) => {
         const { config } = get();
-        return (
-          config.styles.find((s) => s.value === style)?.displayName || style
-        );
+        return config.styles.find((s) => s.value === style)?.label || style;
       },
       getLengthDisplayName: (length) => {
         const { config } = get();
-        return (
-          config.lengths.find((l) => l.value === length)?.displayName || length
-        );
+        return config.lengths.find((l) => l.value === length)?.label || length;
       },
       markAsProcessed: () =>
         set((state) => {
