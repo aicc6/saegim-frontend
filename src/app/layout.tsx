@@ -2,6 +2,8 @@ import type { Metadata } from 'next';
 import { Providers } from '@/components/providers/theme-provider';
 import { Toaster } from '@/components/ui/toaster';
 import { DEFAULT_METADATA } from '@/constants/metadata';
+import { createWebsiteSchema, createJsonLdScript } from '@/lib/structured-data';
+import '@/lib/env-validation';
 import './globals.css';
 
 export const metadata: Metadata = DEFAULT_METADATA;
@@ -11,6 +13,8 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const websiteSchema = createWebsiteSchema();
+
   return (
     <html lang="ko" suppressHydrationWarning>
       <head>
@@ -25,6 +29,10 @@ export default function RootLayout({
               } catch (e) {}
             `,
           }}
+        />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={createJsonLdScript(websiteSchema)}
         />
       </head>
       <body suppressHydrationWarning>

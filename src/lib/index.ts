@@ -9,6 +9,9 @@ export * from './error-handler';
 // 로거
 export * from './logger';
 
+// 구조화된 데이터
+export * from './structured-data';
+
 // 타입 가드
 export * from './type-guards';
 
