@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { X, ChevronLeft, ChevronRight, Edit, Trash2 } from 'lucide-react';
-import { Button } from '@/components/ui/custom/Button';
+import { Button } from '@/components/ui/button';
 import { formatDate } from '@/lib/utils';
 
 interface DiaryEntry {

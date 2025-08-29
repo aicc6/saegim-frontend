@@ -7,7 +7,7 @@ import AuthGuard from '@/components/auth/AuthGuard';
 import { MainContent } from '@/components/layout/MainContent';
 import { FCMProvider } from '@/components/providers/fcm-provider';
 import { SidebarProvider } from '@/contexts/sidebar-context';
-import { DEFAULT_METADATA } from '@/constants';
+import { DEFAULT_METADATA } from '@/constants/metadata';
 
 import '../globals.css';
 

@@ -2,6 +2,7 @@
 
 import { useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { FormInput } from '@/components/ui/form-input';
 import { authApi } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
 import { logger } from '@/lib/logger';
@@ -149,12 +150,11 @@ function RestoreAccountContent() {
                 >
                   이메일 주소
                 </label>
-                <input
+                <FormInput
                   type="email"
                   id="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full px-4 py-3 bg-gray-50 dark:bg-background-dark-tertiary border border-gray-300 dark:border-border-dark-subtle rounded-lg focus:outline-none focus:ring-2 focus:ring-sage-50 dark:focus:ring-border-dark-focus focus:border-sage-50 dark:focus:border-border-dark-focus text-gray-900 dark:text-text-dark-primary placeholder-gray-500 dark:placeholder-text-dark-placeholder transition-all duration-200"
                   placeholder="탈퇴한 계정의 이메일을 입력하세요"
                   disabled={isCodeSent}
                 />
@@ -181,12 +181,11 @@ function RestoreAccountContent() {
                     >
                       인증 코드
                     </label>
-                    <input
+                    <FormInput
                       type="text"
                       id="verificationCode"
                       value={verificationCode}
                       onChange={(e) => setVerificationCode(e.target.value)}
-                      className="w-full px-4 py-3 bg-gray-50 dark:bg-background-dark-tertiary border border-gray-300 dark:border-border-dark-subtle rounded-lg focus:outline-none focus:ring-2 focus:ring-sage-50 dark:focus:ring-border-dark-focus focus:border-sage-50 dark:focus:border-border-dark-focus text-gray-900 dark:text-text-dark-primary placeholder-gray-500 dark:placeholder-text-dark-placeholder transition-all duration-200"
                       placeholder="이메일로 받은 6자리 인증 코드를 입력하세요"
                     />
                   </div>

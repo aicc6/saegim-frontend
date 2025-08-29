@@ -30,6 +30,8 @@ export const BUTTON_STYLES = {
     danger: 'bg-red-600 hover:bg-red-700 text-white focus:ring-red-500',
     ghost:
       'hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300',
+    brand:
+      'bg-[#5C8D89] hover:bg-[#4A7A76] text-white dark:text-text-dark-on-color hover:opacity-90 active:opacity-100 shadow-sm hover:shadow-md focus:ring-sage-50 dark:focus:ring-border-dark-focus focus:ring-offset-2 dark:focus:ring-offset-background-dark-secondary',
   },
 
   // 크기

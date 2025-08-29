@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import ConfirmModal from '@/components/ui/custom/ConfirmModal';
+import { FormInput } from '@/components/ui/form-input';
 import { apiClient } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
 import { getLogger } from '@/lib/logger';
@@ -554,14 +555,14 @@ export default function ProfileForm() {
                 다른 사용자에게 표시되는 이름입니다.
               </p>
               <div className="flex gap-2">
-                <input
+                <FormInput
                   type="text"
                   id="nickname"
                   name="nickname"
                   value={profileData.nickname}
                   onChange={handleInputChange}
                   maxLength={10}
-                  className="flex-1 px-4 py-3 bg-gray-50 dark:bg-background-dark-tertiary border border-gray-300 dark:border-border-dark-subtle rounded-lg focus:outline-none focus:ring-2 focus:ring-sage-50 dark:focus:ring-border-dark-focus focus:border-sage-50 dark:focus:border-border-dark-focus text-gray-900 dark:text-text-dark-primary placeholder-gray-500 dark:placeholder-text-dark-placeholder transition-all duration-200"
+                  className="flex-1"
                   placeholder="닉네임을 입력하세요 (2-10자)"
                 />
                 <button
@@ -738,12 +739,11 @@ ${
                 >
                   비밀번호
                 </label>
-                <input
+                <FormInput
                   type="password"
                   id="withdraw-password"
                   value={withdrawPassword}
                   onChange={(e) => setWithdrawPassword(e.target.value)}
-                  className="w-full px-4 py-3 bg-gray-50 dark:bg-background-dark-tertiary border border-gray-300 dark:border-border-dark-subtle rounded-lg focus:outline-none focus:ring-2 focus:ring-sage-50 dark:focus:ring-border-dark-focus focus:border-sage-50 dark:focus:border-border-dark-focus text-gray-900 dark:text-text-dark-primary placeholder-gray-500 dark:placeholder-text-dark-placeholder transition-all duration-200"
                   placeholder="비밀번호를 입력하세요"
                   required
                 />
@@ -808,7 +808,7 @@ ${
                 >
                   현재 비밀번호
                 </label>
-                <input
+                <FormInput
                   type="password"
                   id="password"
                   value={emailChangeData.password}
@@ -818,7 +818,6 @@ ${
                       password: e.target.value,
                     }))
                   }
-                  className="w-full px-4 py-3 bg-gray-50 dark:bg-background-dark-tertiary border border-gray-300 dark:border-border-dark-subtle rounded-lg focus:outline-none focus:ring-2 focus:ring-sage-50 dark:focus:ring-border-dark-focus focus:border-sage-50 dark:focus:border-border-dark-focus text-gray-900 dark:text-text-dark-primary placeholder-gray-500 dark:placeholder-text-dark-placeholder transition-all duration-200"
                   placeholder="현재 비밀번호를 입력하세요"
                   required
                 />

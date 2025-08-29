@@ -321,8 +321,7 @@ export default function SignupForm() {
               type="button"
               onClick={handleSendVerificationCode}
               disabled={!formData.email || emailVerified || isSendingCode}
-              className="px-4 py-3 text-white dark:text-text-dark-on-color rounded-lg hover:opacity-90 active:opacity-100 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 text-sm font-medium shadow-sm hover:shadow-md focus:outline-none focus:ring-2 focus:ring-sage-50 dark:focus:ring-border-dark-focus focus:ring-offset-2 dark:focus:ring-offset-background-dark-secondary"
-              style={{ backgroundColor: BRAND_COLORS.PRIMARY }}
+              className="saegim-button saegim-button-small"
             >
               {isSendingCode
                 ? '발송중...'
@@ -359,8 +358,7 @@ export default function SignupForm() {
                     VALIDATION.VERIFICATION_CODE_LENGTH ||
                   isVerifyingCode
                 }
-                className="px-4 py-3 text-white dark:text-text-dark-on-color rounded-lg hover:opacity-90 active:opacity-100 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 text-sm font-medium shadow-sm hover:shadow-md focus:outline-none focus:ring-2 focus:ring-sage-50 dark:focus:ring-border-dark-focus focus:ring-offset-2 dark:focus:ring-offset-background-dark-secondary"
-                style={{ backgroundColor: BRAND_COLORS.PRIMARY }}
+                className="saegim-button saegim-button-small"
               >
                 {isVerifyingCode ? '확인중...' : '확인'}
               </button>
@@ -416,8 +414,7 @@ export default function SignupForm() {
               type="button"
               onClick={handleNicknameCheck}
               disabled={!formData.nickname || nicknameChecked}
-              className="px-4 py-3 text-white dark:text-text-dark-on-color rounded-lg hover:opacity-90 active:opacity-100 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 text-sm font-medium shadow-sm hover:shadow-md focus:outline-none focus:ring-2 focus:ring-sage-50 dark:focus:ring-border-dark-focus focus:ring-offset-2 dark:focus:ring-offset-background-dark-secondary"
-              style={{ backgroundColor: BRAND_COLORS.PRIMARY }}
+              className="saegim-button saegim-button-small"
             >
               {nicknameChecked ? '확인완료' : '중복확인'}
             </button>

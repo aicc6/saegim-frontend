@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 
 import GoogleLoginButton from '@/components/ui/custom/GoogleLoginButton';
+import { FormInput } from '@/components/ui/form-input';
 import { useToast } from '@/hooks/use-toast';
 import { useAuthStore } from '@/stores/auth';
 import { authApi, getLogger } from '@/lib';
@@ -256,13 +257,12 @@ export default function LoginForm({ redirectTo }: LoginFormProps) {
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* 아이디(메일계정) 입력 */}
         <div>
-          <input
+          <FormInput
             type="email"
             id="email"
             name="email"
             value={formData.email}
             onChange={handleInputChange}
-            className="w-full px-4 py-3 border border-gray-300 dark:border-border-dark-subtle rounded-lg focus:outline-none focus:ring-2 focus:ring-sage-50 dark:focus:ring-border-dark-focus focus:border-sage-50 dark:focus:border-border-dark-focus bg-gray-50 dark:bg-background-dark-tertiary text-gray-900 dark:text-text-dark-primary placeholder-gray-500 dark:placeholder-text-dark-placeholder transition-all duration-200 text-base font-light tracking-wide"
             placeholder="아이디(메일계정) 입력"
             required
             aria-describedby="email-help"
@@ -274,13 +274,12 @@ export default function LoginForm({ redirectTo }: LoginFormProps) {
 
         {/* 비밀번호 입력 */}
         <div>
-          <input
+          <FormInput
             type="password"
             id="password"
             name="password"
             value={formData.password}
             onChange={handleInputChange}
-            className="w-full px-4 py-3 border border-gray-300 dark:border-border-dark-subtle rounded-lg focus:outline-none focus:ring-2 focus:ring-sage-50 dark:focus:ring-border-dark-focus focus:border-sage-50 dark:focus:border-border-dark-focus bg-gray-50 dark:bg-background-dark-tertiary text-gray-900 dark:text-text-dark-primary placeholder-gray-500 dark:placeholder-text-dark-placeholder transition-all duration-200 text-base font-light tracking-wide"
             placeholder="비밀번호 입력"
             required
             aria-describedby="password-help"

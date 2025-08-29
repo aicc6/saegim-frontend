@@ -3,11 +3,13 @@
 interface ConfirmModalProps {
   isOpen: boolean;
   title: string;
-  message: string;
+  message: string | React.ReactNode;
   confirmText: string;
   cancelText: string;
   onConfirm: () => void;
   onCancel: () => void;
+  variant?: 'warning' | 'danger';
+  isLoading?: boolean;
 }
 
 const ConfirmModal = ({
@@ -18,6 +20,8 @@ const ConfirmModal = ({
   cancelText,
   onConfirm,
   onCancel,
+  variant = 'warning',
+  isLoading = false,
 }: ConfirmModalProps) => {
   if (!isOpen) return null;
 
@@ -29,9 +33,9 @@ const ConfirmModal = ({
         role="button"
         tabIndex={0}
         aria-label="모달 닫기"
-        onClick={onCancel}
+        onClick={!isLoading ? onCancel : undefined}
         onKeyDown={(e) => {
-          if (e.key === 'Escape' || e.key === 'Enter' || e.key === ' ') {
+          if (e.key === 'Escape' && !isLoading) {
             e.preventDefault();
             onCancel();
           }
@@ -79,15 +83,28 @@ const ConfirmModal = ({
           <div className="bg-gray-50 dark:bg-gray-700 px-4 py-3 sm:flex sm:flex-row-reverse sm:px-6">
             <button
               type="button"
-              className="inline-flex w-full justify-center rounded-md bg-red-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-red-500 sm:ml-3 sm:w-auto"
+              className={`inline-flex w-full justify-center rounded-md px-3 py-2 text-sm font-semibold text-white shadow-sm sm:ml-3 sm:w-auto disabled:opacity-50 disabled:cursor-not-allowed ${
+                variant === 'danger'
+                  ? 'bg-red-600 hover:bg-red-500'
+                  : 'bg-amber-600 hover:bg-amber-500'
+              }`}
               onClick={onConfirm}
+              disabled={isLoading}
             >
-              {confirmText}
+              {isLoading ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2" />
+                  처리 중...
+                </>
+              ) : (
+                confirmText
+              )}
             </button>
             <button
               type="button"
-              className="mt-3 inline-flex w-full justify-center rounded-md bg-white dark:bg-gray-600 px-3 py-2 text-sm font-semibold text-gray-900 dark:text-white shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-gray-500 hover:bg-gray-50 dark:hover:bg-gray-500 sm:mt-0 sm:w-auto"
+              className="mt-3 inline-flex w-full justify-center rounded-md bg-white dark:bg-gray-600 px-3 py-2 text-sm font-semibold text-gray-900 dark:text-white shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-gray-500 hover:bg-gray-50 dark:hover:bg-gray-500 sm:mt-0 sm:w-auto disabled:opacity-50"
               onClick={onCancel}
+              disabled={isLoading}
             >
               {cancelText}
             </button>

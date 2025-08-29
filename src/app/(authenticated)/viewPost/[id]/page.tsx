@@ -13,7 +13,7 @@ import {
   EmotionType,
 } from '@/types/diary';
 import PageHeader from '@/components/common/PageHeader';
-import { Button } from '@/components/ui/custom/Button';
+import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import DeleteConfirmModal from '@/components/diary/DeleteConfirmModal';
 
