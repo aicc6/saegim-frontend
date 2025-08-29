@@ -69,6 +69,9 @@ export default function CreateChat({ sessionId }: CreateChatProps) {
   const [generatedMessages, setGeneratedMessages] = useState<
     GeneratedMessage[]
   >([]);
+  const [regeneratingMessageIds, setRegeneratingMessageIds] = useState<
+    Set<string>
+  >(new Set());
 
   // refs
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -89,6 +92,7 @@ export default function CreateChat({ sessionId }: CreateChatProps) {
     setStyle,
     setLength,
     generateText,
+    clearGeneratedText,
     getStyleDisplayName,
     getLengthDisplayName,
   } = useCreateStore();
@@ -200,8 +204,16 @@ export default function CreateChat({ sessionId }: CreateChatProps) {
     generateText(tempEmotion);
     setSelectedImages([]);
     setPrompt('');
+    clearGeneratedText(); // 기존 generatedText 초기화
     setTimeout(scrollToBottom, 200);
-  }, [tempEmotion, generateText, scrollToBottom, setPrompt, applyOptions]);
+  }, [
+    tempEmotion,
+    generateText,
+    scrollToBottom,
+    setPrompt,
+    applyOptions,
+    clearGeneratedText,
+  ]);
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent): void => {
@@ -230,6 +242,11 @@ export default function CreateChat({ sessionId }: CreateChatProps) {
       }
 
       const newCount = (message?.versions.length || 1) + 1;
+
+      // 재생성 시작 시 로딩 상태 설정
+      if (message) {
+        setRegeneratingMessageIds((prev) => new Set(prev).add(message.id));
+      }
 
       try {
         const response: GenerateAITextResponse = await generateAIText({
@@ -277,11 +294,31 @@ export default function CreateChat({ sessionId }: CreateChatProps) {
             return updatedMessages;
           }
         });
+
+        // 재생성 후 generatedText 초기화
+        clearGeneratedText();
       } catch (error) {
         console.error('💥 재생성 실패:', error);
+      } finally {
+        // 재생성 완료 후 로딩 상태 제거
+        if (message) {
+          setRegeneratingMessageIds((prev) => {
+            const newSet = new Set(prev);
+            newSet.delete(message.id);
+            return newSet;
+          });
+        }
       }
     },
-    [prompt, emotion, isGenerating, style, length, sessionId],
+    [
+      prompt,
+      emotion,
+      isGenerating,
+      style,
+      length,
+      sessionId,
+      clearGeneratedText,
+    ],
   );
 
   // 버전 네비게이션 핸들러
@@ -318,18 +355,8 @@ export default function CreateChat({ sessionId }: CreateChatProps) {
   const saveMessagesToLocalStorage = useCallback(
     (messages: GeneratedMessage[], sessionId: string): void => {
       try {
-        const localStorageKey = `ai_messages_${sessionId}`;
-        const messagesForStorage: StoredMessage[] = messages.map((msg) => ({
-          ...msg,
-          versions: msg.versions.map((version) => ({
-            ...version,
-            createdAt: version.createdAt.toISOString(),
-          })),
-        }));
-        localStorage.setItem(
-          localStorageKey,
-          JSON.stringify(messagesForStorage),
-        );
+        const localStorageKey = `messages-${sessionId}`;
+        localStorage.setItem(localStorageKey, JSON.stringify(messages));
       } catch (error) {
         console.error('localStorage 저장 실패:', error);
       }
@@ -340,22 +367,15 @@ export default function CreateChat({ sessionId }: CreateChatProps) {
   const loadMessagesFromLocalStorage = useCallback(
     (sessionId: string): GeneratedMessage[] => {
       try {
-        const localStorageKey = `ai_messages_${sessionId}`;
+        const localStorageKey = `messages-${sessionId}`;
         const savedMessages = localStorage.getItem(localStorageKey);
 
         if (!savedMessages) return [];
 
-        const parsedMessages: StoredMessage[] = JSON.parse(savedMessages);
-        return parsedMessages.map((msg) => ({
-          ...msg,
-          versions: msg.versions.map((version) => ({
-            ...version,
-            createdAt: new Date(version.createdAt),
-          })),
-        }));
+        return JSON.parse(savedMessages);
       } catch (error) {
         console.error('localStorage 파싱 오류:', error);
-        const localStorageKey = `ai_messages_${sessionId}`;
+        const localStorageKey = `messages-${sessionId}`;
         localStorage.removeItem(localStorageKey);
         return [];
       }
@@ -402,12 +422,15 @@ export default function CreateChat({ sessionId }: CreateChatProps) {
 
       const newMessage: GeneratedMessage = {
         id: `msg_${generateId()}`,
-        sessionId: storeSessionId || '',
+        sessionId: storeSessionId || sessionId, // storeSessionId가 없으면 props의 sessionId 사용
         versions: [newVersion],
         currentVersionIndex: 0,
       };
 
       setGeneratedMessages((prev) => [...prev, newMessage]);
+
+      // generatedText 사용 후 초기화하여 중복 생성 방지
+      clearGeneratedText();
     }
   }, [
     generatedText,
@@ -418,6 +441,7 @@ export default function CreateChat({ sessionId }: CreateChatProps) {
     sessionId,
     storeSessionId,
     isGenerating,
+    clearGeneratedText,
   ]);
 
   useEffect(() => {
@@ -543,18 +567,38 @@ export default function CreateChat({ sessionId }: CreateChatProps) {
                 )}
 
                 {/* 내용 */}
-                <div className="space-y-2 text-gray-800 leading-relaxed">
-                  {currentVersion.style === 'poem'
-                    ? currentVersion.text
-                        .split('\n')
-                        .map((line: string, idx: number) => (
-                          <div key={idx}>{line}</div>
-                        ))
-                    : currentVersion.text}
-                </div>
+                {regeneratingMessageIds.has(message.id) ? (
+                  <div className="space-y-3 animate-pulse">
+                    {[40, 100, 90, 80].map((width, idx) => (
+                      <div
+                        key={idx}
+                        className={`h-4 rounded bg-gray-200 ${
+                          width === 40
+                            ? 'w-2/5'
+                            : width === 100
+                              ? 'w-full'
+                              : width === 90
+                                ? 'w-11/12'
+                                : 'w-5/6'
+                        }`}
+                      />
+                    ))}
+                  </div>
+                ) : (
+                  <div className="space-y-2 text-gray-800 leading-relaxed">
+                    {currentVersion.style === 'poem'
+                      ? currentVersion.text
+                          .split('\n')
+                          .map((line: string, idx: number) => (
+                            <div key={idx}>{line}</div>
+                          ))
+                      : currentVersion.text}
+                  </div>
+                )}
 
                 {/* 키워드 표시 */}
-                {currentVersion.keywords &&
+                {!regeneratingMessageIds.has(message.id) &&
+                  currentVersion.keywords &&
                   currentVersion.keywords.length > 0 && (
                     <div className="mt-4 pt-4 border-t border-gray-100">
                       <p className="text-sm text-gray-600 mb-2">
@@ -577,7 +621,9 @@ export default function CreateChat({ sessionId }: CreateChatProps) {
                 <div className="mt-6 flex gap-2">
                   <ActionButton
                     onClick={() => copyToClipboard(currentVersion.text)}
-                    disabled={isGenerating}
+                    disabled={
+                      isGenerating || regeneratingMessageIds.has(message.id)
+                    }
                     text="복사하기"
                   />
 
@@ -588,19 +634,27 @@ export default function CreateChat({ sessionId }: CreateChatProps) {
                         currentVersion.emotion,
                       )
                     }
-                    disabled={isGenerating}
+                    disabled={
+                      isGenerating || regeneratingMessageIds.has(message.id)
+                    }
                     text="다이어리로 이동"
                   />
 
                   <ActionButton
                     onClick={() => handleRegenerate(message)}
-                    disabled={isGenerating || message.versions.length >= 5}
+                    disabled={
+                      isGenerating ||
+                      regeneratingMessageIds.has(message.id) ||
+                      message.versions.length >= 5
+                    }
                     text={
-                      message.versions.length === 1
-                        ? '다시 생성'
-                        : message.versions.length >= 5
-                          ? `최대 재생성 횟수 도달 (${message.versions.length}번)`
-                          : `다시 생성 (${message.versions.length}번)`
+                      regeneratingMessageIds.has(message.id)
+                        ? '재생성 중...'
+                        : message.versions.length === 1
+                          ? '다시 생성'
+                          : message.versions.length >= 5
+                            ? `최대 재생성 횟수 도달 (${message.versions.length}번)`
+                            : `다시 생성 (${message.versions.length}번)`
                     }
                     className={
                       message.versions.length >= 5

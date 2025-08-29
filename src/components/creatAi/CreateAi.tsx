@@ -147,24 +147,26 @@ export default function CreateAi() {
   // (실제로는 페이지 라우팅으로 처리될 예정)
 
   return (
-    <div className="rounded-3xl bg-ivory-cream shadow-card relative p-6 sm:p-8">
-      <h1 className="text-4xl font-poetic font-bold text-[#3F764A] text-center">
+    <div className="rounded-3xl bg-ivory-cream shadow-card relative p-4 sm:p-6 md:p-8">
+      <h1 className="text-2xl sm:text-3xl md:text-4xl font-poetic font-bold text-[#3F764A] text-center">
         <span className="inline-flex items-center gap-2 whitespace-nowrap">
-          <span className="text-soft-rose text-3xl">✿</span>
+          <span className="text-soft-rose text-xl sm:text-2xl md:text-3xl">
+            ✿
+          </span>
           어떤 글을 만들어드릴까요?
         </span>
       </h1>
 
-      <p className="mt-2 text-body text-text-primary text-center">
+      <p className="mt-2 text-sm sm:text-base text-body text-text-primary text-center px-2">
         키워드나 짧은 글을 입력하면 AI가 감정적인 글을 생성해 드립니다
       </p>
 
       {/* 에러 메시지 표시 */}
       {error && (
-        <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-xl">
+        <div className="mt-4 p-3 sm:p-4 bg-red-50 border border-red-200 rounded-xl mx-2">
           <div className="flex items-center gap-2">
             <svg
-              className="w-5 h-5 text-red-500 flex-shrink-0"
+              className="w-4 h-4 sm:w-5 sm:h-5 text-red-500 flex-shrink-0"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -176,7 +178,9 @@ export default function CreateAi() {
                 d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
               />
             </svg>
-            <p className="text-red-700 text-sm font-medium">{error}</p>
+            <p className="text-red-700 text-xs sm:text-sm font-medium">
+              {error}
+            </p>
             <button
               onClick={clearError}
               className="ml-auto text-red-400 hover:text-red-600 transition-colors"
@@ -202,8 +206,8 @@ export default function CreateAi() {
 
       {/* 선택된 이미지들 미리보기 */}
       {selectedImages.length > 0 && (
-        <div className="mt-6">
-          <div className="flex flex-wrap gap-3">
+        <div className="mt-4 sm:mt-6 px-2">
+          <div className="flex flex-wrap gap-2 sm:gap-3 justify-center">
             {selectedImages.map((image, index) => (
               <div key={index} className="relative group">
                 <Image
@@ -211,32 +215,32 @@ export default function CreateAi() {
                   alt={`선택된 이미지 ${index + 1}`}
                   width={80}
                   height={80}
-                  className="w-20 h-20 object-cover rounded-lg border-2 border-sage-30"
+                  className="w-16 h-16 sm:w-20 sm:h-20 object-cover rounded-lg border-2 border-sage-30"
                 />
                 <button
                   type="button"
                   onClick={() => handleImageRemove(index)}
-                  className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full text-xs flex items-center justify-center hover:bg-red-600 transition-colors"
+                  className="absolute -top-1 -right-1 sm:-top-2 sm:-right-2 w-5 h-5 sm:w-6 sm:h-6 bg-red-500 text-white rounded-full text-xs flex items-center justify-center hover:bg-red-600 transition-colors"
                 >
                   ×
                 </button>
               </div>
             ))}
           </div>
-          <p className="mt-2 text-xs text-text-secondary">
+          <p className="mt-2 text-xs text-text-secondary text-center">
             {selectedImages.length}/3개 이미지 선택됨
           </p>
         </div>
       )}
 
       {/* textarea와 이미지 추가 버튼 */}
-      <div className="relative mt-6">
+      <div className="relative mt-4 sm:mt-6 px-2">
         <textarea
           value={prompt}
           onChange={(e) => setPrompt(e.target.value)}
-          rows={4}
+          rows={3}
           placeholder="예: 바람, 초록빛 오후, 천천히 걷는 길"
-          className="w-full rounded-xl border border-border-subtle bg-white p-4 pr-12 text-body text-text-primary placeholder:text-text-placeholder focus:outline-none focus:ring-2 focus:ring-border-focus shadow-card resize-none"
+          className="w-full rounded-xl border border-border-subtle bg-white p-3 sm:p-4 pr-12 text-sm sm:text-base text-text-primary placeholder:text-text-placeholder focus:outline-none focus:ring-2 focus:ring-border-focus shadow-card resize-none"
         />
 
         {/* 이미지 추가 버튼 - textarea 내부 오른쪽 위 */}
@@ -244,11 +248,11 @@ export default function CreateAi() {
           <button
             type="button"
             onClick={handleAddImageClick}
-            className="absolute top-2 right-2 w-8 h-8 flex items-center justify-center text-sage-60 hover:text-sage-80 hover:bg-sage-10 rounded-lg transition-colors"
+            className="absolute top-2 right-2 w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center text-sage-60 hover:text-sage-80 hover:bg-sage-10 rounded-lg transition-colors"
             title="이미지 추가"
           >
             <svg
-              className="w-5 h-5"
+              className="w-4 h-4 sm:w-5 sm:h-5"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -274,13 +278,13 @@ export default function CreateAi() {
         />
       </div>
 
-      <div className="mt-6 space-y-6">
+      <div className="mt-4 sm:mt-6 space-y-4 sm:space-y-6 px-2">
         {/* 문체와 길이 선택 */}
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
           <div>
             <div
               id="style-label"
-              className="mb-2 block text-body-small text-text-secondary"
+              className="mb-2 block text-xs sm:text-sm text-text-secondary"
             >
               문체 선택
             </div>
@@ -294,7 +298,7 @@ export default function CreateAi() {
           <div>
             <div
               id="length-label"
-              className="mb-2 block text-body-small text-text-secondary"
+              className="mb-2 block text-xs sm:text-sm text-text-secondary"
             >
               길이 선택
             </div>
@@ -309,11 +313,11 @@ export default function CreateAi() {
 
         {/* 감정 선택 */}
         <div>
-          <div className="mb-3 block text-body-small text-text-secondary">
+          <div className="mb-3 block text-xs sm:text-sm text-text-secondary text-center">
             감정을 선택해주세요 😊 (선택 사항)
           </div>
           <div
-            className="flex flex-wrap gap-3 justify-center"
+            className="flex flex-wrap gap-2 sm:gap-3 justify-center"
             role="group"
             aria-label="감정 선택"
           >
@@ -322,7 +326,7 @@ export default function CreateAi() {
                 key={value}
                 type="button"
                 onClick={() => setEmotion(emotion === value ? '' : value)}
-                className={`flex h-16 w-16 items-center justify-center rounded-full border-2 text-2xl transition-all ${
+                className={`flex h-12 w-12 sm:h-16 sm:w-16 items-center justify-center rounded-full border-2 text-lg sm:text-2xl transition-all ${
                   emotion === value
                     ? 'border-sage-60 bg-sage-50 shadow-md scale-110'
                     : 'border-sage-20 bg-white hover:border-sage-40 hover:bg-sage-10 hover:scale-105'
@@ -333,7 +337,7 @@ export default function CreateAi() {
               </button>
             ))}
           </div>
-          <p className="mt-2 text-center text-body-small text-text-secondary">
+          <p className="mt-2 text-center text-xs sm:text-sm text-text-secondary">
             선택된 감정:{' '}
             <span className="font-medium text-sage-100">
               {emotion
@@ -348,17 +352,17 @@ export default function CreateAi() {
       <button
         onClick={handleGenerateText}
         disabled={isGenerating || !prompt.trim()}
-        className="mt-8 w-full rounded-xl bg-sage-90 px-6 py-4 text-body-large font-semibold text-text-on-color hover:bg-sage-100 active:bg-sage-80 disabled:opacity-40 transition-colors shadow-card"
+        className="mt-6 sm:mt-8 w-full rounded-xl bg-sage-90 px-4 sm:px-6 py-3 sm:py-4 text-sm sm:text-base md:text-lg font-semibold text-text-on-color hover:bg-sage-100 active:bg-sage-80 disabled:opacity-40 transition-colors shadow-card mx-2"
       >
         {isGenerating ? (
           <span className="inline-flex items-center justify-center gap-2">
-            <span className="inline-block h-5 w-5 animate-spin rounded-full border-2 border-sage-30 border-t-sage-70" />
+            <span className="inline-block h-4 w-4 sm:h-5 sm:w-5 animate-spin rounded-full border-2 border-sage-30 border-t-sage-70" />
             생성 중...
           </span>
         ) : (
           <span className="inline-flex items-center justify-center gap-2">
             <svg
-              className="h-5 w-5"
+              className="h-4 w-4 sm:h-5 sm:w-5"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"

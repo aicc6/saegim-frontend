@@ -199,6 +199,7 @@ interface CreateState {
   setLength: (length: LengthOption) => void;
   setEmotion: (emotion: EmotionOption) => void;
   clearError: () => void;
+  clearGeneratedText: () => void;
 
   // API 액션
   generateText: (emotion?: EmotionOption) => Promise<void>;
@@ -243,6 +244,12 @@ export const useCreateStore = create<CreateState>()(
       clearError: () =>
         set((state) => {
           state.error = null;
+        }),
+      clearGeneratedText: () =>
+        set((state) => {
+          state.generatedText = null;
+          state.generatedKeywords = null;
+          state.sessionId = null;
         }),
 
       // AI 텍스트 생성
