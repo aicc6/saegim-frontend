@@ -1,126 +1,90 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect } from 'react';
+import { useForm } from 'react-hook-form';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { authApi } from '@/lib/api';
-import { useToast } from '@/hooks/use-toast';
+import { useApiError } from '@/hooks/use-api-error';
+import {
+  validatePassword,
+  validatePasswordConfirmation,
+} from '@/lib/validation';
+import { FormInput } from '@/components/ui/form-input';
+
+interface FormData {
+  newPassword: string;
+  confirmPassword: string;
+}
 
 export default function ResetPasswordForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { toast } = useToast();
-
-  const [passwordData, setPasswordData] = useState({
-    newPassword: '',
-    confirmPassword: '',
+  const { handleApiError, showSuccess } = useApiError({
+    loggerName: 'ResetPasswordForm',
   });
-  const [isLoading, setIsLoading] = useState(false);
-  const [email, setEmail] = useState('');
-  const [verificationCode, setVerificationCode] = useState('');
+
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+    watch,
+  } = useForm<FormData>({
+    mode: 'onChange',
+  });
+
+  const newPassword = watch('newPassword');
 
   // URL에서 이메일과 인증 코드 추출
   useEffect(() => {
     const emailParam = searchParams.get('email');
     const codeParam = searchParams.get('code');
 
-    if (emailParam) {
-      setEmail(decodeURIComponent(emailParam));
-    }
-    if (codeParam) {
-      setVerificationCode(decodeURIComponent(codeParam));
-    }
-
     // 필요한 파라미터가 없으면 비밀번호 찾기 페이지로 리다이렉트
     if (!emailParam || !codeParam) {
-      toast({
-        title: '잘못된 접근',
-        description: '비밀번호 재설정 링크가 올바르지 않습니다.',
-        variant: 'destructive',
-      });
+      handleApiError(
+        new Error('잘못된 접근'),
+        '잘못된 접근',
+        '비밀번호 재설정 링크가 올바르지 않습니다.',
+      );
       router.push('/forgot-password');
     }
-  }, [searchParams, router, toast]);
+  }, [searchParams, router, handleApiError]);
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setPasswordData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
-  };
+  const onSubmit = async (data: FormData) => {
+    const emailParam = searchParams.get('email');
+    const codeParam = searchParams.get('code');
 
-  const validatePassword = (password: string): string | null => {
-    if (password.length < 8) {
-      return '비밀번호는 8자 이상이어야 합니다.';
-    }
-    if (!/(?=.*[a-zA-Z])(?=.*\d)/.test(password)) {
-      return '비밀번호는 영문자와 숫자를 모두 포함해야 합니다.';
-    }
-    return null;
-  };
-
-  const handlePasswordChange = async () => {
-    if (!email || !verificationCode) {
-      toast({
-        title: '오류',
-        description: '필요한 정보가 없습니다. 다시 시도해주세요.',
-        variant: 'destructive',
-      });
+    if (!emailParam || !codeParam) {
+      handleApiError(
+        new Error('필수 정보 누락'),
+        '오류',
+        '필요한 정보가 없습니다. 다시 시도해주세요.',
+      );
       router.push('/forgot-password');
-      return;
-    }
-
-    // 비밀번호 유효성 검증
-    const passwordError = validatePassword(passwordData.newPassword);
-    if (passwordError) {
-      toast({
-        title: '비밀번호 오류',
-        description: passwordError,
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    if (passwordData.newPassword !== passwordData.confirmPassword) {
-      toast({
-        title: '비밀번호 불일치',
-        description: '입력한 비밀번호가 일치하지 않습니다.',
-        variant: 'destructive',
-      });
       return;
     }
 
     try {
-      setIsLoading(true);
-
       await authApi.resetPassword({
-        email,
-        verification_code: verificationCode,
-        new_password: passwordData.newPassword,
+        email: decodeURIComponent(emailParam),
+        verification_code: decodeURIComponent(codeParam),
+        new_password: data.newPassword,
       });
 
-      toast({
-        title: '비밀번호 변경 완료',
-        description:
-          '비밀번호가 성공적으로 변경되었습니다. 새 비밀번호로 로그인해주세요.',
-        duration: 5000,
-      });
+      showSuccess(
+        '🔐 비밀번호 변경 완료',
+        '비밀번호가 성공적으로 변경되었습니다. 새 비밀번호로 로그인해주세요.',
+        5000,
+      );
 
       // 로그인 페이지로 리다이렉트
       router.push('/login?message=password_changed');
     } catch (error: unknown) {
-      const apiError = error as { response?: { data?: { detail?: string } } };
-      const errorMessage =
-        apiError.response?.data?.detail ||
-        '비밀번호 변경 중 오류가 발생했습니다.';
-
-      toast({
-        title: '비밀번호 변경 실패',
-        description: errorMessage,
-        variant: 'destructive',
-      });
-    } finally {
-      setIsLoading(false);
+      handleApiError(
+        error,
+        '비밀번호 변경 실패',
+        '비밀번호 변경 중 오류가 발생했습니다.',
+      );
     }
   };
 
@@ -144,68 +108,78 @@ export default function ResetPasswordForm() {
         </p>
       </div>
 
-      {/* 새 비밀번호 입력 */}
-      <div>
-        <label
-          className="block text-sm font-medium text-text-primary dark:text-text-dark mb-2"
-          htmlFor="newPassword"
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+        {/* 새 비밀번호 입력 */}
+        <div>
+          <label
+            className="block text-sm font-medium text-text-primary dark:text-text-dark mb-2"
+            htmlFor="newPassword"
+          >
+            새 비밀번호 입력
+          </label>
+          <FormInput
+            type="password"
+            id="newPassword"
+            {...register('newPassword', {
+              required: '비밀번호를 입력해주세요.',
+              validate: (value) => {
+                const validation = validatePassword(value);
+                return validation.isValid || validation.errors[0];
+              },
+            })}
+            placeholder="새 비밀번호를 입력하세요"
+            error={errors.newPassword?.message}
+            disabled={isSubmitting}
+          />
+        </div>
+
+        {/* 새 비밀번호 확인 */}
+        <div>
+          <label
+            className="block text-sm font-medium text-text-primary dark:text-text-dark mb-2"
+            htmlFor="confirmPassword"
+          >
+            새 비밀번호 확인
+          </label>
+          <FormInput
+            type="password"
+            id="confirmPassword"
+            {...register('confirmPassword', {
+              required: '비밀번호 확인을 입력해주세요.',
+              validate: (value) => {
+                const validation = validatePasswordConfirmation(
+                  newPassword,
+                  value,
+                );
+                return validation.isValid || validation.error;
+              },
+            })}
+            placeholder="새 비밀번호를 다시 입력하세요"
+            error={errors.confirmPassword?.message}
+            disabled={isSubmitting}
+          />
+        </div>
+
+        {/* 비밀번호 보안 요구사항 안내 */}
+        <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800/30 rounded-lg p-4">
+          <h3 className="text-sm font-medium text-blue-800 dark:text-blue-200 mb-2">
+            비밀번호 요구사항
+          </h3>
+          <ul className="text-xs text-blue-700 dark:text-blue-300 space-y-1">
+            <li>• 8자 이상</li>
+            <li>• 소문자, 숫자, 특수문자 포함</li>
+          </ul>
+        </div>
+
+        {/* 비밀번호 변경 버튼 */}
+        <button
+          type="submit"
+          disabled={isSubmitting}
+          className="w-full saegim-button saegim-button-large disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          새 비밀번호 입력
-        </label>
-        <input
-          type="password"
-          name="newPassword"
-          id="newPassword"
-          value={passwordData.newPassword}
-          onChange={handleInputChange}
-          className="w-full px-4 py-3 bg-gray-50 dark:bg-background-dark-tertiary border border-gray-300 dark:border-border-dark-subtle rounded-lg focus:outline-none focus:ring-2 focus:ring-sage-50 dark:focus:ring-border-dark-focus focus:border-sage-50 dark:focus:border-border-dark-focus text-gray-900 dark:text-text-dark-primary placeholder-gray-500 dark:placeholder-text-dark-placeholder transition-all duration-200"
-          placeholder="새 비밀번호를 입력하세요"
-        />
-      </div>
-
-      {/* 새 비밀번호 확인 */}
-      <div>
-        <label
-          className="block text-sm font-medium text-text-primary dark:text-text-dark mb-2"
-          htmlFor="confirmPassword"
-        >
-          새 비밀번호 확인
-        </label>
-        <input
-          type="password"
-          name="confirmPassword"
-          id="confirmPassword"
-          value={passwordData.confirmPassword}
-          onChange={handleInputChange}
-          className="w-full px-4 py-3 bg-gray-50 dark:bg-background-dark-tertiary border border-gray-300 dark:border-border-dark-subtle rounded-lg focus:outline-none focus:ring-2 focus:ring-sage-50 dark:focus:ring-border-dark-focus focus:border-sage-50 dark:focus:border-border-dark-focus text-gray-900 dark:text-text-dark-primary placeholder-gray-500 dark:placeholder-text-dark-placeholder transition-all duration-200"
-          placeholder="새 비밀번호를 다시 입력하세요"
-        />
-      </div>
-
-      {/* 비밀번호 보안 요구사항 안내 */}
-      <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800/30 rounded-lg p-4">
-        <h3 className="text-sm font-medium text-blue-800 dark:text-blue-200 mb-2">
-          비밀번호 요구사항
-        </h3>
-        <ul className="text-xs text-blue-700 dark:text-blue-300 space-y-1">
-          <li>• 8자 이상</li>
-          <li>• 영문자와 숫자 포함</li>
-          <li>• 특수문자 사용 권장</li>
-        </ul>
-      </div>
-
-      {/* 비밀번호 변경 버튼 */}
-      <button
-        onClick={handlePasswordChange}
-        disabled={
-          isLoading ||
-          !passwordData.newPassword ||
-          !passwordData.confirmPassword
-        }
-        className="w-full saegim-button saegim-button-large disabled:opacity-50 disabled:cursor-not-allowed"
-      >
-        {isLoading ? '변경 중...' : '비밀번호 변경'}
-      </button>
+          {isSubmitting ? '변경 중...' : '비밀번호 변경'}
+        </button>
+      </form>
 
       {/* 로그인 페이지로 돌아가기 */}
       <div className="text-center">

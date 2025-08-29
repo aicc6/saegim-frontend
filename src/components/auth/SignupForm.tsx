@@ -3,17 +3,23 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { authApi } from '@/lib/api';
-import { useToast } from '@/hooks/use-toast';
-import { getLogger } from '@/lib/logger';
+import { useApiError } from '@/hooks/use-api-error';
+import {
+  validateEmail,
+  validatePassword,
+  validatePasswordConfirmation,
+  validateNickname,
+  validateVerificationCode,
+} from '@/lib/validation';
+import { FormInput } from '@/components/ui/form-input';
 import { BRAND_COLORS } from '@/constants/brand';
 import { VALIDATION } from '@/constants/timeouts';
-import { REGEX_PATTERNS } from '@/constants/locale';
-
-const logger = getLogger('SignupForm');
 
 export default function SignupForm() {
   const router = useRouter();
-  const { toast } = useToast();
+  const { handleApiError, showSuccess } = useApiError({
+    loggerName: 'SignupForm',
+  });
 
   const [formData, setFormData] = useState({
     email: '',
@@ -23,6 +29,15 @@ export default function SignupForm() {
     verificationCode: '',
   });
 
+  // 검증 에러 상태
+  const [errors, setErrors] = useState<{
+    email?: string;
+    password?: string;
+    confirmPassword?: string;
+    nickname?: string;
+    verificationCode?: string;
+  }>({});
+
   const [emailVerified, setEmailVerified] = useState(false);
   const [nicknameChecked, setNicknameChecked] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -30,92 +45,118 @@ export default function SignupForm() {
   const [isVerifyingCode, setIsVerifyingCode] = useState(false);
   const [codeSent, setCodeSent] = useState(false);
 
+  // 폼 검증 함수
+  const validateForm = (): boolean => {
+    const newErrors: typeof errors = {};
+
+    // 이메일 검증
+    const emailValidation = validateEmail(formData.email);
+    if (!emailValidation.isValid) {
+      newErrors.email = emailValidation.error;
+    }
+
+    // 비밀번호 검증
+    const passwordValidation = validatePassword(formData.password);
+    if (!passwordValidation.isValid) {
+      newErrors.password = passwordValidation.errors[0]; // 첫 번째 에러만 표시
+    }
+
+    // 비밀번호 확인 검증
+    const confirmValidation = validatePasswordConfirmation(
+      formData.password,
+      formData.confirmPassword,
+    );
+    if (!confirmValidation.isValid) {
+      newErrors.confirmPassword = confirmValidation.error;
+    }
+
+    // 닉네임 검증
+    const nicknameValidation = validateNickname(
+      formData.nickname,
+      VALIDATION.NICKNAME_MIN_LENGTH,
+      VALIDATION.NICKNAME_MAX_LENGTH,
+    );
+    if (!nicknameValidation.isValid) {
+      newErrors.nickname = nicknameValidation.error;
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
 
-    // 닉네임 필드인 경우 실시간 검사 제거하고 모든 입력 허용
-    if (name === 'nickname') {
-      setFormData((prev) => ({
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+
+    // 에러 상태 초기화
+    if (errors[name as keyof typeof errors]) {
+      setErrors((prev) => ({
         ...prev,
-        [name]: value,
+        [name]: undefined,
       }));
-      // 중복 확인 상태 초기화 (닉네임이 변경되면 다시 확인 필요)
-      if (nicknameChecked) {
-        setNicknameChecked(false);
-      }
-    } else {
-      setFormData((prev) => ({
-        ...prev,
-        [name]: value,
-      }));
+    }
+
+    // 닉네임 필드인 경우 중복 확인 상태 초기화
+    if (name === 'nickname' && nicknameChecked) {
+      setNicknameChecked(false);
+    }
+
+    // 이메일 필드인 경우 인증 상태 초기화
+    if (name === 'email' && emailVerified) {
+      setEmailVerified(false);
+      setCodeSent(false);
     }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!emailVerified || !nicknameChecked) {
-      toast({
-        title: '입력 확인 필요',
-        description: '이메일 인증과 닉네임 중복 확인을 완료해주세요.',
-        variant: 'destructive',
-      });
+    // 폼 검증
+    if (!validateForm()) {
       return;
     }
 
-    // 닉네임 유효성 검사 (한글과 영문만 허용)
-    if (!REGEX_PATTERNS.KOREAN_ENGLISH_ONLY.test(formData.nickname)) {
-      toast({
-        title: '닉네임 형식 오류',
-        description: '닉네임은 한글과 영문만 사용 가능합니다.',
-        variant: 'destructive',
-      });
+    if (!emailVerified || !nicknameChecked) {
+      handleApiError(
+        new Error('입력 확인 필요'),
+        '입력 확인 필요',
+        '이메일 인증과 닉네임 중복 확인을 완료해주세요.',
+      );
       return;
     }
 
     setIsLoading(true);
 
     try {
-      const _response = await authApi.signup({
+      await authApi.signup({
         email: formData.email,
         password: formData.password,
         nickname: formData.nickname,
       });
 
-      toast({
-        title: '회원가입 성공',
-        description: '새김에 가입해주셔서 감사합니다!',
-        variant: 'default',
-      });
+      showSuccess('회원가입 성공', '새김에 가입해주셔서 감사합니다!');
 
       // 로그인 페이지로 이동
       router.push('/login');
     } catch (error: unknown) {
-      const apiError = error as {
-        response?: {
-          data?: { detail?: string };
-        };
-        [key: string]: unknown;
-      };
-      logger.error('회원가입 실패', { error });
-      toast({
-        title: '회원가입 실패',
-        description:
-          apiError.response?.data?.detail || '회원가입 중 오류가 발생했습니다.',
-        variant: 'destructive',
-      });
+      handleApiError(
+        error,
+        '회원가입 실패',
+        '회원가입 중 오류가 발생했습니다.',
+      );
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleSendVerificationCode = async () => {
-    if (!formData.email) {
-      toast({
-        title: '이메일 입력 필요',
-        description: '이메일을 입력해주세요.',
-        variant: 'destructive',
-      });
+    const emailValidation = validateEmail(formData.email);
+    if (!emailValidation.isValid) {
+      setErrors((prev) => ({ ...prev, email: emailValidation.error }));
       return;
     }
 
@@ -131,11 +172,10 @@ export default function SignupForm() {
       };
 
       if (!emailCheckData.available) {
-        toast({
-          title: '이메일 중복',
-          description: '이미 사용 중인 이메일입니다.',
-          variant: 'destructive',
-        });
+        setErrors((prev) => ({
+          ...prev,
+          email: '이미 사용 중인 이메일입니다.',
+        }));
         return;
       }
 
@@ -143,49 +183,28 @@ export default function SignupForm() {
       await authApi.sendVerificationEmail({ email: formData.email });
 
       setCodeSent(true);
-      toast({
-        title: '인증 코드 발송',
-        description: '이메일로 인증 코드가 발송되었습니다.',
-        variant: 'default',
-      });
+      showSuccess('인증 코드 발송', '이메일로 인증 코드가 발송되었습니다.');
     } catch (error: unknown) {
-      const apiError = error as {
-        response?: {
-          data?: { detail?: string };
-        };
-        [key: string]: unknown;
-      };
-      logger.error('인증 코드 발송 실패', { error });
-      toast({
-        title: '인증 코드 발송 실패',
-        description:
-          apiError.response?.data?.detail ||
-          '인증 코드 발송 중 오류가 발생했습니다.',
-        variant: 'destructive',
-      });
+      handleApiError(
+        error,
+        '인증 코드 발송 실패',
+        '인증 코드 발송 중 오류가 발생했습니다.',
+      );
     } finally {
       setIsSendingCode(false);
     }
   };
 
   const handleVerifyCode = async () => {
-    if (!formData.verificationCode) {
-      toast({
-        title: '인증 코드 입력 필요',
-        description: '인증 코드를 입력해주세요.',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    if (
-      formData.verificationCode.length !== VALIDATION.VERIFICATION_CODE_LENGTH
-    ) {
-      toast({
-        title: '인증 코드 형식 오류',
-        description: '인증 코드는 6자리 숫자입니다.',
-        variant: 'destructive',
-      });
+    const codeValidation = validateVerificationCode(
+      formData.verificationCode,
+      VALIDATION.VERIFICATION_CODE_LENGTH,
+    );
+    if (!codeValidation.isValid) {
+      setErrors((prev) => ({
+        ...prev,
+        verificationCode: codeValidation.error,
+      }));
       return;
     }
 
@@ -198,47 +217,22 @@ export default function SignupForm() {
       });
 
       setEmailVerified(true);
-      toast({
-        title: '이메일 인증 완료',
-        description: '이메일 인증이 완료되었습니다.',
-        variant: 'default',
-      });
+      showSuccess('이메일 인증 완료', '이메일 인증이 완료되었습니다.');
     } catch (error: unknown) {
-      const apiError = error as {
-        response?: {
-          data?: { detail?: string };
-        };
-        [key: string]: unknown;
-      };
-      logger.error('인증 코드 확인 실패', { error });
-      toast({
-        title: '인증 실패',
-        description:
-          apiError.response?.data?.detail || '인증 코드가 올바르지 않습니다.',
-        variant: 'destructive',
-      });
+      handleApiError(error, '인증 실패', '인증 코드가 올바르지 않습니다.');
     } finally {
       setIsVerifyingCode(false);
     }
   };
 
   const handleNicknameCheck = async () => {
-    if (!formData.nickname) {
-      toast({
-        title: '닉네임 입력 필요',
-        description: '닉네임을 입력해주세요.',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    // 닉네임 유효성 검사 (한글과 영문만 허용)
-    if (!REGEX_PATTERNS.KOREAN_ENGLISH_ONLY.test(formData.nickname)) {
-      toast({
-        title: '닉네임 형식 오류',
-        description: '닉네임은 한글과 영문만 사용 가능합니다.',
-        variant: 'destructive',
-      });
+    const nicknameValidation = validateNickname(
+      formData.nickname,
+      VALIDATION.NICKNAME_MIN_LENGTH,
+      VALIDATION.NICKNAME_MAX_LENGTH,
+    );
+    if (!nicknameValidation.isValid) {
+      setErrors((prev) => ({ ...prev, nickname: nicknameValidation.error }));
       return;
     }
 
@@ -252,25 +246,19 @@ export default function SignupForm() {
 
       if (responseData.available) {
         setNicknameChecked(true);
-        toast({
-          title: '닉네임 확인 완료',
-          description: '사용 가능한 닉네임입니다.',
-          variant: 'default',
-        });
+        showSuccess('닉네임 확인 완료', '사용 가능한 닉네임입니다.');
       } else {
-        toast({
-          title: '닉네임 중복',
-          description: '이미 사용 중인 닉네임입니다.',
-          variant: 'destructive',
-        });
+        setErrors((prev) => ({
+          ...prev,
+          nickname: '이미 사용 중인 닉네임입니다.',
+        }));
       }
     } catch (error: unknown) {
-      logger.error('닉네임 확인 실패', { error });
-      toast({
-        title: '닉네임 확인 실패',
-        description: '닉네임 확인 중 오류가 발생했습니다.',
-        variant: 'destructive',
-      });
+      handleApiError(
+        error,
+        '닉네임 확인 실패',
+        '닉네임 확인 중 오류가 발생했습니다.',
+      );
     }
   };
 
@@ -282,24 +270,11 @@ export default function SignupForm() {
       formData.confirmPassword &&
       formData.nickname;
     const passwordsMatch = formData.password === formData.confirmPassword;
-    const passwordLength =
-      formData.password.length >= VALIDATION.PASSWORD_MIN_LENGTH;
+    // 비밀번호 복잡성 검사 (통합 검증 사용)
+    const passwordValidation = validatePassword(formData.password);
+    const isPasswordComplex = passwordValidation.isValid;
 
-    // 비밀번호 복잡성 검사 (영문, 숫자, 특수문자 포함)
-    const hasLetter = REGEX_PATTERNS.PASSWORD_COMPLEXITY.LETTER.test(
-      formData.password,
-    );
-    const hasNumber = REGEX_PATTERNS.PASSWORD_COMPLEXITY.NUMBER.test(
-      formData.password,
-    );
-    const hasSpecialChar = REGEX_PATTERNS.PASSWORD_COMPLEXITY.SPECIAL_CHAR.test(
-      formData.password,
-    );
-    const isPasswordComplex = hasLetter && hasNumber && hasSpecialChar;
-
-    return (
-      hasRequiredFields && passwordsMatch && passwordLength && isPasswordComplex
-    );
+    return hasRequiredFields && passwordsMatch && isPasswordComplex;
   };
 
   return (
@@ -329,17 +304,19 @@ export default function SignupForm() {
         {/* 이메일 입력 */}
         <div className="space-y-2">
           <div className="flex space-x-2">
-            <input
-              type="email"
-              id="email"
-              name="email"
-              value={formData.email}
-              onChange={handleInputChange}
-              className="flex-1 px-4 py-3 border border-gray-300 dark:border-border-dark-subtle rounded-lg focus:outline-none focus:ring-2 focus:ring-sage-50 dark:focus:ring-border-dark-focus focus:border-sage-50 dark:focus:border-border-dark-focus bg-gray-50 dark:bg-background-dark-tertiary text-gray-900 dark:text-text-dark-primary placeholder-gray-500 dark:placeholder-text-dark-placeholder transition-all duration-200 text-base font-light tracking-wide"
-              placeholder="이메일 입력"
-              required
-              disabled={emailVerified}
-            />
+            <div className="flex-1">
+              <FormInput
+                type="email"
+                id="email"
+                name="email"
+                value={formData.email}
+                onChange={handleInputChange}
+                placeholder="이메일 입력"
+                error={errors.email}
+                required
+                disabled={emailVerified}
+              />
+            </div>
             <button
               type="button"
               onClick={handleSendVerificationCode}
@@ -360,17 +337,19 @@ export default function SignupForm() {
         {codeSent && !emailVerified && (
           <div className="space-y-2">
             <div className="flex space-x-2">
-              <input
-                type="text"
-                id="verificationCode"
-                name="verificationCode"
-                value={formData.verificationCode}
-                onChange={handleInputChange}
-                className="flex-1 px-4 py-3 border border-gray-300 dark:border-border-dark-subtle rounded-lg focus:outline-none focus:ring-2 focus:ring-sage-50 dark:focus:ring-border-dark-focus focus:border-sage-50 dark:focus:border-border-dark-focus bg-gray-50 dark:bg-background-dark-tertiary text-gray-900 dark:text-text-dark-primary placeholder-gray-500 dark:placeholder-text-dark-placeholder transition-all duration-200 text-base font-light tracking-wide"
-                placeholder={`인증 코드 ${VALIDATION.VERIFICATION_CODE_LENGTH}자리 입력`}
-                maxLength={VALIDATION.VERIFICATION_CODE_LENGTH}
-                disabled={isVerifyingCode}
-              />
+              <div className="flex-1">
+                <FormInput
+                  type="text"
+                  id="verificationCode"
+                  name="verificationCode"
+                  value={formData.verificationCode}
+                  onChange={handleInputChange}
+                  placeholder={`인증 코드 ${VALIDATION.VERIFICATION_CODE_LENGTH}자리 입력`}
+                  error={errors.verificationCode}
+                  maxLength={VALIDATION.VERIFICATION_CODE_LENGTH}
+                  disabled={isVerifyingCode}
+                />
+              </div>
               <button
                 type="button"
                 onClick={handleVerifyCode}
@@ -393,48 +372,46 @@ export default function SignupForm() {
         )}
 
         {/* 비밀번호 입력 */}
-        <div>
-          <input
-            type="password"
-            id="password"
-            name="password"
-            value={formData.password}
-            onChange={handleInputChange}
-            className="w-full px-4 py-3 border border-gray-300 dark:border-border-dark-subtle rounded-lg focus:outline-none focus:ring-2 focus:ring-sage-50 dark:focus:ring-border-dark-focus focus:border-sage-50 dark:focus:border-border-dark-focus bg-gray-50 dark:bg-background-dark-tertiary text-gray-900 dark:text-text-dark-primary placeholder-gray-500 dark:placeholder-text-dark-placeholder transition-all duration-200 text-base font-light tracking-wide"
-            placeholder={`비밀번호 입력 (영문, 숫자, 특수문자 포함 ${VALIDATION.PASSWORD_MIN_LENGTH}자 이상)`}
-            required
-          />
-        </div>
+        <FormInput
+          type="password"
+          id="password"
+          name="password"
+          value={formData.password}
+          onChange={handleInputChange}
+          placeholder={`비밀번호 입력 (영문, 숫자, 특수문자 포함 ${VALIDATION.PASSWORD_MIN_LENGTH}자 이상)`}
+          error={errors.password}
+          required
+        />
 
         {/* 비밀번호 확인 */}
-        <div>
-          <input
-            type="password"
-            id="confirmPassword"
-            name="confirmPassword"
-            value={formData.confirmPassword}
-            onChange={handleInputChange}
-            className="w-full px-4 py-3 border border-gray-300 dark:border-border-dark-subtle rounded-lg focus:outline-none focus:ring-2 focus:ring-sage-50 dark:focus:ring-border-dark-focus focus:border-sage-50 dark:focus:border-border-dark-focus bg-gray-50 dark:bg-background-dark-tertiary text-gray-900 dark:text-text-dark-primary placeholder-gray-500 dark:placeholder-text-dark-placeholder transition-all duration-200 text-base font-light tracking-wide"
-            placeholder="비밀번호 확인"
-            required
-          />
-        </div>
+        <FormInput
+          type="password"
+          id="confirmPassword"
+          name="confirmPassword"
+          value={formData.confirmPassword}
+          onChange={handleInputChange}
+          placeholder="비밀번호 확인"
+          error={errors.confirmPassword}
+          required
+        />
 
         {/* 닉네임 입력 */}
         <div className="space-y-2">
           <div className="flex space-x-2">
-            <input
-              type="text"
-              id="nickname"
-              name="nickname"
-              value={formData.nickname}
-              onChange={handleInputChange}
-              maxLength={VALIDATION.NICKNAME_MAX_LENGTH}
-              className="flex-1 px-4 py-3 border border-gray-300 dark:border-border-dark-subtle rounded-lg focus:outline-none focus:ring-2 focus:ring-sage-50 dark:focus:ring-border-dark-focus focus:border-sage-50 dark:focus:border-border-dark-focus bg-gray-50 dark:bg-background-dark-tertiary text-gray-900 dark:text-text-dark-primary placeholder-gray-500 dark:placeholder-text-dark-placeholder transition-all duration-200 text-base font-light tracking-wide"
-              placeholder={`닉네임 입력 (${VALIDATION.NICKNAME_MIN_LENGTH}-${VALIDATION.NICKNAME_MAX_LENGTH}자, 한글/영문만)`}
-              required
-              disabled={nicknameChecked}
-            />
+            <div className="flex-1">
+              <FormInput
+                type="text"
+                id="nickname"
+                name="nickname"
+                value={formData.nickname}
+                onChange={handleInputChange}
+                maxLength={VALIDATION.NICKNAME_MAX_LENGTH}
+                placeholder={`닉네임 입력 (${VALIDATION.NICKNAME_MIN_LENGTH}-${VALIDATION.NICKNAME_MAX_LENGTH}자, 한글/영문만)`}
+                error={errors.nickname}
+                required
+                disabled={nicknameChecked}
+              />
+            </div>
             <button
               type="button"
               onClick={handleNicknameCheck}
