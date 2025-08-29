@@ -11,7 +11,8 @@ import {
   EmotionConfig,
 } from '@/stores/emotion';
 import { getLogger } from '@/lib/logger';
-import { diaryApi, aiApi } from '@/lib/api';
+import { diaryApi, aiApi, ApiResponse } from '@/lib/api';
+import { DiaryEntry } from '@/types/diary';
 
 const logger = getLogger('CreateChat');
 
@@ -36,6 +37,15 @@ interface GeneratedMessage {
   currentVersionIndex: number;
 }
 
+interface RegenerateResponse {
+  ai_generated_text: string;
+  keywords?: string[];
+  ai_emotion: string;
+  style?: WritingStyle;
+  length?: LengthOption;
+  user_prompt?: string;
+}
+
 interface CreateChatProps {
   sessionId: string;
 }
@@ -58,12 +68,6 @@ interface StoredMessageVersion {
   createdAt: string; // ISO string for localStorage
   images?: File[];
   userPrompt: string; // 사용자 원본 프롬프트 저장
-}
-
-interface GenerateAITextResponse {
-  ai_generated_text: string;
-  keywords?: string[];
-  ai_emotion: string;
 }
 
 export default function CreateChat({ sessionId }: CreateChatProps) {
@@ -116,7 +120,7 @@ export default function CreateChat({ sessionId }: CreateChatProps) {
 
   // 유틸리티 함수들
   const generateId = (): string =>
-    `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    `${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
 
   const applyOptions = useCallback((): void => {
     setStyle(tempStyle);
@@ -197,7 +201,7 @@ export default function CreateChat({ sessionId }: CreateChatProps) {
           return;
         }
 
-        const response = await diaryApi.createDiary({
+        const response = (await diaryApi.createDiary({
           content: originalPrompt.trim(),
           user_emotion: emotion || undefined,
           ai_generated_text: messageContent,
@@ -205,7 +209,7 @@ export default function CreateChat({ sessionId }: CreateChatProps) {
           ai_emotion_confidence: 0.8,
           keywords: messageKeywords || [],
           is_public: false,
-        });
+        })) as ApiResponse<DiaryEntry>;
 
         router.push(`/viewPost/${response.data.id}`);
       } catch (error) {
@@ -213,7 +217,7 @@ export default function CreateChat({ sessionId }: CreateChatProps) {
         alert('다이어리 저장 중 오류가 발생했습니다. 다시 시도해주세요.');
       }
     },
-    [originalPrompt, emotion],
+    [originalPrompt, emotion, router],
   );
 
   const handleOptionKeyDown = useCallback(
@@ -256,7 +260,9 @@ export default function CreateChat({ sessionId }: CreateChatProps) {
 
       try {
         const targetSessionId = message?.sessionId || sessionId;
-        const response = await aiApi.regenerate(targetSessionId);
+        const response = (await aiApi.regenerate(
+          targetSessionId,
+        )) as ApiResponse<RegenerateResponse>;
         const responseData = response.data;
 
         setGeneratedMessages((prev) => {
@@ -301,7 +307,7 @@ export default function CreateChat({ sessionId }: CreateChatProps) {
         logger.error('재생성 실패', { error });
       }
     },
-    [prompt, emotion, isGenerating, style, length, sessionId],
+    [isGenerating, style, length, sessionId],
   );
 
   // 버전 네비게이션 핸들러
@@ -420,7 +426,7 @@ export default function CreateChat({ sessionId }: CreateChatProps) {
         regenerationCount: 1,
         createdAt: new Date(),
         images: selectedImages.length > 0 ? [...selectedImages] : undefined,
-        userPrompt: prompt.trim(),
+        userPrompt: originalPrompt || prompt.trim(),
       };
 
       const newMessage: GeneratedMessage = {
@@ -444,6 +450,9 @@ export default function CreateChat({ sessionId }: CreateChatProps) {
     isGenerating,
     wasJustGenerated,
     markAsProcessed,
+    prompt,
+    selectedImages,
+    originalPrompt,
   ]);
 
   useEffect(() => {

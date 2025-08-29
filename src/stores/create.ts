@@ -239,6 +239,7 @@ interface CreateState {
   getStyleDisplayName: (style: WritingStyle) => string;
   getLengthDisplayName: (length: LengthOption) => string;
   markAsProcessed: () => void; // 처리 완료 마킹
+  restoreOriginalInput: () => Promise<void>; // 원본 입력 복구
   resetToDefaults: () => void; // 기본값으로 초기화
 }
 
