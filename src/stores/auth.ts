@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist, subscribeWithSelector } from 'zustand/middleware';
 import { User } from '@/types';
+import { TIMEOUTS } from '@/constants/timeouts';
 
 interface AuthState {
   user: User | null;
@@ -15,8 +16,8 @@ interface AuthState {
   checkSessionExpiry: () => boolean;
 }
 
-// 세션 만료 시간 설정 (8시간)
-const SESSION_TIMEOUT = 8 * 60 * 60 * 1000; // 8시간
+// 세션 만료 시간 설정
+const SESSION_TIMEOUT = TIMEOUTS.SESSION_EXPIRE;
 
 export const useAuthStore = create<AuthState>()(
   subscribeWithSelector(
@@ -226,13 +227,13 @@ if (typeof window !== 'undefined') {
     });
   });
 
-  // 주기적인 세션 만료 검사 (1분마다)
+  // 주기적인 세션 만료 검사
   setInterval(() => {
     const state = useAuthStore.getState();
     if (state.isAuthenticated) {
       state.checkSessionExpiry();
     }
-  }, 60 * 1000); // 1분
+  }, TIMEOUTS.ACTIVITY_CHECK);
 
   // 사용자 활동 추적을 위한 이벤트 리스너
   [

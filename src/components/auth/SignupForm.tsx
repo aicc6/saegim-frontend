@@ -6,6 +6,7 @@ import { authApi } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
 import { getLogger } from '@/lib/logger';
 import { BRAND_COLORS } from '@/constants/brand';
+import { VALIDATION } from '@/constants/timeouts';
 
 const logger = getLogger('SignupForm');
 
@@ -177,7 +178,9 @@ export default function SignupForm() {
       return;
     }
 
-    if (formData.verificationCode.length !== 6) {
+    if (
+      formData.verificationCode.length !== VALIDATION.VERIFICATION_CODE_LENGTH
+    ) {
       toast({
         title: '인증 코드 형식 오류',
         description: '인증 코드는 6자리 숫자입니다.',
@@ -280,7 +283,8 @@ export default function SignupForm() {
       formData.confirmPassword &&
       formData.nickname;
     const passwordsMatch = formData.password === formData.confirmPassword;
-    const passwordLength = formData.password.length >= 9;
+    const passwordLength =
+      formData.password.length >= VALIDATION.PASSWORD_MIN_LENGTH;
 
     // 비밀번호 복잡성 검사 (영문, 숫자, 특수문자 포함)
     const hasLetter = /[a-zA-Z]/.test(formData.password);
@@ -360,8 +364,8 @@ export default function SignupForm() {
                 value={formData.verificationCode}
                 onChange={handleInputChange}
                 className="flex-1 px-4 py-3 border border-gray-300 dark:border-border-dark-subtle rounded-lg focus:outline-none focus:ring-2 focus:ring-sage-50 dark:focus:ring-border-dark-focus focus:border-sage-50 dark:focus:border-border-dark-focus bg-gray-50 dark:bg-background-dark-tertiary text-gray-900 dark:text-text-dark-primary placeholder-gray-500 dark:placeholder-text-dark-placeholder transition-all duration-200 text-base font-light tracking-wide"
-                placeholder="인증 코드 6자리 입력"
-                maxLength={6}
+                placeholder={`인증 코드 ${VALIDATION.VERIFICATION_CODE_LENGTH}자리 입력`}
+                maxLength={VALIDATION.VERIFICATION_CODE_LENGTH}
                 disabled={isVerifyingCode}
               />
               <button
@@ -369,7 +373,8 @@ export default function SignupForm() {
                 onClick={handleVerifyCode}
                 disabled={
                   !formData.verificationCode ||
-                  formData.verificationCode.length !== 6 ||
+                  formData.verificationCode.length !==
+                    VALIDATION.VERIFICATION_CODE_LENGTH ||
                   isVerifyingCode
                 }
                 className="px-4 py-3 text-white dark:text-text-dark-on-color rounded-lg hover:opacity-90 active:opacity-100 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 text-sm font-medium shadow-sm hover:shadow-md focus:outline-none focus:ring-2 focus:ring-sage-50 dark:focus:ring-border-dark-focus focus:ring-offset-2 dark:focus:ring-offset-background-dark-secondary"
@@ -393,7 +398,7 @@ export default function SignupForm() {
             value={formData.password}
             onChange={handleInputChange}
             className="w-full px-4 py-3 border border-gray-300 dark:border-border-dark-subtle rounded-lg focus:outline-none focus:ring-2 focus:ring-sage-50 dark:focus:ring-border-dark-focus focus:border-sage-50 dark:focus:border-border-dark-focus bg-gray-50 dark:bg-background-dark-tertiary text-gray-900 dark:text-text-dark-primary placeholder-gray-500 dark:placeholder-text-dark-placeholder transition-all duration-200 text-base font-light tracking-wide"
-            placeholder="비밀번호 입력 (영문, 숫자, 특수문자 포함 9자 이상)"
+            placeholder={`비밀번호 입력 (영문, 숫자, 특수문자 포함 ${VALIDATION.PASSWORD_MIN_LENGTH}자 이상)`}
             required
           />
         </div>
@@ -421,9 +426,9 @@ export default function SignupForm() {
               name="nickname"
               value={formData.nickname}
               onChange={handleInputChange}
-              maxLength={10}
+              maxLength={VALIDATION.NICKNAME_MAX_LENGTH}
               className="flex-1 px-4 py-3 border border-gray-300 dark:border-border-dark-subtle rounded-lg focus:outline-none focus:ring-2 focus:ring-sage-50 dark:focus:ring-border-dark-focus focus:border-sage-50 dark:focus:border-border-dark-focus bg-gray-50 dark:bg-background-dark-tertiary text-gray-900 dark:text-text-dark-primary placeholder-gray-500 dark:placeholder-text-dark-placeholder transition-all duration-200 text-base font-light tracking-wide"
-              placeholder="닉네임 입력 (2-10자, 한글/영문만)"
+              placeholder={`닉네임 입력 (${VALIDATION.NICKNAME_MIN_LENGTH}-${VALIDATION.NICKNAME_MAX_LENGTH}자, 한글/영문만)`}
               required
               disabled={nicknameChecked}
             />

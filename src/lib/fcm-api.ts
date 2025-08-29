@@ -4,6 +4,7 @@
  * (FCM + 인앱 알림 통합)
  */
 
+import { VALIDATION } from '@/constants/timeouts';
 import { apiClient } from './api';
 
 // Notification API 스키마 타입 정의 (백엔드 통합 API 기반)
@@ -173,7 +174,10 @@ class NotificationApiClient {
    * @param limit 조회할 개수 (기본: 20)
    * @param offset 오프셋 (기본: 0)
    */
-  async getNotificationHistory(limit: number = 20, offset: number = 0) {
+  async getNotificationHistory(
+    limit: number = VALIDATION.NOTIFICATION_HISTORY_DEFAULT_LIMIT,
+    offset: number = 0,
+  ) {
     return apiClient.get<NotificationHistoryResponse[]>(
       '/api/notifications/history',
       {

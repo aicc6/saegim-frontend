@@ -2,6 +2,7 @@
 
 import { create } from 'zustand';
 import { immer } from 'zustand/middleware/immer';
+import { VALIDATION } from '@/constants/timeouts';
 import type {
   FCMState,
   NotificationSettings,
@@ -413,7 +414,7 @@ const deleteUserToken = async (tokenId: string) => {
 
 // 알림 히스토리 조회 함수
 const getNotificationHistory = async (
-  limit: number = 20,
+  limit: number = VALIDATION.NOTIFICATION_HISTORY_DEFAULT_LIMIT,
   offset: number = 0,
 ) => {
   try {
@@ -489,7 +490,10 @@ useFCMStore.setState((state) => ({
   ...state,
   addNotification: (notification: NotificationHistory) => {
     useFCMStore.setState((prevState) => ({
-      notifications: [notification, ...prevState.notifications].slice(0, 100), // 최대 100개 유지
+      notifications: [notification, ...prevState.notifications].slice(
+        0,
+        VALIDATION.NOTIFICATION_MAX_COUNT,
+      ),
       unreadCount: prevState.unreadCount + 1,
     }));
   },

@@ -6,6 +6,7 @@ import { authApi } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
 import { logger } from '@/lib/logger';
 import { BRAND_COLORS } from '@/constants/brand';
+import { TIMEOUTS } from '@/constants/timeouts';
 
 function RestoreAccountContent() {
   const router = useRouter();
@@ -83,7 +84,7 @@ function RestoreAccountContent() {
       // 로그인 페이지로 이동
       setTimeout(() => {
         router.push('/login');
-      }, 2000);
+      }, TIMEOUTS.REDIRECT_DELAY);
     } catch (error: unknown) {
       const errorMessage =
         error instanceof Error ? error.message : '알 수 없는 오류';

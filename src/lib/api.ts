@@ -3,6 +3,7 @@
  */
 
 import { DiaryListEntry } from '@/types/diary';
+import { TIMEOUTS } from '@/constants/timeouts';
 import { getLogger } from './logger';
 
 // HTTPS 강제 - 보안상 HTTP 프로토콜 사용 금지
@@ -85,9 +86,12 @@ class ApiClient {
     };
 
     try {
-      // 타임아웃 설정 (10초)
+      // 타임아웃 설정
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 10000);
+      const timeoutId = setTimeout(
+        () => controller.abort(),
+        TIMEOUTS.API_DEFAULT,
+      );
 
       const response = await fetch(url, {
         ...defaultOptions,
@@ -168,9 +172,12 @@ class ApiClient {
 
   private async refreshToken(): Promise<boolean> {
     try {
-      // 토큰 갱신에도 타임아웃 설정 (5초)
+      // 토큰 갱신에도 타임아웃 설정
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 5000);
+      const timeoutId = setTimeout(
+        () => controller.abort(),
+        TIMEOUTS.API_UPLOAD,
+      );
 
       const response = await fetch(`${this.baseURL}/api/auth/refresh`, {
         method: 'POST',
