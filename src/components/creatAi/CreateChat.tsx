@@ -3,19 +3,14 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { CiLocationArrow1 } from 'react-icons/ci';
 import Image from 'next/image';
-import {
-  useCreateStore,
-  WritingStyle,
-  LengthOption,
-  generateAIText,
-} from '@/stores/create';
+import { useCreateStore, WritingStyle, LengthOption } from '@/stores/create';
 import {
   EmotionOption,
   useEmotionStore,
   EmotionConfig,
 } from '@/stores/emotion';
 import { getLogger } from '@/lib/logger';
-import { diaryApi } from '@/lib/api';
+import { diaryApi, aiApi } from '@/lib/api';
 
 const logger = getLogger('CreateChat');
 
@@ -29,6 +24,8 @@ interface MessageVersion {
   length: LengthOption;
   regenerationCount: number;
   createdAt: Date;
+  images?: File[];
+  userPrompt: string; // 사용자 원본 프롬프트 저장
 }
 
 interface GeneratedMessage {
@@ -58,6 +55,8 @@ interface StoredMessageVersion {
   length: LengthOption;
   regenerationCount: number;
   createdAt: string; // ISO string for localStorage
+  images?: File[];
+  userPrompt: string; // 사용자 원본 프롬프트 저장
 }
 
 interface GenerateAITextResponse {
@@ -246,44 +245,33 @@ export default function CreateChat({ sessionId }: CreateChatProps) {
     async (message?: GeneratedMessage): Promise<void> => {
       if (isGenerating) return;
 
-      let promptToUse = prompt.trim();
-      if (!promptToUse && message && message.versions.length > 0) {
-        const currentVersion = message.versions[message.currentVersionIndex];
-        promptToUse = currentVersion.text;
-      }
-
       if (message && message.versions.length >= 5) {
-        logger.warn('재생성 횟수 제한 도달');
+        alert('재생성 횟수가 5회에 도달했습니다.');
         return;
       }
 
-      const newCount = (message?.versions.length || 1) + 1;
-
       try {
-        const response: GenerateAITextResponse = await generateAIText({
-          prompt: promptToUse,
-          style,
-          length,
-          emotion,
-          regeneration_count: newCount,
-          sessionId: message?.sessionId || sessionId,
-        });
+        const targetSessionId = message?.sessionId || sessionId;
+        const response = await aiApi.regenerate(targetSessionId);
+        const responseData = response.data;
 
         setGeneratedMessages((prev) => {
-          const targetSessionId = message?.sessionId || sessionId;
           const messageIndex = prev.findIndex(
             (msg) => msg.sessionId === targetSessionId,
           );
 
+          const newCount = (message?.versions.length || 0) + 1;
           const newVersion: MessageVersion = {
             id: `version_${generateId()}`,
-            text: response.ai_generated_text,
-            keywords: response.keywords || [],
-            emotion: response.ai_emotion as EmotionOption,
-            style,
-            length,
+            text: responseData.ai_generated_text,
+            keywords: responseData.keywords || [],
+            emotion: responseData.ai_emotion as EmotionOption,
+            style: responseData.style || style,
+            length: responseData.length || length,
             regenerationCount: newCount,
             createdAt: new Date(),
+            images: message?.versions[message.currentVersionIndex]?.images,
+            userPrompt: responseData.user_prompt || '',
           };
 
           if (messageIndex === -1) {
@@ -346,7 +334,7 @@ export default function CreateChat({ sessionId }: CreateChatProps) {
   const saveMessagesToLocalStorage = useCallback(
     (messages: GeneratedMessage[], sessionId: string): void => {
       try {
-        const localStorageKey = `ai_messages_${sessionId}`;
+        const localStorageKey = `ai_messages_v2_${sessionId}`;
         const messagesForStorage: StoredMessage[] = messages.map((msg) => ({
           ...msg,
           versions: msg.versions.map((version) => ({
@@ -368,7 +356,7 @@ export default function CreateChat({ sessionId }: CreateChatProps) {
   const loadMessagesFromLocalStorage = useCallback(
     (sessionId: string): GeneratedMessage[] => {
       try {
-        const localStorageKey = `ai_messages_${sessionId}`;
+        const localStorageKey = `ai_messages_v2_${sessionId}`;
         const savedMessages = localStorage.getItem(localStorageKey);
 
         if (!savedMessages) return [];
@@ -379,11 +367,12 @@ export default function CreateChat({ sessionId }: CreateChatProps) {
           versions: msg.versions.map((version) => ({
             ...version,
             createdAt: new Date(version.createdAt),
+            userPrompt: version.userPrompt || '',
           })),
         }));
       } catch (error) {
         logger.error('localStorage 파싱 오류', { error });
-        const localStorageKey = `ai_messages_${sessionId}`;
+        const localStorageKey = `ai_messages_v2_${sessionId}`;
         localStorage.removeItem(localStorageKey);
         return [];
       }
@@ -426,6 +415,8 @@ export default function CreateChat({ sessionId }: CreateChatProps) {
         length,
         regenerationCount: 1,
         createdAt: new Date(),
+        images: selectedImages.length > 0 ? [...selectedImages] : undefined,
+        userPrompt: prompt.trim(),
       };
 
       const newMessage: GeneratedMessage = {
@@ -570,6 +561,25 @@ export default function CreateChat({ sessionId }: CreateChatProps) {
                         />
                       </svg>
                     </button>
+                  </div>
+                )}
+
+                {/* 이미지 표시 */}
+                {currentVersion.images && currentVersion.images.length > 0 && (
+                  <div className="mb-4">
+                    <div className="flex flex-wrap gap-2">
+                      {currentVersion.images.map((image, index) => (
+                        <div key={index} className="relative">
+                          <Image
+                            src={URL.createObjectURL(image)}
+                            alt={`업로드된 이미지 ${index + 1}`}
+                            width={100}
+                            height={100}
+                            className="rounded-lg object-cover"
+                          />
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 )}
 

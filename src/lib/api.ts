@@ -418,3 +418,11 @@ export const diaryApi = {
   // 다이어리 삭제
   deleteDiary: (id: string) => apiClient.delete(`/api/diary/${id}`),
 };
+
+// AI 관련 API 엔드포인트
+export const aiApi = {
+  // AI 텍스트 재생성 (session_id 기반)
+  regenerate: async (sessionId: string) => {
+    return apiClient.post(`/api/ai/regenerate/${sessionId}`, {});
+  },
+};
