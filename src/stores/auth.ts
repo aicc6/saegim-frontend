@@ -183,10 +183,12 @@ export const useAuthStore = create<AuthState>()(
   ),
 );
 
-// Cross-tab 동기화 설정
+// Cross-tab 동기화 및 세션 관리 설정
+let cleanupFunctions: (() => void)[] = [];
+
 if (typeof window !== 'undefined') {
-  // 다른 탭에서 로그인 시 동기화
-  window.addEventListener('auth-login', (event) => {
+  // 로그인 동기화 핸들러
+  const handleAuthLogin = (event: Event) => {
     const customEvent = event as CustomEvent;
     const { user, timestamp } = customEvent.detail;
     useAuthStore.setState({
@@ -195,64 +197,89 @@ if (typeof window !== 'undefined') {
       sessionExpiry: timestamp + SESSION_TIMEOUT,
       lastActivity: timestamp,
     });
-  });
+  };
 
-  // 다른 탭에서 로그아웃 시 동기화
-  window.addEventListener('auth-logout', () => {
+  // 로그아웃 동기화 핸들러
+  const handleAuthLogout = () => {
     useAuthStore.setState({
       user: null,
       isAuthenticated: false,
       sessionExpiry: null,
       lastActivity: Date.now(),
     });
-  });
+  };
 
-  // 다른 탭에서 사용자 정보 업데이트 시 동기화
-  window.addEventListener('auth-update', (event) => {
+  // 사용자 정보 업데이트 동기화 핸들러
+  const handleAuthUpdate = (event: Event) => {
     const customEvent = event as CustomEvent;
     const { user } = customEvent.detail;
     useAuthStore.setState({
       user,
       lastActivity: Date.now(),
     });
-  });
+  };
 
-  // 다른 탭에서 세션 만료 시 동기화
-  window.addEventListener('auth-expired', () => {
+  // 세션 만료 동기화 핸들러
+  const handleAuthExpired = () => {
     useAuthStore.setState({
       user: null,
       isAuthenticated: false,
       sessionExpiry: null,
       lastActivity: Date.now(),
     });
-  });
+  };
 
-  // 주기적인 세션 만료 검사
-  setInterval(() => {
+  // 이벤트 리스너 등록
+  window.addEventListener('auth-login', handleAuthLogin);
+  window.addEventListener('auth-logout', handleAuthLogout);
+  window.addEventListener('auth-update', handleAuthUpdate);
+  window.addEventListener('auth-expired', handleAuthExpired);
+
+  // 활동 추적 핸들러
+  const activityHandler = () => {
     const state = useAuthStore.getState();
-    if (state.isAuthenticated) {
-      state.checkSessionExpiry();
+    if (state.isAuthenticated && !state.checkSessionExpiry()) {
+      state.updateActivity();
     }
-  }, TIMEOUTS.ACTIVITY_CHECK);
+  };
 
   // 사용자 활동 추적을 위한 이벤트 리스너
-  [
+  const activityEvents = [
     'mousedown',
     'mousemove',
     'keypress',
     'scroll',
     'touchstart',
     'click',
-  ].forEach((event) => {
-    window.addEventListener(
-      event,
-      () => {
-        const state = useAuthStore.getState();
-        if (state.isAuthenticated && !state.checkSessionExpiry()) {
-          state.updateActivity();
-        }
-      },
-      { passive: true },
-    );
+  ];
+
+  activityEvents.forEach((event) => {
+    window.addEventListener(event, activityHandler, { passive: true });
   });
+
+  // 주기적인 세션 만료 검사
+  const sessionCheckInterval = setInterval(() => {
+    const state = useAuthStore.getState();
+    if (state.isAuthenticated) {
+      state.checkSessionExpiry();
+    }
+  }, TIMEOUTS.ACTIVITY_CHECK);
+
+  // Cleanup 함수들 등록
+  cleanupFunctions = [
+    () => window.removeEventListener('auth-login', handleAuthLogin),
+    () => window.removeEventListener('auth-logout', handleAuthLogout),
+    () => window.removeEventListener('auth-update', handleAuthUpdate),
+    () => window.removeEventListener('auth-expired', handleAuthExpired),
+    ...activityEvents.map(
+      (event) => () => window.removeEventListener(event, activityHandler),
+    ),
+    () => clearInterval(sessionCheckInterval),
+  ];
 }
+
+// 전역 cleanup 함수 (필요시 호출)
+export const cleanupAuthStore = () => {
+  cleanupFunctions.forEach((cleanup) => cleanup());
+  cleanupFunctions = [];
+};

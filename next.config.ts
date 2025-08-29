@@ -64,14 +64,14 @@ const nextConfig: NextConfig = {
   // 서버 외부 패키지 설정 (Next.js 15에서 이동됨)
   serverExternalPackages: [],
 
-  // ESLint 설정 (빌드 시 비활성화)
+  // ESLint 설정 (빌드 시 활성화)
   eslint: {
-    ignoreDuringBuilds: true,
+    ignoreDuringBuilds: false,
   },
 
-  // TypeScript 설정 (빌드 시 비활성화)
+  // TypeScript 설정 (빌드 시 활성화)
   typescript: {
-    ignoreBuildErrors: true,
+    ignoreBuildErrors: false,
   },
 
   // 이미지 최적화 설정

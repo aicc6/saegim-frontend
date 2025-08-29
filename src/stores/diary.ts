@@ -10,6 +10,11 @@ import {
   DiaryFilters,
   CalendarDateRange,
 } from '@/types/diary';
+import {
+  isValidDiaryEntry,
+  isValidDiaryList,
+  validateApiResponse,
+} from '@/lib/type-guards';
 import { getLogger } from '../lib/logger';
 
 const logger = getLogger('diary');
@@ -81,8 +86,8 @@ export const useDiaryStore = create<DiaryState>((set, get) => ({
 
       const response = await diaryApi.getDiaries(params);
 
-      // 백엔드 API 응답 구조에 맞게 처리
-      const diaries = Array.isArray(response.data) ? response.data : [];
+      // 타입 안전성을 보장하는 API 응답 처리
+      const diaries = validateApiResponse(response.data, isValidDiaryList);
 
       set({
         diaries,
@@ -108,13 +113,8 @@ export const useDiaryStore = create<DiaryState>((set, get) => ({
 
       const response = await diaryApi.getDiary(id);
 
-      // 타입 안전성 확보
-      const diary =
-        response.data &&
-        typeof response.data === 'object' &&
-        'id' in response.data
-          ? (response.data as DiaryEntry)
-          : null;
+      // 타입 안전성을 보장하는 API 응답 처리
+      const diary = isValidDiaryEntry(response.data) ? response.data : null;
 
       set({
         currentDiary: diary,
@@ -153,8 +153,8 @@ export const useDiaryStore = create<DiaryState>((set, get) => ({
         isArray: Array.isArray(response.data),
       });
 
-      // 백엔드 API 응답 구조에 맞게 처리
-      const diaries = Array.isArray(response.data) ? response.data : [];
+      // 타입 안전성을 보장하는 API 응답 처리
+      const diaries = validateApiResponse(response.data, isValidDiaryList);
 
       logger.info('처리된 데이터', {
         diariesCount: diaries.length,
@@ -193,7 +193,7 @@ export const useDiaryStore = create<DiaryState>((set, get) => ({
     try {
       set({ isLoading: true, error: null });
       const response = await diaryApi.updateDiary(id, data);
-      const diaryData = response.data as DiaryEntry;
+      const diaryData = validateApiResponse(response.data, isValidDiaryEntry);
       set({ currentDiary: diaryData, isLoading: false, error: null });
     } catch (error) {
       set({
