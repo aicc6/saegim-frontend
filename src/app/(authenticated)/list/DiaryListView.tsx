@@ -14,10 +14,13 @@ import {
 import { useDiaryStore } from '@/stores/diary';
 import { type DiaryFilters } from '@/types/diary';
 import { logger } from '@/lib/logger';
+import { useToast } from '@/hooks/use-toast';
+import DeleteConfirmModal from '@/components/diary/DeleteConfirmModal';
 import DiaryCard from './DiaryCard';
 
 export default function DiaryListView() {
   const router = useRouter();
+  const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedEmotion, setSelectedEmotion] = useState('all');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
@@ -27,6 +30,13 @@ export default function DiaryListView() {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
 
+  // 삭제 확인 모달 상태
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [diaryToDelete, setDiaryToDelete] = useState<{
+    id: string;
+    title: string;
+  } | null>(null);
+
   // store에서 상태와 액션 가져오기 (Store에 실제로 있는 것만)
   const {
     diaries,
@@ -35,6 +45,7 @@ export default function DiaryListView() {
     totalCount,
     currentPage, // hasNextPage 대신 currentPage 사용
     fetchDiaries,
+    deleteDiary,
     clearError,
   } = useDiaryStore();
 
@@ -101,7 +112,7 @@ export default function DiaryListView() {
     try {
       const filters = buildFilters(currentPage + 1);
       await fetchDiaries(filters);
-    } catch (error) {
+    } catch (err) {
       logger.error('Failed to load more diaries:', error);
     }
   }, [isLoading, currentPage, buildFilters, fetchDiaries]);
@@ -129,7 +140,7 @@ export default function DiaryListView() {
       clearError();
       const filters = buildFilters(1); // 첫 페이지부터 시작
       await fetchDiaries(filters);
-    } catch (error) {
+    } catch (err) {
       logger.error('Failed to apply filters:', error);
     }
   }, [buildFilters, fetchDiaries, clearError]);
@@ -145,6 +156,42 @@ export default function DiaryListView() {
     },
     [router],
   );
+
+  // 삭제 버튼 클릭 핸들러
+  const handleDeleteClick = useCallback(
+    (diaryId: string, diaryTitle: string) => {
+      setDiaryToDelete({ id: diaryId, title: diaryTitle });
+      setDeleteModalOpen(true);
+    },
+    [],
+  );
+
+  // 삭제 확인 핸들러
+  const handleDeleteConfirm = useCallback(async () => {
+    if (!diaryToDelete) return;
+
+    try {
+      await deleteDiary(diaryToDelete.id);
+      toast({
+        title: '삭제 완료',
+        description: '다이어리가 성공적으로 삭제되었습니다.',
+      });
+      setDeleteModalOpen(false);
+      setDiaryToDelete(null);
+    } catch (err) {
+      toast({
+        title: '삭제 실패',
+        description: '다이어리 삭제 중 오류가 발생했습니다.',
+        variant: 'destructive',
+      });
+    }
+  }, [diaryToDelete, deleteDiary, toast]);
+
+  // 삭제 모달 닫기 핸들러
+  const handleDeleteModalClose = useCallback(() => {
+    setDeleteModalOpen(false);
+    setDiaryToDelete(null);
+  }, []);
 
   // 초기 데이터 로드 및 필터 변경 시 재로드
   useEffect(() => {
@@ -411,6 +458,9 @@ export default function DiaryListView() {
               thumbnail: `https://picsum.photos/400/200?random=${diary.id}`,
             }}
             onClick={() => handleCardClick(diary.id.toString())}
+            onDelete={(_) =>
+              handleDeleteClick(diary.id.toString(), diary.title || '')
+            }
           />
         ))}
       </div>
@@ -443,6 +493,15 @@ export default function DiaryListView() {
           <span className="text-text-tertiary">모든 글을 확인했습니다.</span>
         </div>
       )}
+
+      {/* 삭제 확인 모달 */}
+      <DeleteConfirmModal
+        isOpen={deleteModalOpen}
+        onClose={handleDeleteModalClose}
+        onConfirm={handleDeleteConfirm}
+        diaryTitle={diaryToDelete?.title}
+        isLoading={isLoading}
+      />
     </div>
   );
 }

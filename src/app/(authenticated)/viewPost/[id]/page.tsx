@@ -14,6 +14,8 @@ import {
 } from '@/types/diary';
 import PageHeader from '@/components/common/PageHeader';
 import { Button } from '@/components/ui/custom/Button';
+import { useToast } from '@/hooks/use-toast';
+import DeleteConfirmModal from '@/components/diary/DeleteConfirmModal';
 
 const emotionLabels = {
   happy: { emoji: '😊', name: '행복', color: 'text-emotion-happy' },
@@ -39,11 +41,14 @@ export default function ViewPostPage({
   params: Promise<{ id: string }>;
 }) {
   const router = useRouter();
+  const { toast } = useToast();
   const { id: entryId } = use(params); // React.use()로 params unwrap
   const {
     diaries,
     currentDiary,
     fetchDiary,
+    deleteDiary,
+    isLoading,
     deletedImageIds,
     addDeletedImageId,
   } = useDiaryStore();
@@ -59,6 +64,9 @@ export default function ViewPostPage({
   const [sameDateEntries, setSameDateEntries] = useState<DiaryListEntry[]>([]);
   const [isImageDeleted, setIsImageDeleted] = useState(false); // 이미지 삭제 상태 추가
   // deletedImageIds는 전역 스토어에서 가져옴
+
+  // 삭제 확인 모달 상태
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
 
   // 감정 선택 관련 상태
   const [showEmotionSelector, setShowEmotionSelector] = useState(false);
@@ -283,17 +291,38 @@ export default function ViewPostPage({
     }
   };
 
+  // 삭제 버튼 클릭 핸들러
   const handleDelete = () => {
-    if (
-      entry &&
-      window.confirm(
-        '정말로 이 글을 삭제하시겠습니까? 삭제된 글은 복구할 수 없습니다.',
-      )
-    ) {
-      // 현재는 삭제 기능이 구현되지 않음
-      logger.warn('삭제 기능은 아직 구현되지 않았습니다');
-      router.push('/calendar');
+    setDeleteModalOpen(true);
+  };
+
+  // 삭제 확인 핸들러
+  const handleDeleteConfirm = async () => {
+    if (!entry) return;
+
+    try {
+      await deleteDiary(entry.id);
+      toast({
+        title: '삭제 완료',
+        description: '다이어리가 성공적으로 삭제되었습니다.',
+      });
+      setDeleteModalOpen(false);
+
+      // 삭제 후 이전 페이지로 이동
+      handleBack();
+    } catch (error) {
+      toast({
+        title: '삭제 실패',
+        description: '다이어리 삭제 중 오류가 발생했습니다.',
+        variant: 'destructive',
+      });
+      logger.error('다이어리 삭제 실패:', error);
     }
+  };
+
+  // 삭제 모달 닫기 핸들러
+  const handleDeleteModalClose = () => {
+    setDeleteModalOpen(false);
   };
 
   const handleCancelEdit = () => {
@@ -1140,6 +1169,15 @@ export default function ViewPostPage({
         onClose={() => setShowImageOptionsModal(false)}
         onLoadExisting={handleLoadExistingImages}
         onUploadNew={handleUploadNewImage}
+      />
+
+      {/* 삭제 확인 모달 */}
+      <DeleteConfirmModal
+        isOpen={deleteModalOpen}
+        onClose={handleDeleteModalClose}
+        onConfirm={handleDeleteConfirm}
+        diaryTitle={entry?.title}
+        isLoading={isLoading}
       />
     </div>
   );

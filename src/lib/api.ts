@@ -402,4 +402,7 @@ export const diaryApi = {
       start_date: startDate,
       end_date: endDate,
     }),
+
+  // 다이어리 삭제
+  deleteDiary: (id: string) => apiClient.delete(`/api/diary/${id}`),
 };

@@ -39,6 +39,7 @@ interface DiaryState {
       keywords?: string[];
     },
   ) => Promise<void>;
+  deleteDiary: (id: string) => Promise<void>;
   clearError: () => void;
   setPage: (page: number) => void;
   setPageSize: (size: number) => void;
@@ -198,6 +199,43 @@ export const useDiaryStore = create<DiaryState>((set, get) => ({
           error instanceof Error
             ? error.message
             : '다이어리를 수정하는데 실패했습니다.',
+        isLoading: false,
+      });
+    }
+  },
+
+  // 다이어리 삭제
+  deleteDiary: async (id: string) => {
+    try {
+      set({ isLoading: true, error: null });
+
+      await diaryApi.deleteDiary(id);
+
+      // 삭제 후 목록에서 해당 다이어리 제거
+      const currentState = get();
+      const updatedDiaries = currentState.diaries.filter(
+        (diary) => diary.id.toString() !== id,
+      );
+
+      set({
+        diaries: updatedDiaries,
+        totalCount: currentState.totalCount - 1,
+        currentDiary:
+          currentState.currentDiary?.id.toString() === id
+            ? null
+            : currentState.currentDiary,
+        isLoading: false,
+        error: null,
+      });
+
+      logger.info('다이어리 삭제 성공', { id });
+    } catch (error) {
+      logger.error('다이어리 삭제 실패', { id, error });
+      set({
+        error:
+          error instanceof Error
+            ? error.message
+            : '다이어리를 삭제하는데 실패했습니다.',
         isLoading: false,
       });
     }
