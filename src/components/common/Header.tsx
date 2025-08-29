@@ -1,13 +1,14 @@
 'use client';
 
-import { Menu, X } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTheme } from 'next-themes';
+import { Menu, X } from 'lucide-react';
+
 import { useAuthStore } from '@/stores/auth';
-import { BRAND_ASSETS, BRAND_COLORS } from '@/constants/brand';
+import { BRAND_ASSETS, BRAND_COLORS } from '@/constants';
 import { Button } from '../ui/button';
 import ThemeToggle from '../ui/custom/ThemeToggle';
 

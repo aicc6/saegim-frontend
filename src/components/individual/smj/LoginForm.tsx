@@ -2,12 +2,12 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+
 import GoogleLoginButton from '@/components/ui/custom/GoogleLoginButton';
-import { authApi } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
 import { useAuthStore } from '@/stores/auth';
-import { getLogger } from '@/lib/logger';
-import { BRAND_COLORS } from '@/constants/brand';
+import { authApi, getLogger } from '@/lib';
+import { BRAND_COLORS } from '@/constants';
 
 interface LoginFormProps {
   redirectTo?: string | null;

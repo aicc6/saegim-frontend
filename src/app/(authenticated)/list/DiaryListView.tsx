@@ -11,11 +11,12 @@ import {
   SortAsc,
   SortDesc,
 } from 'lucide-react';
-import { useDiaryStore } from '@/stores/diary';
-import { type DiaryFilters } from '@/types/diary';
-import { logger } from '@/lib/logger';
-import { useToast } from '@/hooks/use-toast';
+
 import DeleteConfirmModal from '@/components/diary/DeleteConfirmModal';
+import { useToast } from '@/hooks/use-toast';
+import { useDiaryStore } from '@/stores/diary';
+import { logger } from '@/lib';
+import { type DiaryFilters } from '@/types/diary';
 import DiaryCard from './DiaryCard';
 
 export default function DiaryListView() {
@@ -112,8 +113,8 @@ export default function DiaryListView() {
     try {
       const filters = buildFilters(currentPage + 1);
       await fetchDiaries(filters);
-    } catch (err) {
-      logger.error('Failed to load more diaries:', error);
+    } catch (loadError) {
+      logger.error('Failed to load more diaries:', loadError);
     }
   }, [isLoading, currentPage, buildFilters, fetchDiaries]);
 
@@ -140,8 +141,8 @@ export default function DiaryListView() {
       clearError();
       const filters = buildFilters(1); // 첫 페이지부터 시작
       await fetchDiaries(filters);
-    } catch (err) {
-      logger.error('Failed to apply filters:', error);
+    } catch (filterError) {
+      logger.error('Failed to apply filters:', filterError);
     }
   }, [buildFilters, fetchDiaries, clearError]);
 
@@ -170,7 +171,8 @@ export default function DiaryListView() {
       });
       setDeleteModalOpen(false);
       setDiaryToDelete(null);
-    } catch (err) {
+    } catch (deleteError) {
+      logger.error('Failed to delete diary:', deleteError);
       toast({
         title: '삭제 실패',
         description: '다이어리 삭제 중 오류가 발생했습니다.',

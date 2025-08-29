@@ -2,9 +2,9 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+
 import { useAuthStore } from '@/stores/auth';
-import { authApi } from '@/lib/api';
-import { getLogger } from '@/lib/logger';
+import { authApi, getLogger } from '@/lib';
 
 const logger = getLogger('AuthGuard');
 

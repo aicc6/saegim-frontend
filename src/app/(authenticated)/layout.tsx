@@ -1,12 +1,13 @@
 import type { Metadata } from 'next';
+
 import Footer from '@/components/common/Footer';
 import AuthenticatedHeader from '@/components/common/AuthenticatedHeader';
 import { Sidebar } from '@/components/common/Sidebar';
-import { SidebarProvider } from '@/contexts/sidebar-context';
+import AuthGuard from '@/components/auth/AuthGuard';
 import { MainContent } from '@/components/layout/MainContent';
 import { FCMProvider } from '@/components/providers/fcm-provider';
-import AuthGuard from '@/components/auth/AuthGuard';
-import { DEFAULT_METADATA } from '@/constants/metadata';
+import { SidebarProvider } from '@/contexts/sidebar-context';
+import { DEFAULT_METADATA } from '@/constants';
 
 import '../globals.css';
 

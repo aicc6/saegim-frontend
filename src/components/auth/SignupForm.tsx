@@ -2,18 +2,18 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { authApi } from '@/lib/api';
+
+import { FormInput } from '@/components/ui/form-input';
 import { useApiError } from '@/hooks/use-api-error';
 import {
+  authApi,
   validateEmail,
   validatePassword,
   validatePasswordConfirmation,
   validateNickname,
   validateVerificationCode,
-} from '@/lib/validation';
-import { FormInput } from '@/components/ui/form-input';
-import { BRAND_COLORS } from '@/constants/brand';
-import { VALIDATION } from '@/constants/timeouts';
+} from '@/lib';
+import { BRAND_COLORS, VALIDATION } from '@/constants';
 
 export default function SignupForm() {
   const router = useRouter();

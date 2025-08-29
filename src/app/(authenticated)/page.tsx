@@ -1,8 +1,9 @@
 'use client';
 
 import { Suspense } from 'react';
+
 import CreateAi from '@/components/creatAi/CreateAi';
-import { getLogger } from '@/lib/logger';
+import { getLogger } from '@/lib';
 
 const logger = getLogger('home');
 

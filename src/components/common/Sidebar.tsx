@@ -16,14 +16,14 @@ import {
   ChevronRight,
   LogOut,
 } from 'lucide-react';
+
 import { Button } from '@/components/ui/button';
 import { useSidebar } from '@/contexts/sidebar-context';
-import { useAuthStore } from '@/stores/auth';
-import { authApi } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
 import { useNotifications } from '@/hooks/use-notifications';
+import { useAuthStore } from '@/stores/auth';
 import { useFCMStore } from '@/stores/fcm';
-import { getLogger } from '@/lib/logger';
+import { authApi, getLogger } from '@/lib';
 import ThemeToggle from '../ui/custom/ThemeToggle';
 import NotificationPopover from './NotificationPopover';
 
