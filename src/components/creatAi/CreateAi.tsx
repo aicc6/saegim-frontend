@@ -1,12 +1,16 @@
 'use client';
 
-import { useMemo, useCallback, useState, useRef, useEffect } from 'react';
+import { useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { X } from 'lucide-react';
 import { useCreateStore, WritingStyle, LengthOption } from '@/stores/create';
 import { useEmotionStore } from '@/stores/emotion';
 import { getLogger } from '@/lib/logger';
+import { useFormValidation } from '@/hooks/use-form-validation';
+import { useImageHandler } from '@/hooks/use-image-handler';
+import { useErrorManagement } from '@/hooks/use-error-management';
+import { useFormOptions } from '@/hooks/use-form-options';
 import Select from '../ui/custom/Select';
 
 const logger = getLogger('CreateAi');
@@ -15,8 +19,6 @@ const logger = getLogger('CreateAi');
 
 export default function CreateAi() {
   const router = useRouter();
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const [selectedImages, setSelectedImages] = useState<File[]>([]);
 
   const {
     config,
@@ -38,85 +40,39 @@ export default function CreateAi() {
     setSelectedEmotion: setEmotion,
   } = useEmotionStore();
 
-  // 에러가 있으면 자동으로 5초 후 제거
-  useEffect(() => {
-    if (error) {
-      const timer = setTimeout(() => {
-        clearError();
-      }, 5000);
-      return () => clearTimeout(timer);
-    }
-  }, [error, clearError]);
+  const { validateForm, showValidationAlert } = useFormValidation();
+  const {
+    selectedImages,
+    fileInputRef,
+    handleImageSelect,
+    handleImageRemove,
+    handleAddImageClick,
+    canAddMore,
+  } = useImageHandler(3);
 
-  // 이미지 파일 선택 핸들러
-  const handleImageSelect = useCallback(
-    (event: React.ChangeEvent<HTMLInputElement>) => {
-      const files = event.target.files;
-      if (files) {
-        const newImages = Array.from(files).filter(
-          (file) =>
-            file.type.startsWith('image/') && file.size <= 5 * 1024 * 1024, // 5MB 제한
-        );
-        setSelectedImages((prev) => [...prev, ...newImages].slice(0, 3)); // 최대 3개까지
-      }
-      // input 초기화
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
-      }
-    },
-    [],
-  );
+  const { styleOptions, lengthOptions } = useFormOptions({
+    styles: config.styles,
+    lengths: config.lengths,
+  });
 
-  // 이미지 삭제 핸들러
-  const handleImageRemove = (index: number) => {
-    setSelectedImages((prev) => prev.filter((_, i) => i !== index));
-  };
+  useErrorManagement({ error, clearError });
 
-  // 이미지 추가 버튼 클릭 핸들러
-  const handleAddImageClick = () => {
-    fileInputRef.current?.click();
-  };
-
-  // 컴포넌트 언마운트 시 URL 객체 정리
-  useEffect(() => {
-    return () => {
-      selectedImages.forEach((image) => {
-        URL.revokeObjectURL(URL.createObjectURL(image));
-      });
-    };
-  }, [selectedImages]);
-
-  // 글 생성 후 세션 페이지로 이동
   const handleGenerateText = useCallback(async () => {
-    // 입력값 검증
-    if (!prompt.trim()) {
-      alert('텍스트를 입력해주세요');
-      return;
-    }
-
-    if (!style) {
-      alert('문체를 선택해주세요');
-      return;
-    }
-
-    if (!length) {
-      alert('길이를 선택해주세요');
-      return;
-    }
-
     if (isGenerating) return;
 
+    const validation = validateForm(prompt, style, length);
+    if (!validation.isValid && validation.errorMessage) {
+      showValidationAlert(validation.errorMessage);
+      return;
+    }
+
     try {
-      // generateText 실행 (이미 세션 생성 로직 포함)
       await generateText(emotion);
 
-      // 생성된 세션 ID 가져오기
       const { sessionId } = useCreateStore.getState();
 
       if (sessionId) {
-        // textarea 초기화
         setPrompt('');
-        // 세션 ID로 리다이렉트
         router.push(`/${sessionId}`);
       } else {
         logger.error('세션 ID가 생성되지 않았습니다');
@@ -130,22 +86,12 @@ export default function CreateAi() {
     length,
     emotion,
     isGenerating,
+    validateForm,
+    showValidationAlert,
     generateText,
     router,
     setPrompt,
   ]);
-
-  // 메모이제이션된 옵션들
-  const { styleOptions, lengthOptions } = useMemo(
-    () => ({
-      styleOptions: config.styles.map(({ value, label }) => ({ value, label })),
-      lengthOptions: config.lengths.map(({ value, label }) => ({
-        value,
-        label,
-      })),
-    }),
-    [config.styles, config.lengths],
-  );
 
   // 결과가 있으면 CreateChat 컴포넌트를 사용하도록 안내
   // (실제로는 페이지 라우팅으로 처리될 예정)
@@ -248,7 +194,7 @@ export default function CreateAi() {
         />
 
         {/* 이미지 추가 버튼 - textarea 내부 오른쪽 위 */}
-        {selectedImages.length < 3 && (
+        {canAddMore && (
           <button
             type="button"
             onClick={handleAddImageClick}
