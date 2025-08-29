@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useCallback, useEffect } from 'react';
+import { logger } from '@/lib/logger';
 
 // 알림 타입 정의
 interface Notification {
@@ -96,7 +97,7 @@ export function useNotifications(): UseNotificationsReturn {
           );
         }
       } catch (error) {
-        console.error('Failed to load notifications:', error);
+        logger.error('Failed to load notifications:', error);
         setNotifications(initialNotifications);
       }
     };
@@ -109,7 +110,7 @@ export function useNotifications(): UseNotificationsReturn {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedNotifications));
     } catch (error) {
-      console.error('Failed to save notifications:', error);
+      logger.error('Failed to save notifications:', error);
     }
   }, []);
 

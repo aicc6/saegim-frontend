@@ -1,6 +1,19 @@
 /* eslint-env serviceworker */
 /* global firebase, importScripts, clients */
 
+// Simple logging utility for Service Worker environment
+const swLog = {
+  info: (message, data) => {
+    console.info(`[새김 SW] ${message}`, data || '');
+  },
+  error: (message, error) => {
+    console.error(`[새김 SW ERROR] ${message}`, error || '');
+  },
+  log: (message, data) => {
+    console.log(`[새김 SW] ${message}`, data || '');
+  },
+};
+
 // Firebase Messaging Service Worker for background notifications
 // Service Worker 환경에서는 ES6 모듈을 사용할 수 없으므로 importScripts 사용
 importScripts(
@@ -30,7 +43,7 @@ if (typeof firebase !== 'undefined') {
 
   // 백그라운드 메시지 수신 처리
   messaging.onBackgroundMessage((payload) => {
-    console.log('백그라운드 메시지 수신:', payload);
+    swLog.info('백그라운드 메시지 수신:', payload);
 
     const notificationTitle = payload.notification?.title || '새김 알림';
     const notificationOptions = {
@@ -73,12 +86,12 @@ if (typeof firebase !== 'undefined') {
     self.registration.showNotification(notificationTitle, notificationOptions);
   });
 } else {
-  console.error('Firebase SDK가 로드되지 않았습니다.');
+  swLog.error('Firebase SDK가 로드되지 않았습니다.');
 }
 
 // 알림 클릭 이벤트 처리
 self.addEventListener('notificationclick', (event) => {
-  console.log('알림 클릭됨:', event);
+  swLog.info('알림 클릭됨:', event);
 
   event.notification.close();
 
@@ -112,7 +125,7 @@ self.addEventListener('notificationclick', (event) => {
 
 // 알림이 닫힐 때 이벤트 처리 (분석용)
 self.addEventListener('notificationclose', (event) => {
-  console.log('알림 닫힘:', event.notification.tag);
+  swLog.info('알림 닫힘:', event.notification.tag);
 
   // TODO: 알림 닫힘 이벤트를 분석 서버로 전송
   // 사용자의 알림 패턴 분석을 위한 데이터 수집
@@ -120,12 +133,12 @@ self.addEventListener('notificationclose', (event) => {
 
 // Service Worker 설치 이벤트
 self.addEventListener('install', (_event) => {
-  console.log('새김 FCM Service Worker 설치됨');
+  swLog.info('새김 FCM Service Worker 설치됨');
   self.skipWaiting();
 });
 
 // Service Worker 활성화 이벤트
 self.addEventListener('activate', (event) => {
-  console.log('새김 FCM Service Worker 활성화됨');
+  swLog.info('새김 FCM Service Worker 활성화됨');
   event.waitUntil(self.clients.claim());
 });

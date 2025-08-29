@@ -3,9 +3,13 @@
 import { useMemo, useCallback, useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
+import { X } from 'lucide-react';
 import { useCreateStore, WritingStyle, LengthOption } from '@/stores/create';
 import { useEmotionStore } from '@/stores/emotion';
+import { getLogger } from '@/lib/logger';
 import Select from '../ui/custom/Select';
+
+const logger = getLogger('CreateAi');
 
 // 초기 입력 화면 전용 컴포넌트
 
@@ -115,10 +119,10 @@ export default function CreateAi() {
         // 세션 ID로 리다이렉트
         router.push(`/${sessionId}`);
       } else {
-        console.error('세션 ID가 생성되지 않았습니다.');
+        logger.error('세션 ID가 생성되지 않았습니다');
       }
     } catch (error) {
-      console.error('글 생성 실패:', error);
+      logger.error('글 생성 실패', { error });
     }
   }, [
     prompt,
@@ -222,7 +226,7 @@ export default function CreateAi() {
                   onClick={() => handleImageRemove(index)}
                   className="absolute -top-1 -right-1 sm:-top-2 sm:-right-2 w-5 h-5 sm:w-6 sm:h-6 bg-red-500 text-white rounded-full text-xs flex items-center justify-center hover:bg-red-600 transition-colors"
                 >
-                  ×
+                  <X />
                 </button>
               </div>
             ))}

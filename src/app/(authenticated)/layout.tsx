@@ -38,7 +38,7 @@ export default function AuthenticatedLayout({
                 <AuthenticatedHeader />
 
                 {/* 메인 콘텐츠 영역 - flex-1로 확장 */}
-                <div className="flex-1">{children}</div>
+                <div className="flex-1 bg-background-primary">{children}</div>
 
                 {/* 푸터 - 항상 바닥에 위치 */}
                 <Footer />

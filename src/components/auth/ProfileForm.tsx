@@ -6,6 +6,9 @@ import Image from 'next/image';
 import ConfirmModal from '@/components/ui/custom/ConfirmModal';
 import { apiClient } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
+import { getLogger } from '@/lib/logger';
+
+const logger = getLogger('ProfileForm');
 
 export default function ProfileForm() {
   const router = useRouter();
@@ -80,7 +83,7 @@ export default function ProfileForm() {
         });
       }
     } catch (error) {
-      console.error('토큰 검증 실패:', error);
+      logger.error('토큰 검증 실패', { error });
       toast({
         title: '오류',
         description: '인증 링크가 유효하지 않습니다.',
@@ -111,7 +114,7 @@ export default function ProfileForm() {
       });
       setOriginalNickname(profile.nickname);
     } catch (error) {
-      console.error('프로필 로드 실패:', error);
+      logger.error('프로필 로드 실패', { error });
       toast({
         title: '오류',
         description: '프로필 정보를 불러오는데 실패했습니다.',
@@ -151,7 +154,7 @@ export default function ProfileForm() {
         description: '프로필이 성공적으로 업데이트되었습니다.',
       });
     } catch (error) {
-      console.error('프로필 업데이트 실패:', error);
+      logger.error('프로필 업데이트 실패', { error });
       toast({
         title: '오류',
         description: '프로필 업데이트에 실패했습니다.',
@@ -200,7 +203,7 @@ export default function ProfileForm() {
         };
         [key: string]: unknown;
       };
-      console.error('이메일 변경 요청 실패:', error);
+      logger.error('이메일 변경 요청 실패', { error });
       const errorMsg =
         apiError.response?.data?.detail || '이메일 변경 요청에 실패했습니다.';
       toast({
@@ -276,7 +279,7 @@ export default function ProfileForm() {
         };
         [key: string]: unknown;
       };
-      console.error('이메일 변경 실패:', error);
+      logger.error('이메일 변경 실패', { error });
       const errorMsg =
         apiError.response?.data?.detail || '이메일 변경에 실패했습니다.';
       toast({
@@ -316,7 +319,7 @@ export default function ProfileForm() {
       });
       setIsNicknameCheckModalOpen(true);
     } catch (error) {
-      console.error('닉네임 확인 실패:', error);
+      logger.error('닉네임 확인 실패', { error });
       toast({
         title: '오류',
         description: '닉네임 확인에 실패했습니다.',
@@ -383,7 +386,7 @@ export default function ProfileForm() {
         message?: string;
         [key: string]: unknown;
       };
-      console.error('탈퇴 실패:', error);
+      logger.error('탈퇴 실패', { error });
 
       // 401 에러인 경우 (토큰 만료 또는 사용자 삭제됨) 랜딩 페이지로 리다이렉트
       if (apiError.message && apiError.message.includes('401')) {

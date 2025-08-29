@@ -8,7 +8,10 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import PageHeader from '@/components/common/PageHeader';
+import { getLogger } from '@/lib/logger';
 import NotificationSettings from './notification-settings';
+
+const logger = getLogger('NotificationPage');
 
 // 백엔드 API 응답 타입에 맞춘 알림 인터페이스
 interface Notification {
@@ -110,7 +113,9 @@ export function NotificationPage() {
           .map((apiNotification, index) => {
             // 필수 필드 검증
             if (!apiNotification.id || !apiNotification.title) {
-              console.warn(`알림 데이터 누락: index ${index}`, apiNotification);
+              logger.warn(`알림 데이터 누락: index ${index}`, {
+                apiNotification,
+              });
               return null;
             }
 
@@ -145,7 +150,7 @@ export function NotificationPage() {
         setNotifications(uniqueNotifications);
         setRetryCount(0); // 성공 시 재시도 카운트 리셋
       } catch (err) {
-        console.error('알림 이력 로드 실패:', err);
+        logger.error('알림 이력 로드 실패', { error: err });
 
         // 에러 타입에 따른 상세 메시지
         let errorMessage = '알림 이력을 불러올 수 없습니다.';

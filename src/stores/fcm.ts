@@ -16,6 +16,9 @@ import {
   type FCMTokenRegisterRequest,
   type NotificationSettingsUpdate,
 } from '../lib/notification-api';
+import { getLogger } from '../lib/logger';
+
+const logger = getLogger('fcm');
 
 // 기본 알림 설정
 const DEFAULT_SETTINGS: NotificationSettings = {
@@ -77,7 +80,7 @@ export const useFCMStore = create<FCMState>()(
 
         return false;
       } catch (error) {
-        console.error('알림 권한 요청 실패:', error);
+        logger.error('알림 권한 요청 실패:', error);
         set((state) => {
           state.error =
             error instanceof Error
@@ -99,7 +102,7 @@ export const useFCMStore = create<FCMState>()(
         currentState.token &&
         !currentState.isLoading
       ) {
-        console.log(
+        logger.debug(
           'FCM 토큰이 이미 등록되어 있습니다:',
           currentState.token.substring(0, 20) + '...',
         );
@@ -108,7 +111,7 @@ export const useFCMStore = create<FCMState>()(
 
       // 이미 토큰 등록 진행 중인 경우 중복 방지
       if (currentState.isLoading) {
-        console.log('FCM 토큰 등록이 이미 진행 중입니다.');
+        logger.debug('FCM 토큰 등록이 이미 진행 중입니다.');
         return;
       }
 
@@ -123,7 +126,7 @@ export const useFCMStore = create<FCMState>()(
         if (token) {
           // 현재 토큰과 동일한 경우 서버 등록 건너뛰기
           if (currentState.token === token && currentState.isTokenRegistered) {
-            console.log('동일한 FCM 토큰이 이미 등록되어 있습니다.');
+            logger.debug('동일한 FCM 토큰이 이미 등록되어 있습니다.');
             set((state) => {
               state.isLoading = false;
             });
@@ -154,7 +157,7 @@ export const useFCMStore = create<FCMState>()(
               setupForegroundListener();
             }
 
-            console.log('FCM 토큰 등록 성공:', response.data);
+            logger.info('FCM 토큰 등록 성공:', response.data);
           } else {
             throw new Error(
               response.message || 'FCM 토큰 등록에 실패했습니다.',
@@ -164,7 +167,7 @@ export const useFCMStore = create<FCMState>()(
           throw new Error('FCM 토큰 생성에 실패했습니다.');
         }
       } catch (error) {
-        console.error('FCM 토큰 등록 실패:', error);
+        logger.error('FCM 토큰 등록 실패:', error);
         set((state) => {
           state.error =
             error instanceof Error
@@ -206,14 +209,14 @@ export const useFCMStore = create<FCMState>()(
             state.isLoading = false;
           });
 
-          console.log('알림 설정 업데이트 성공:', response.data);
+          logger.info('알림 설정 업데이트 성공:', response.data);
         } else {
           throw new Error(
             response.message || '알림 설정 업데이트에 실패했습니다.',
           );
         }
       } catch (error) {
-        console.error('알림 설정 업데이트 실패:', error);
+        logger.error('알림 설정 업데이트 실패:', error);
         set((state) => {
           state.error =
             error instanceof Error
@@ -293,7 +296,7 @@ const syncSettingsFromServer =
 
       return null;
     } catch (error) {
-      console.error('서버에서 알림 설정 조회 실패:', error);
+      logger.error('서버에서 알림 설정 조회 실패:', error);
       return null;
     }
   };
@@ -302,7 +305,7 @@ const syncSettingsFromServer =
 const setupForegroundListener = (): void => {
   onMessageListener()
     .then((payload: unknown) => {
-      console.log('포그라운드 메시지 수신:', payload);
+      logger.debug('포그라운드 메시지 수신:', payload);
 
       // Firebase payload를 안전하게 처리
       const fcmPayload = payload as {
@@ -339,7 +342,7 @@ const setupForegroundListener = (): void => {
       }
     })
     .catch((error) => {
-      console.error('포그라운드 메시지 리스너 오류:', error);
+      logger.error('포그라운드 메시지 리스너 오류:', error);
     });
 };
 
@@ -373,7 +376,7 @@ const showBrowserNotification = (notification: NotificationHistory): void => {
 // 인앱 알림 표시 (토스트)
 const showInAppNotification = (notification: NotificationHistory): void => {
   // TODO: toast 라이브러리 연동
-  console.log('인앱 알림 표시:', notification);
+  logger.debug('인앱 알림 표시:', notification);
 
   // 임시로 브라우저 알림으로 대체
   showBrowserNotification(notification);
@@ -388,7 +391,7 @@ const getUserTokens = async () => {
     }
     return [];
   } catch (error) {
-    console.error('사용자 토큰 목록 조회 실패:', error);
+    logger.error('사용자 토큰 목록 조회 실패:', error);
     return [];
   }
 };
@@ -398,12 +401,12 @@ const deleteUserToken = async (tokenId: string) => {
   try {
     const response = await notificationApi.deleteToken(tokenId);
     if (response.success) {
-      console.log('토큰 삭제 성공:', tokenId);
+      logger.info('토큰 삭제 성공:', tokenId);
       return true;
     }
     return false;
   } catch (error) {
-    console.error('토큰 삭제 실패:', error);
+    logger.error('토큰 삭제 실패:', error);
     return false;
   }
 };
@@ -423,7 +426,7 @@ const getNotificationHistory = async (
     }
     return [];
   } catch (error) {
-    console.error('알림 히스토리 조회 실패:', error);
+    logger.error('알림 히스토리 조회 실패:', error);
     return [];
   }
 };
@@ -432,11 +435,11 @@ const getNotificationHistory = async (
 export const initializeFCM = async (): Promise<void> => {
   const store = useFCMStore.getState();
 
-  console.log('FCM 스토어 초기화 시작...');
+  logger.info('FCM 스토어 초기화 시작...');
 
   // 브라우저 지원 확인
   if ('Notification' in window && 'serviceWorker' in navigator) {
-    console.log('브라우저가 FCM을 지원합니다.');
+    logger.info('브라우저가 FCM을 지원합니다.');
     useFCMStore.setState({ isSupported: true });
 
     // Service Worker 등록 확인
@@ -445,39 +448,39 @@ export const initializeFCM = async (): Promise<void> => {
         '/firebase-messaging-sw.js',
       );
       if (!registration) {
-        console.log('Service Worker를 등록합니다...');
+        logger.info('Service Worker를 등록합니다...');
         await navigator.serviceWorker.register('/firebase-messaging-sw.js');
-        console.log('Service Worker 등록 완료');
+        logger.info('Service Worker 등록 완료');
       } else {
-        console.log('Service Worker가 이미 등록되어 있습니다.');
+        logger.debug('Service Worker가 이미 등록되어 있습니다.');
       }
     } catch (error) {
-      console.error('Service Worker 등록 실패:', error);
+      logger.error('Service Worker 등록 실패:', error);
     }
 
     // 현재 권한 상태 확인
     const permission = Notification.permission as NotificationPermission;
     useFCMStore.setState({ permission });
-    console.log('현재 알림 권한 상태:', permission);
+    logger.debug('현재 알림 권한 상태:', permission);
 
     // 백엔드에서 알림 설정 동기화
     const serverSettings = await syncSettingsFromServer();
     if (serverSettings) {
       useFCMStore.setState({ settings: serverSettings });
-      console.log('서버 알림 설정 동기화 완료');
+      logger.info('서버 알림 설정 동기화 완료');
     }
 
     // 이미 권한이 있으면 토큰 등록
     if (permission === 'granted') {
-      console.log('알림 권한이 이미 허용되어 있어 토큰 등록을 시도합니다.');
+      logger.info('알림 권한이 이미 허용되어 있어 토큰 등록을 시도합니다.');
       await store.registerToken();
     }
   } else {
-    console.warn('FCM이 지원되지 않는 브라우저입니다.');
+    logger.warn('FCM이 지원되지 않는 브라우저입니다.');
     useFCMStore.setState({ isSupported: false });
   }
 
-  console.log('FCM 스토어 초기화 완료');
+  logger.info('FCM 스토어 초기화 완료');
 };
 
 // 스토어에 알림 추가 액션 (동적으로 추가)
@@ -513,7 +516,7 @@ useFCMStore.setState((state) => ({
       const response = await notificationApi.checkHealth();
       return response.success;
     } catch (error) {
-      console.error('FCM 서비스 상태 확인 실패:', error);
+      logger.error('FCM 서비스 상태 확인 실패:', error);
       return false;
     }
   },

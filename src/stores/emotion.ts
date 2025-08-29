@@ -10,7 +10,7 @@ export type EmotionOption =
   | 'sad'
   | 'angry'
   | 'peaceful'
-  | 'worried';
+  | 'unrest';
 
 export interface EmotionConfig {
   value: EmotionOption;
@@ -25,6 +25,16 @@ export interface EmotionConfig {
 
 // ===== 감정 설정 데이터 =====
 const EMOTION_CONFIGS: EmotionConfig[] = [
+  {
+    value: 'peaceful',
+    label: '평온',
+    emoji: '😌',
+    styles: {
+      bg: 'bg-green-100',
+      text: 'text-green-700',
+      ring: 'ring-green-400',
+    },
+  },
   {
     value: 'happy',
     label: '기쁨',
@@ -56,23 +66,13 @@ const EMOTION_CONFIGS: EmotionConfig[] = [
     },
   },
   {
-    value: 'worried',
-    label: '당황',
-    emoji: '😰',
+    value: 'unrest',
+    label: '불안',
+    emoji: '🫨',
     styles: {
-      bg: 'bg-purple-100',
-      text: 'text-purple-700',
-      ring: 'ring-purple-400',
-    },
-  },
-  {
-    value: 'peaceful',
-    label: '평온',
-    emoji: '😌',
-    styles: {
-      bg: 'bg-green-100',
-      text: 'text-green-700',
-      ring: 'ring-green-400',
+      bg: 'bg-orange-100',
+      text: 'text-orange-700',
+      ring: 'ring-orange-400',
     },
   },
 ];
@@ -105,7 +105,7 @@ export class EmotionAnalyzer {
       lowerText.includes('걱정') ||
       lowerText.includes('불안')
     )
-      return 'worried';
+      return 'unrest';
     if (
       lowerText.includes('평온') ||
       lowerText.includes('고요') ||
@@ -121,7 +121,7 @@ export class EmotionAnalyzer {
       happy: '기쁨이 배어있는',
       sad: '슬픔이 배어있는',
       angry: '분노가 배어있는',
-      worried: '당황스러운',
+      unrest: '불안한',
       peaceful: '평온한',
       '': '담담한',
     };

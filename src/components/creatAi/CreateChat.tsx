@@ -3,17 +3,18 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { CiLocationArrow1 } from 'react-icons/ci';
 import Image from 'next/image';
-import {
-  useCreateStore,
-  WritingStyle,
-  LengthOption,
-  generateAIText,
-} from '@/stores/create';
+import { useRouter } from 'next/navigation';
+import { useCreateStore, WritingStyle, LengthOption } from '@/stores/create';
 import {
   EmotionOption,
   useEmotionStore,
   EmotionConfig,
 } from '@/stores/emotion';
+import { getLogger } from '@/lib/logger';
+import { diaryApi, aiApi, ApiResponse } from '@/lib/api';
+import { DiaryEntry } from '@/types/diary';
+
+const logger = getLogger('CreateChat');
 
 // 타입 정의
 interface MessageVersion {
@@ -25,6 +26,8 @@ interface MessageVersion {
   length: LengthOption;
   regenerationCount: number;
   createdAt: Date;
+  images?: File[];
+  userPrompt: string; // 사용자 원본 프롬프트 저장
 }
 
 interface GeneratedMessage {
@@ -32,6 +35,15 @@ interface GeneratedMessage {
   sessionId?: string;
   versions: MessageVersion[];
   currentVersionIndex: number;
+}
+
+interface RegenerateResponse {
+  ai_generated_text: string;
+  keywords?: string[];
+  ai_emotion: string;
+  style?: WritingStyle;
+  length?: LengthOption;
+  user_prompt?: string;
 }
 
 interface CreateChatProps {
@@ -54,12 +66,8 @@ interface StoredMessageVersion {
   length: LengthOption;
   regenerationCount: number;
   createdAt: string; // ISO string for localStorage
-}
-
-interface GenerateAITextResponse {
-  ai_generated_text: string;
-  keywords?: string[];
-  ai_emotion: string;
+  images?: File[];
+  userPrompt: string; // 사용자 원본 프롬프트 저장
 }
 
 export default function CreateChat({ sessionId }: CreateChatProps) {
@@ -74,6 +82,7 @@ export default function CreateChat({ sessionId }: CreateChatProps) {
   >(new Set());
 
   // refs
+  const router = useRouter();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -82,12 +91,14 @@ export default function CreateChat({ sessionId }: CreateChatProps) {
   const {
     config,
     prompt,
+    originalPrompt,
     style,
     length,
     isGenerating,
     generatedText,
     generatedKeywords,
     sessionId: storeSessionId,
+    wasJustGenerated,
     setPrompt,
     setStyle,
     setLength,
@@ -95,6 +106,8 @@ export default function CreateChat({ sessionId }: CreateChatProps) {
     clearGeneratedText,
     getStyleDisplayName,
     getLengthDisplayName,
+    markAsProcessed,
+    restoreOriginalInput,
   } = useCreateStore();
 
   const {
@@ -111,7 +124,7 @@ export default function CreateChat({ sessionId }: CreateChatProps) {
 
   // 유틸리티 함수들
   const generateId = (): string =>
-    `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    `${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
 
   const applyOptions = useCallback((): void => {
     setStyle(tempStyle);
@@ -147,7 +160,7 @@ export default function CreateChat({ sessionId }: CreateChatProps) {
         setShowToast(true);
         setTimeout(() => setShowToast(false), 2000);
       } catch (error) {
-        console.error('클립보드 복사 실패:', error);
+        logger.error('클립보드 복사 실패', { error });
       }
     },
     [],
@@ -181,12 +194,34 @@ export default function CreateChat({ sessionId }: CreateChatProps) {
   }, []);
 
   const handleMoveToDiary = useCallback(
-    (messageContent: string, _messageEmotion?: string): void => {
-      alert(
-        `다이어리로 이동 기능은 아직 구현되지 않았습니다.\n\n생성된 텍스트: ${messageContent.substring(0, 100)}...`,
-      );
+    async (
+      messageContent: string,
+      messageEmotion?: string,
+      messageKeywords?: string[],
+    ): Promise<void> => {
+      try {
+        if (!originalPrompt.trim()) {
+          alert('사용자 입력이 없어 다이어리를 저장할 수 없습니다.');
+          return;
+        }
+
+        const response = (await diaryApi.createDiary({
+          content: originalPrompt.trim(),
+          user_emotion: emotion || undefined,
+          ai_generated_text: messageContent,
+          ai_emotion: messageEmotion || undefined,
+          ai_emotion_confidence: 0.8,
+          keywords: messageKeywords || [],
+          is_public: false,
+        })) as ApiResponse<DiaryEntry>;
+
+        router.push(`/viewPost/${response.data.id}`);
+      } catch (error) {
+        logger.error('다이어리 저장 실패:', error);
+        alert('다이어리 저장 중 오류가 발생했습니다. 다시 시도해주세요.');
+      }
     },
-    [],
+    [originalPrompt, emotion, router],
   );
 
   const handleOptionKeyDown = useCallback(
@@ -230,49 +265,35 @@ export default function CreateChat({ sessionId }: CreateChatProps) {
     async (message?: GeneratedMessage): Promise<void> => {
       if (isGenerating) return;
 
-      let promptToUse = prompt.trim();
-      if (!promptToUse && message && message.versions.length > 0) {
-        const currentVersion = message.versions[message.currentVersionIndex];
-        promptToUse = currentVersion.text;
-      }
-
       if (message && message.versions.length >= 5) {
-        console.log('⚠️ 재생성 횟수 제한 도달');
+        alert('재생성 횟수가 5회에 도달했습니다.');
         return;
       }
 
-      const newCount = (message?.versions.length || 1) + 1;
-
-      // 재생성 시작 시 로딩 상태 설정
-      if (message) {
-        setRegeneratingMessageIds((prev) => new Set(prev).add(message.id));
-      }
-
       try {
-        const response: GenerateAITextResponse = await generateAIText({
-          prompt: promptToUse,
-          style,
-          length,
-          emotion,
-          regeneration_count: newCount,
-          sessionId: message?.sessionId || sessionId,
-        });
+        const targetSessionId = message?.sessionId || sessionId;
+        const response = (await aiApi.regenerate(
+          targetSessionId,
+        )) as ApiResponse<RegenerateResponse>;
+        const responseData = response.data;
 
         setGeneratedMessages((prev) => {
-          const targetSessionId = message?.sessionId || sessionId;
           const messageIndex = prev.findIndex(
             (msg) => msg.sessionId === targetSessionId,
           );
 
+          const newCount = (message?.versions.length || 0) + 1;
           const newVersion: MessageVersion = {
             id: `version_${generateId()}`,
-            text: response.ai_generated_text,
-            keywords: response.keywords || [],
-            emotion: response.ai_emotion as EmotionOption,
-            style,
-            length,
+            text: responseData.ai_generated_text,
+            keywords: responseData.keywords || [],
+            emotion: responseData.ai_emotion as EmotionOption,
+            style: responseData.style || style,
+            length: responseData.length || length,
             regenerationCount: newCount,
             createdAt: new Date(),
+            images: message?.versions[message.currentVersionIndex]?.images,
+            userPrompt: responseData.user_prompt || '',
           };
 
           if (messageIndex === -1) {
@@ -298,27 +319,10 @@ export default function CreateChat({ sessionId }: CreateChatProps) {
         // 재생성 후 generatedText 초기화
         clearGeneratedText();
       } catch (error) {
-        console.error('💥 재생성 실패:', error);
-      } finally {
-        // 재생성 완료 후 로딩 상태 제거
-        if (message) {
-          setRegeneratingMessageIds((prev) => {
-            const newSet = new Set(prev);
-            newSet.delete(message.id);
-            return newSet;
-          });
-        }
+        logger.error('재생성 실패', { error });
       }
     },
-    [
-      prompt,
-      emotion,
-      isGenerating,
-      style,
-      length,
-      sessionId,
-      clearGeneratedText,
-    ],
+    [isGenerating, style, length, sessionId],
   );
 
   // 버전 네비게이션 핸들러
@@ -355,10 +359,20 @@ export default function CreateChat({ sessionId }: CreateChatProps) {
   const saveMessagesToLocalStorage = useCallback(
     (messages: GeneratedMessage[], sessionId: string): void => {
       try {
-        const localStorageKey = `messages-${sessionId}`;
-        localStorage.setItem(localStorageKey, JSON.stringify(messages));
+        const localStorageKey = `ai_messages_v2_${sessionId}`;
+        const messagesForStorage: StoredMessage[] = messages.map((msg) => ({
+          ...msg,
+          versions: msg.versions.map((version) => ({
+            ...version,
+            createdAt: version.createdAt.toISOString(),
+          })),
+        }));
+        localStorage.setItem(
+          localStorageKey,
+          JSON.stringify(messagesForStorage),
+        );
       } catch (error) {
-        console.error('localStorage 저장 실패:', error);
+        logger.error('localStorage 저장 실패', { error });
       }
     },
     [],
@@ -367,15 +381,23 @@ export default function CreateChat({ sessionId }: CreateChatProps) {
   const loadMessagesFromLocalStorage = useCallback(
     (sessionId: string): GeneratedMessage[] => {
       try {
-        const localStorageKey = `messages-${sessionId}`;
+        const localStorageKey = `ai_messages_v2_${sessionId}`;
         const savedMessages = localStorage.getItem(localStorageKey);
 
         if (!savedMessages) return [];
 
-        return JSON.parse(savedMessages);
+        const parsedMessages: StoredMessage[] = JSON.parse(savedMessages);
+        return parsedMessages.map((msg) => ({
+          ...msg,
+          versions: msg.versions.map((version) => ({
+            ...version,
+            createdAt: new Date(version.createdAt),
+            userPrompt: version.userPrompt || '',
+          })),
+        }));
       } catch (error) {
-        console.error('localStorage 파싱 오류:', error);
-        const localStorageKey = `messages-${sessionId}`;
+        logger.error('localStorage 파싱 오류', { error });
+        const localStorageKey = `ai_messages_v2_${sessionId}`;
         localStorage.removeItem(localStorageKey);
         return [];
       }
@@ -408,7 +430,7 @@ export default function CreateChat({ sessionId }: CreateChatProps) {
   }, [generatedMessages, sessionId, saveMessagesToLocalStorage]);
 
   useEffect(() => {
-    if (generatedText && !isGenerating) {
+    if (generatedText && !isGenerating && wasJustGenerated) {
       const newVersion: MessageVersion = {
         id: `version_${generateId()}`,
         text: generatedText,
@@ -418,6 +440,8 @@ export default function CreateChat({ sessionId }: CreateChatProps) {
         length,
         regenerationCount: 1,
         createdAt: new Date(),
+        images: selectedImages.length > 0 ? [...selectedImages] : undefined,
+        userPrompt: originalPrompt || prompt.trim(),
       };
 
       const newMessage: GeneratedMessage = {
@@ -428,9 +452,7 @@ export default function CreateChat({ sessionId }: CreateChatProps) {
       };
 
       setGeneratedMessages((prev) => [...prev, newMessage]);
-
-      // generatedText 사용 후 초기화하여 중복 생성 방지
-      clearGeneratedText();
+      markAsProcessed(); // 처리 완료 마킹
     }
   }, [
     generatedText,
@@ -441,12 +463,23 @@ export default function CreateChat({ sessionId }: CreateChatProps) {
     sessionId,
     storeSessionId,
     isGenerating,
-    clearGeneratedText,
+    wasJustGenerated,
+    markAsProcessed,
+    prompt,
+    selectedImages,
+    originalPrompt,
   ]);
 
   useEffect(() => {
     adjustTextareaHeight();
   }, [prompt, adjustTextareaHeight]);
+
+  // 페이지 로드 시 originalPrompt 복구
+  useEffect(() => {
+    if (storeSessionId && !originalPrompt && generatedText) {
+      restoreOriginalInput();
+    }
+  }, [storeSessionId, originalPrompt, generatedText, restoreOriginalInput]);
 
   useEffect(() => {
     if (prompt === '' && textareaRef.current) {
@@ -566,6 +599,25 @@ export default function CreateChat({ sessionId }: CreateChatProps) {
                   </div>
                 )}
 
+                {/* 이미지 표시 */}
+                {currentVersion.images && currentVersion.images.length > 0 && (
+                  <div className="mb-4">
+                    <div className="flex flex-wrap gap-2">
+                      {currentVersion.images.map((image, index) => (
+                        <div key={index} className="relative">
+                          <Image
+                            src={URL.createObjectURL(image)}
+                            alt={`업로드된 이미지 ${index + 1}`}
+                            width={100}
+                            height={100}
+                            className="rounded-lg object-cover"
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 {/* 내용 */}
                 {regeneratingMessageIds.has(message.id) ? (
                   <div className="space-y-3 animate-pulse">
@@ -632,6 +684,7 @@ export default function CreateChat({ sessionId }: CreateChatProps) {
                       handleMoveToDiary(
                         currentVersion.text,
                         currentVersion.emotion,
+                        currentVersion.keywords,
                       )
                     }
                     disabled={

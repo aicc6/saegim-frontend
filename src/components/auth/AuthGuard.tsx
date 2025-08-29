@@ -4,6 +4,9 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/stores/auth';
 import { authApi } from '@/lib/api';
+import { getLogger } from '@/lib/logger';
+
+const logger = getLogger('AuthGuard');
 
 interface AuthGuardProps {
   children: React.ReactNode;
@@ -43,7 +46,7 @@ export default function AuthGuard({ children }: AuthGuardProps) {
       } catch (error: unknown) {
         const errorMessage =
           error instanceof Error ? error.message : '알 수 없는 오류';
-        console.error('❌ AuthGuard: 서버 인증 실패:', errorMessage);
+        logger.error('서버 인증 실패', { errorMessage });
 
         // 로컬 스토리지 완전 정리
         clearStorage();

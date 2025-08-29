@@ -2,10 +2,13 @@
 
 import { Suspense } from 'react';
 import CreateAi from '@/components/creatAi/CreateAi';
+import { getLogger } from '@/lib/logger';
+
+const logger = getLogger('home');
 
 function HomeContent() {
   // AuthGuard가 이미 인증을 확인하므로 여기서는 단순히 메인 콘텐츠만 렌더링
-  console.log('🎨 CreateAi 컴포넌트 렌더링 시작');
+  logger.debug('CreateAi 컴포넌트 렌더링 시작');
 
   return (
     <div className="bg-sage-20 flex items-center justify-center flex-1">
@@ -17,7 +20,7 @@ function HomeContent() {
 }
 
 export default function Home() {
-  console.log('🏠 Home 컴포넌트 렌더링');
+  logger.debug('Home 컴포넌트 렌더링');
 
   return (
     <Suspense

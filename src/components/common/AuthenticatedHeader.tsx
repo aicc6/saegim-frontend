@@ -8,8 +8,11 @@ import { useNotifications } from '@/hooks/use-notifications';
 import { useFCMStore } from '@/stores/fcm';
 import { useAuthStore } from '@/stores/auth';
 import { authApi } from '@/lib/api';
+import { getLogger } from '@/lib/logger';
 import ThemeToggle from '../ui/custom/ThemeToggle';
 import NotificationPopover from './NotificationPopover';
+
+const logger = getLogger('AuthenticatedHeader');
 
 interface UserInfo {
   email: string;
@@ -50,7 +53,7 @@ export default function AuthenticatedHeader() {
           setUserInfo(response.data as UserInfo);
         }
       } catch (error) {
-        console.error('사용자 정보 가져오기 실패:', error);
+        logger.error('사용자 정보 가져오기 실패', { error });
       } finally {
         setIsLoading(false);
       }

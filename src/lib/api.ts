@@ -3,6 +3,7 @@
  */
 
 import { DiaryListEntry } from '@/types/diary';
+import { getLogger } from './logger';
 
 // HTTPS 강제 - 보안상 HTTP 프로토콜 사용 금지
 const ensureHttps = (url: string): string => {
@@ -14,22 +15,7 @@ const ensureHttps = (url: string): string => {
   return url.replace(/^http:/, 'https:');
 };
 
-// 개발 환경에서만 로깅하는 유틸리티 함수
-const logger = {
-  log: (...args: unknown[]) => {
-    if (process.env.NODE_ENV === 'development') {
-      console.log(...args);
-    }
-  },
-  error: (...args: unknown[]) => {
-    if (process.env.NODE_ENV === 'development') {
-      console.error(...args);
-    } else {
-      // 프로덕션에서는 민감한 정보 제외하고 기본 메시지만
-      console.error(args[0] || '오류가 발생했습니다.');
-    }
-  },
-};
+const logger = getLogger('api');
 
 export const API_BASE_URL = ensureHttps(
   process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000',
@@ -81,7 +67,7 @@ class ApiClient {
   ): Promise<ApiResponse<T>> {
     const url = `${this.baseURL}${endpoint}`;
 
-    logger.log('🌐 ApiClient: 요청 시작', {
+    logger.debug('🌐 ApiClient: 요청 시작', {
       url,
       method: options.method || 'GET',
       hasAuthHeader: !!options.headers && 'Authorization' in options.headers,
@@ -110,7 +96,7 @@ class ApiClient {
 
       clearTimeout(timeoutId);
 
-      logger.log('📡 ApiClient: 응답 받음', {
+      logger.debug('📡 ApiClient: 응답 받음', {
         status: response.status,
         ok: response.ok,
         url: response.url,
@@ -118,7 +104,7 @@ class ApiClient {
 
       // 401 에러 시 토큰 갱신 시도 (쿠키 기반) - 로그인 요청 제외
       if (response.status === 401 && !endpoint.includes('/api/auth/login')) {
-        logger.log('🔄 토큰 만료, 갱신 시도...');
+        logger.info('🔄 토큰 만료, 갱신 시도...');
         const refreshed = await this.refreshToken();
 
         if (refreshed) {
@@ -127,7 +113,9 @@ class ApiClient {
 
           if (!retryResponse.ok) {
             // 재시도도 실패하면 토큰 갱신이 무효화된 것으로 간주
-            logger.log('❌ 토큰 갱신 후 재시도 실패, 랜딩 페이지로 리다이렉트');
+            logger.warn(
+              '❌ 토큰 갱신 후 재시도 실패, 랜딩 페이지로 리다이렉트',
+            );
             if (typeof window !== 'undefined') {
               // 탈퇴 관련 요청인지 확인하여 적절한 상태로 리다이렉트
               const isWithdrawRequest = endpoint.includes('/api/auth/withdraw');
@@ -157,7 +145,7 @@ class ApiClient {
         throw error;
       }
 
-      logger.log('📊 ApiClient: 응답 데이터', {
+      logger.debug('📊 ApiClient: 응답 데이터', {
         hasData: !!data,
         dataType: typeof data,
         success: data?.success,
@@ -196,10 +184,10 @@ class ApiClient {
       clearTimeout(timeoutId);
 
       if (response.ok) {
-        logger.log('✅ 토큰 갱신 성공');
+        logger.info('✅ 토큰 갱신 성공');
         return true;
       } else {
-        logger.log('❌ 토큰 갱신 실패');
+        logger.warn('❌ 토큰 갱신 실패');
         // 갱신 실패 시 랜딩 페이지로 리다이렉트
         if (typeof window !== 'undefined') {
           window.location.href = '/landing?status=token_expired';
@@ -281,7 +269,7 @@ export const authApi = {
       // 쿠키가 자동으로 삭제되므로 localStorage 정리 불필요
       return { success: true };
     } catch (error) {
-      console.error('로그아웃 API 호출 실패:', error);
+      logger.error('로그아웃 API 호출 실패:', error);
       // API 호출이 실패해도 쿠키는 자동으로 정리됨
       return { success: true };
     }
@@ -414,4 +402,27 @@ export const diaryApi = {
       start_date: startDate,
       end_date: endDate,
     }),
+
+  // 다이어리 생성
+  createDiary: async (data: {
+    title?: string;
+    content: string;
+    user_emotion?: string;
+    ai_generated_text?: string;
+    ai_emotion?: string;
+    ai_emotion_confidence?: number;
+    keywords?: string[];
+    is_public?: boolean;
+  }) => apiClient.post('/api/diary', data),
+
+  // 다이어리 삭제
+  deleteDiary: (id: string) => apiClient.delete(`/api/diary/${id}`),
+};
+
+// AI 관련 API 엔드포인트
+export const aiApi = {
+  // AI 텍스트 재생성 (session_id 기반)
+  regenerate: async (sessionId: string) => {
+    return apiClient.post(`/api/ai/regenerate/${sessionId}`, {});
+  },
 };

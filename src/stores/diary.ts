@@ -10,6 +10,9 @@ import {
   DiaryFilters,
   CalendarDateRange,
 } from '@/types/diary';
+import { getLogger } from '../lib/logger';
+
+const logger = getLogger('diary');
 
 interface DiaryState {
   // 상태
@@ -36,6 +39,7 @@ interface DiaryState {
       keywords?: string[];
     },
   ) => Promise<void>;
+  deleteDiary: (id: string) => Promise<void>;
   clearError: () => void;
   setPage: (page: number) => void;
   setPageSize: (size: number) => void;
@@ -53,7 +57,9 @@ export const useDiaryStore = create<DiaryState>((set, get) => ({
   totalCount: 0,
   currentPage: 1,
   pageSize: 20,
-  deletedImageIds: new Set(), // 초기화
+  deletedImageIds: new Set(
+    JSON.parse(localStorage.getItem('deletedImageIds') || '[]'),
+  ), // localStorage에서 복원
 
   // 다이어리 목록 조회
   fetchDiaries: async (filters?: DiaryFilters) => {
@@ -129,7 +135,7 @@ export const useDiaryStore = create<DiaryState>((set, get) => ({
   // 캘린더용 다이어리 조회
   fetchCalendarDiaries: async (dateRange: CalendarDateRange) => {
     try {
-      console.log('🚀 DiaryStore: 캘린더 다이어리 조회 시작', {
+      logger.debug('캘린더 다이어리 조회 시작', {
         dateRange,
       });
 
@@ -140,7 +146,7 @@ export const useDiaryStore = create<DiaryState>((set, get) => ({
         dateRange.endDate,
       );
 
-      console.log('📡 DiaryStore: API 응답', {
+      logger.debug('API 응답', {
         response,
         data: response.data,
         dataType: typeof response.data,
@@ -150,7 +156,7 @@ export const useDiaryStore = create<DiaryState>((set, get) => ({
       // 백엔드 API 응답 구조에 맞게 처리
       const diaries = Array.isArray(response.data) ? response.data : [];
 
-      console.log('✅ DiaryStore: 처리된 데이터', {
+      logger.info('처리된 데이터', {
         diariesCount: diaries.length,
         diaries: diaries.slice(0, 3), // 처음 3개만 로그
       });
@@ -162,7 +168,7 @@ export const useDiaryStore = create<DiaryState>((set, get) => ({
         error: null,
       });
     } catch (error) {
-      console.error('❌ DiaryStore: 에러 발생', error);
+      logger.error('에러 발생', { error });
       set({
         error:
           error instanceof Error
@@ -200,6 +206,43 @@ export const useDiaryStore = create<DiaryState>((set, get) => ({
     }
   },
 
+  // 다이어리 삭제
+  deleteDiary: async (id: string) => {
+    try {
+      set({ isLoading: true, error: null });
+
+      await diaryApi.deleteDiary(id);
+
+      // 삭제 후 목록에서 해당 다이어리 제거
+      const currentState = get();
+      const updatedDiaries = currentState.diaries.filter(
+        (diary) => diary.id.toString() !== id,
+      );
+
+      set({
+        diaries: updatedDiaries,
+        totalCount: currentState.totalCount - 1,
+        currentDiary:
+          currentState.currentDiary?.id.toString() === id
+            ? null
+            : currentState.currentDiary,
+        isLoading: false,
+        error: null,
+      });
+
+      logger.info('다이어리 삭제 성공', { id });
+    } catch (error) {
+      logger.error('다이어리 삭제 실패', { id, error });
+      set({
+        error:
+          error instanceof Error
+            ? error.message
+            : '다이어리를 삭제하는데 실패했습니다.',
+        isLoading: false,
+      });
+    }
+  },
+
   // 에러 초기화
   clearError: () => set({ error: null }),
 
@@ -211,22 +254,36 @@ export const useDiaryStore = create<DiaryState>((set, get) => ({
 
   // 이미지 삭제 ID 추가
   addDeletedImageId: (imageId: string) => {
-    set((state) => ({
-      deletedImageIds: new Set([...state.deletedImageIds, imageId]),
-    }));
+    set((state) => {
+      const newDeletedImageIds = new Set([...state.deletedImageIds, imageId]);
+      // localStorage에 저장
+      localStorage.setItem(
+        'deletedImageIds',
+        JSON.stringify(Array.from(newDeletedImageIds)),
+      );
+      return { deletedImageIds: newDeletedImageIds };
+    });
   },
 
   // 이미지 삭제 ID 제거
   removeDeletedImageId: (imageId: string) => {
-    set((state) => ({
-      deletedImageIds: new Set(
+    set((state) => {
+      const newDeletedImageIds = new Set(
         [...state.deletedImageIds].filter((id) => id !== imageId),
-      ),
-    }));
+      );
+      // localStorage에 저장
+      localStorage.setItem(
+        'deletedImageIds',
+        JSON.stringify(Array.from(newDeletedImageIds)),
+      );
+      return { deletedImageIds: newDeletedImageIds };
+    });
   },
 
   // 모든 삭제된 이미지 ID 초기화
   clearDeletedImageIds: () => {
+    // localStorage에서도 제거
+    localStorage.removeItem('deletedImageIds');
     set({ deletedImageIds: new Set() });
   },
 }));

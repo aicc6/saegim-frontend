@@ -5,7 +5,7 @@ import PageHeader from '@/components/common/PageHeader';
 
 export default function ListPage() {
   return (
-    <div className="bg-background-primary flex flex-col">
+    <div className="flex flex-col">
       {/* 페이지 헤더 */}
       <PageHeader
         title="글목록"

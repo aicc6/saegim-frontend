@@ -23,8 +23,11 @@ import { authApi } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
 import { useNotifications } from '@/hooks/use-notifications';
 import { useFCMStore } from '@/stores/fcm';
+import { getLogger } from '@/lib/logger';
 import ThemeToggle from '../ui/custom/ThemeToggle';
 import NotificationPopover from './NotificationPopover';
+
+const logger = getLogger('Sidebar');
 
 interface UserInfo {
   email: string;
@@ -69,7 +72,7 @@ export function Sidebar() {
           setUserInfo(response.data as UserInfo);
         }
       } catch (error) {
-        console.error('사용자 정보 가져오기 실패:', error);
+        logger.error('사용자 정보 가져오기 실패', { error });
       } finally {
         setIsLoading(false);
       }
@@ -102,7 +105,7 @@ export function Sidebar() {
         window.location.reload();
       }, 100);
     } catch (error) {
-      console.error('로그아웃 처리 중 오류:', error);
+      logger.error('로그아웃 처리 중 오류', { error });
       // 에러가 발생해도 클라이언트 상태는 정리하고 로그인 페이지로 이동
       logout();
 

@@ -46,10 +46,11 @@ interface DiaryCardProps {
     thumbnail: string;
   };
   onClick?: () => void;
+  onDelete?: (id: number) => void;
 }
 
 const DiaryCard = forwardRef<HTMLDivElement, DiaryCardProps>(
-  ({ diary, onClick }, ref) => {
+  ({ diary, onClick, onDelete }, ref) => {
     const getEmotionEmoji = (emotion: string) => {
       const config = emotionConfig[emotion as keyof typeof emotionConfig];
       if (!config) return '😊';
@@ -95,6 +96,34 @@ const DiaryCard = forwardRef<HTMLDivElement, DiaryCardProps>(
               <span className="text-xl">{getEmotionEmoji(diary.emotion)}</span>
             </div>
           </div>
+          {/* 삭제 버튼 */}
+          {onDelete && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onDelete(diary.id);
+              }}
+              className="absolute top-3 right-3 p-2 rounded-xl backdrop-blur-sm bg-white/80 hover:bg-red-50 text-red-500 hover:text-red-700 transition-colors"
+              aria-label="다이어리 삭제"
+            >
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <polyline points="3,6 5,6 21,6" />
+                <path d="m19,6v14a2,2 0 0,1 -2,2H7a2,2 0 0,1 -2,-2V6m3,0V4a2,2 0 0,1 2,-2h4a2,2 0 0,1 2,2v2" />
+                <line x1="10" x2="10" y1="11" y2="17" />
+                <line x1="14" x2="14" y1="11" y2="17" />
+              </svg>
+            </button>
+          )}
+
           {/* 날짜 오버레이 */}
           <div className="absolute bottom-3 right-3">
             <span className="text-caption text-white bg-black/50 backdrop-blur-sm px-2 py-1 rounded-lg">

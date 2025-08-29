@@ -4,6 +4,7 @@ import { useState, useEffect, use } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { ArrowLeft } from 'lucide-react';
+import { getLogger } from '@/lib/logger';
 import { useDiaryStore } from '@/stores/diary';
 import {
   DiaryEntry,
@@ -13,6 +14,8 @@ import {
 } from '@/types/diary';
 import PageHeader from '@/components/common/PageHeader';
 import { Button } from '@/components/ui/custom/Button';
+import { useToast } from '@/hooks/use-toast';
+import DeleteConfirmModal from '@/components/diary/DeleteConfirmModal';
 
 const emotionLabels = {
   happy: { emoji: '😊', name: '행복', color: 'text-emotion-happy' },
@@ -30,17 +33,22 @@ const emotionOptions: EmotionType[] = [
   'unrest',
 ];
 
+const logger = getLogger('viewPost');
+
 export default function ViewPostPage({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
   const router = useRouter();
+  const { toast } = useToast();
   const { id: entryId } = use(params); // React.use()로 params unwrap
   const {
     diaries,
     currentDiary,
     fetchDiary,
+    deleteDiary,
+    isLoading,
     deletedImageIds,
     addDeletedImageId,
   } = useDiaryStore();
@@ -56,6 +64,9 @@ export default function ViewPostPage({
   const [sameDateEntries, setSameDateEntries] = useState<DiaryListEntry[]>([]);
   const [isImageDeleted, setIsImageDeleted] = useState(false); // 이미지 삭제 상태 추가
   // deletedImageIds는 전역 스토어에서 가져옴
+
+  // 삭제 확인 모달 상태
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
 
   // 감정 선택 관련 상태
   const [showEmotionSelector, setShowEmotionSelector] = useState(false);
@@ -78,12 +89,9 @@ export default function ViewPostPage({
         parsedIds.forEach((imageId: string) => {
           addDeletedImageId(imageId);
         });
-        console.log(
-          '📝 ViewPost: localStorage에서 삭제된 이미지 ID 복원:',
-          parsedIds,
-        );
+        logger.debug('localStorage에서 삭제된 이미지 ID 복원:', parsedIds);
       } catch (error) {
-        console.error('📝 ViewPost: localStorage 파싱 오류:', error);
+        logger.error('localStorage 파싱 오류:', error);
       }
     }
   }, [entryId, addDeletedImageId]);
@@ -97,7 +105,7 @@ export default function ViewPostPage({
       // 쿼리 파라미터에서 온 경우
       const decodedPath = decodeURIComponent(fromParam);
       setPreviousPath(decodedPath);
-      console.log('🔍 쿼리 파라미터에서 이전 경로 확인:', decodedPath);
+      logger.debug('쿼리 파라미터에서 이전 경로 확인:', decodedPath);
     } else {
       // 2. document.referrer 사용 (폴백)
       const referrer = document.referrer;
@@ -107,7 +115,7 @@ export default function ViewPostPage({
         const referrerPath = new URL(referrer).pathname;
         if (referrerPath !== window.location.pathname) {
           setPreviousPath(referrerPath);
-          console.log('🔍 referrer에서 이전 경로 확인:', referrerPath);
+          logger.debug('referrer에서 이전 경로 확인:', referrerPath);
         }
       }
     }
@@ -120,9 +128,7 @@ export default function ViewPostPage({
     if (foundEntry) {
       // 상세 데이터는 이미 diaries에 있으므로 fetchDiary 호출하지 않음
       // 이미지 삭제 상태를 유지하기 위해 자동 로드 방지
-      console.log(
-        '📝 ViewPost: diaries에서 엔트리 찾음, fetchDiary 호출하지 않음',
-      );
+      logger.debug('diaries에서 엔트리 찾음, fetchDiary 호출하지 않음');
 
       // entry 상태를 diaries에서 직접 설정 (entry가 null일 때만)
       if (!entry) {
@@ -157,14 +163,11 @@ export default function ViewPostPage({
       );
       setCurrentIndex(index);
     } else {
-      console.log(
-        '📝 ViewPost: 해당 ID의 다이어리를 찾을 수 없습니다:',
-        entryId,
-      );
+      logger.warn('해당 ID의 다이어리를 찾을 수 없습니다:', entryId);
 
       // diaries에서 찾을 수 없는 경우 API로 직접 조회 시도
       if (diaries.length === 0) {
-        console.log('📝 ViewPost: diaries가 비어있음, API로 직접 조회 시도');
+        logger.debug('diaries가 비어있음, API로 직접 조회 시도');
         fetchDiary(entryId);
       }
     }
@@ -176,16 +179,14 @@ export default function ViewPostPage({
     if (currentDiary) {
       // 이미지가 삭제된 상태라면 currentDiary로 덮어쓰지 않음
       if (isImageDeleted) {
-        console.log(
-          '📝 ViewPost: 이미지 삭제 상태이므로 currentDiary 업데이트 스킵',
-        );
+        logger.debug('이미지 삭제 상태이므로 currentDiary 업데이트 스킵');
         return;
       }
 
       // entry가 이미 currentDiary와 같은 ID라면 덮어쓰지 않음
       if (entry && entry.id === currentDiary.id) {
-        console.log(
-          '📝 ViewPost: entry가 이미 같은 ID로 설정되어 있으므로 currentDiary 업데이트 스킵',
+        logger.debug(
+          'entry가 이미 같은 ID로 설정되어 있으므로 currentDiary 업데이트 스킵',
         );
         return;
       }
@@ -213,7 +214,7 @@ export default function ViewPostPage({
 
   // editedUserEmotion 상태 변화 추적
   useEffect(() => {
-    console.log('🔍 editedUserEmotion 상태 변화:', {
+    logger.debug('editedUserEmotion 상태 변화:', {
       현재_감정: editedEmotion,
       감정_라벨: editedEmotion
         ? emotionLabels[editedEmotion as keyof typeof emotionLabels]
@@ -225,7 +226,7 @@ export default function ViewPostPage({
     if (isEditing && entry) {
       // 수정 완료
       try {
-        console.log('📝 ViewPost: 수정 완료 시도', {
+        logger.debug('수정 완료 시도', {
           제목: editedTitle,
           내용: editedContent,
           사용자_감정: editedEmotion,
@@ -236,13 +237,13 @@ export default function ViewPostPage({
         // 백엔드 API 호출 제거 - 이미지 삭제 상태 유지를 위해
         // await fetchDiary(entry.id);
 
-        console.log('✅ 다이어리 수정 완료 (로컬 상태만 업데이트)');
+        logger.info('다이어리 수정 완료 (로컬 상태만 업데이트)');
 
         // 수정 완료 후 편집 모드 종료
         setIsEditing(false);
         setShowEmotionSelector(false);
         setShowKeywordInput(false);
-        console.log('📝 ViewPost: 편집 완료');
+        logger.debug('편집 완료');
 
         // 로컬 상태 즉시 업데이트 (UI 반응성 향상)
         const updatedEntry: DiaryEntry = {
@@ -275,7 +276,7 @@ export default function ViewPostPage({
         // 페이지 새로고침 없이 상태만 업데이트
         // window.location.reload();
       } catch (error) {
-        console.error('❌ 다이어리 수정 실패:', error);
+        logger.error('다이어리 수정 실패:', error);
         alert('다이어리 수정에 실패했습니다. 다시 시도해주세요.');
       }
     } else if (!isEditing && entry) {
@@ -290,17 +291,38 @@ export default function ViewPostPage({
     }
   };
 
+  // 삭제 버튼 클릭 핸들러
   const handleDelete = () => {
-    if (
-      entry &&
-      window.confirm(
-        '정말로 이 글을 삭제하시겠습니까? 삭제된 글은 복구할 수 없습니다.',
-      )
-    ) {
-      // 현재는 삭제 기능이 구현되지 않음
-      console.log('📝 ViewPost: 삭제 기능은 아직 구현되지 않았습니다');
-      router.push('/calendar');
+    setDeleteModalOpen(true);
+  };
+
+  // 삭제 확인 핸들러
+  const handleDeleteConfirm = async () => {
+    if (!entry) return;
+
+    try {
+      await deleteDiary(entry.id);
+      toast({
+        title: '삭제 완료',
+        description: '다이어리가 성공적으로 삭제되었습니다.',
+      });
+      setDeleteModalOpen(false);
+
+      // 삭제 후 이전 페이지로 이동
+      handleBack();
+    } catch (error) {
+      toast({
+        title: '삭제 실패',
+        description: '다이어리 삭제 중 오류가 발생했습니다.',
+        variant: 'destructive',
+      });
+      logger.error('다이어리 삭제 실패:', error);
     }
+  };
+
+  // 삭제 모달 닫기 핸들러
+  const handleDeleteModalClose = () => {
+    setDeleteModalOpen(false);
   };
 
   const handleCancelEdit = () => {
@@ -335,12 +357,12 @@ export default function ViewPostPage({
       }
     }
 
-    console.log('📝 ViewPost: 편집 모드 취소');
+    logger.debug('편집 모드 취소');
   };
 
   // 감정 선택 처리
   const handleEmotionSelect = (emotion: EmotionType) => {
-    console.log('🔍 감정 선택:', {
+    logger.debug('감정 선택:', {
       선택된_감정: emotion,
       감정_타입: typeof emotion,
       이전_감정: editedEmotion,
@@ -350,7 +372,7 @@ export default function ViewPostPage({
     setEditedEmotion(emotion);
     setShowEmotionSelector(false);
 
-    console.log('🔍 감정 상태 업데이트 완료:', {
+    logger.debug('감정 상태 업데이트 완료:', {
       선택된_감정: emotion,
       감정_라벨: emotionLabels[emotion],
     });
@@ -389,10 +411,7 @@ export default function ViewPostPage({
       `deletedImageIds_${entryId}`,
       JSON.stringify(updatedDeletedIds),
     );
-    console.log(
-      '📝 ViewPost: localStorage에 삭제된 이미지 ID 저장:',
-      updatedDeletedIds,
-    );
+    logger.debug('localStorage에 삭제된 이미지 ID 저장:', updatedDeletedIds);
 
     // entry 상태도 즉시 업데이트하여 UI 반응성 향상
     const updatedEntryWithImages = {
@@ -410,28 +429,30 @@ export default function ViewPostPage({
     // 전역 상태 강제 업데이트
     useDiaryStore.setState({
       diaries: updatedDiaries,
-      deletedImageIds: new Set([...store.deletedImageIds, imageId]),
     });
+
+    // 삭제된 이미지 ID를 스토어에 추가 (localStorage 자동 저장)
+    useDiaryStore.getState().addDeletedImageId(imageId);
 
     // 이미지 삭제 상태 설정 (상태 잠금)
     setIsImageDeleted(true);
 
-    console.log(
-      '✅ 이미지 삭제 완료 (로컬 상태만 업데이트, DB는 유지, 상태 잠금 설정)',
+    logger.info(
+      '이미지 삭제 완료 (로컬 상태만 업데이트, DB는 유지, 상태 잠금 설정)',
     );
-    console.log('🔄 전역 상태 업데이트 완료 - 캘린더와 동기화됨');
-    console.log('🗑️ 삭제된 이미지 ID:', imageId);
-    console.log('📊 업데이트된 다이어리 수:', updatedDiaries.length);
+    logger.debug('전역 상태 업데이트 완료 - 캘린더와 동기화됨');
+    logger.debug('삭제된 이미지 ID:', imageId);
+    logger.debug('업데이트된 다이어리 수:', updatedDiaries.length);
   };
 
   const handleLoadExistingImages = async () => {
     if (!entry) {
-      console.error('❌ entry가 null입니다.');
+      logger.error('entry가 null입니다.');
       return;
     }
 
     try {
-      console.log('📝 ViewPost: 기존 이미지 불러오기 시작');
+      logger.debug('기존 이미지 불러오기 시작');
       const response = await fetch(
         `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/diary/${entry.id}/images`,
         {
@@ -444,7 +465,7 @@ export default function ViewPostPage({
         const data = await response.json();
         if (data.success && data.data) {
           const existingImages = data.data;
-          console.log('📝 ViewPost: 기존 이미지 조회 성공:', existingImages);
+          logger.debug('기존 이미지 조회 성공:', existingImages);
 
           // 삭제된 이미지는 제외하고 필터링하지 않고 모든 이미지 복원
           // const filteredImages = existingImages.filter(
@@ -477,49 +498,45 @@ export default function ViewPostPage({
 
           // 현재 다이어리의 이미지 ID를 deletedImageIds에서 완전히 제거
           const currentStore = useDiaryStore.getState();
-          const updatedDeletedImageIds = new Set(
-            Array.from(currentStore.deletedImageIds).filter(
-              (id) => !existingImages.some((img: ImageInfo) => img.id === id),
-            ),
-          );
-
-          useDiaryStore.setState({
-            deletedImageIds: updatedDeletedImageIds,
+          existingImages.forEach((img: ImageInfo) => {
+            if (currentStore.deletedImageIds.has(img.id)) {
+              useDiaryStore.getState().removeDeletedImageId(img.id);
+            }
           });
 
           // localStorage에서도 해당 다이어리의 삭제된 이미지 ID 제거
           localStorage.removeItem(`deletedImageIds_${entryId}`);
-          console.log(
-            '📝 ViewPost: localStorage에서 삭제된 이미지 ID 제거 완료',
-          );
+          logger.debug('localStorage에서 삭제된 이미지 ID 제거 완료');
 
           // 이미지 복원 시 상태 잠금 해제
           setIsImageDeleted(false);
           // clearDeletedImageIds() 호출하지 않음 - 전역 상태 유지
 
-          console.log('🔄 기존 이미지 복원 완료 - 캘린더와 동기화됨');
-          console.log('📊 복원된 이미지 수:', filteredImages.length);
-          console.log('🗑️ 삭제된 이미지 ID 초기화 완료');
-          console.log('🔍 디버깅 정보:', {
+          logger.info('기존 이미지 복원 완료 - 캘린더와 동기화됨');
+          logger.debug('복원된 이미지 수:', filteredImages.length);
+          logger.debug('삭제된 이미지 ID 초기화 완료');
+          logger.debug('디버깅 정보:', {
             백엔드_이미지_수: existingImages.length,
             복원된_이미지_수: filteredImages.length,
             현재_삭제된_이미지_ID: Array.from(deletedImageIds),
-            업데이트된_삭제된_이미지_ID: Array.from(updatedDeletedImageIds),
+            업데이트된_삭제된_이미지_ID: Array.from(
+              useDiaryStore.getState().deletedImageIds,
+            ),
           });
 
           alert(
             '기존 이미지를 성공적으로 불러왔습니다. (삭제된 이미지도 복원됨)',
           );
         } else {
-          console.error('❌ 기존 이미지 조회 실패:', data.message);
+          logger.error('기존 이미지 조회 실패:', data.message);
           alert('기존 이미지 조회에 실패했습니다. 다시 시도해주세요.');
         }
       } else {
-        console.error('❌ 기존 이미지 조회 실패:', response.status);
+        logger.error('기존 이미지 조회 실패:', response.status);
         alert('기존 이미지 조회에 실패했습니다. 다시 시도해주세요.');
       }
     } catch (error) {
-      console.error('❌ 기존 이미지 조회 실패:', error);
+      logger.error('기존 이미지 조회 실패:', error);
       alert('기존 이미지 조회에 실패했습니다. 다시 시도해주세요.');
     }
   };
@@ -545,7 +562,7 @@ export default function ViewPostPage({
 
       if (response.ok) {
         const result = await response.json();
-        console.log('✅ 이미지 업로드 성공:', result);
+        logger.info('이미지 업로드 성공:', result);
 
         // 업로드된 이미지 정보를 entry에 추가
         const newImage: ImageInfo = {
@@ -574,15 +591,15 @@ export default function ViewPostPage({
         // 전역 상태 강제 업데이트
         useDiaryStore.setState({ diaries: updatedDiaries });
 
-        console.log('🔄 새 이미지 업로드 완료 - 캘린더와 동기화됨');
-        console.log('📊 업로드된 이미지 수:', updatedImages.length);
+        logger.info('새 이미지 업로드 완료 - 캘린더와 동기화됨');
+        logger.debug('업로드된 이미지 수:', updatedImages.length);
 
         alert('이미지가 성공적으로 업로드되었습니다.');
       } else {
         throw new Error('이미지 업로드 실패');
       }
     } catch (error) {
-      console.error('❌ 이미지 업로드 실패:', error);
+      logger.error('이미지 업로드 실패:', error);
       alert('이미지 업로드에 실패했습니다. 다시 시도해주세요.');
     }
   };
@@ -611,7 +628,7 @@ export default function ViewPostPage({
         try {
           await handleImageUpload(file);
         } catch (error) {
-          console.error('❌ 이미지 업로드 실패:', error);
+          logger.error('이미지 업로드 실패:', error);
           alert('이미지 업로드에 실패했습니다. 다시 시도해주세요.');
         }
       }
@@ -653,7 +670,7 @@ export default function ViewPostPage({
 
     if (fromParam) {
       const targetPath = decodeURIComponent(fromParam);
-      console.log('🔙 URL 파라미터의 from 경로로 이동:', targetPath);
+      logger.debug('URL 파라미터의 from 경로로 이동:', targetPath);
       router.push(targetPath);
       return;
     }
@@ -664,20 +681,20 @@ export default function ViewPostPage({
       previousPath !== '/viewPost' &&
       previousPath !== window.location.pathname
     ) {
-      console.log('🔙 추적된 이전 경로로 이동:', previousPath);
+      logger.debug('추적된 이전 경로로 이동:', previousPath);
       router.push(previousPath);
       return;
     }
 
     // 3. 브라우저 히스토리가 있는 경우 뒤로가기
     if (window.history.length > 1) {
-      console.log('🔙 브라우저 히스토리로 뒤로가기');
+      logger.debug('브라우저 히스토리로 뒤로가기');
       router.back();
       return;
     }
 
     // 4. 모든 방법이 실패한 경우 기본값으로 캘린더로 이동
-    console.log('🔙 기본 경로(캘린더)로 이동');
+    logger.debug('기본 경로(캘린더)로 이동');
     router.push('/calendar');
   };
 
@@ -1152,6 +1169,15 @@ export default function ViewPostPage({
         onClose={() => setShowImageOptionsModal(false)}
         onLoadExisting={handleLoadExistingImages}
         onUploadNew={handleUploadNewImage}
+      />
+
+      {/* 삭제 확인 모달 */}
+      <DeleteConfirmModal
+        isOpen={deleteModalOpen}
+        onClose={handleDeleteModalClose}
+        onConfirm={handleDeleteConfirm}
+        diaryTitle={entry?.title}
+        isLoading={isLoading}
       />
     </div>
   );

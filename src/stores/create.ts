@@ -4,6 +4,9 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { immer } from 'zustand/middleware/immer';
 import { apiClient } from '@/lib/api';
+import { getLogger } from '../lib/logger';
+
+const logger = getLogger('create');
 
 // ===== 타입 정의 =====
 export type WritingStyle = 'poem' | 'short_story';
@@ -64,6 +67,33 @@ const DEFAULT_CONFIG: CreateConfig = {
 };
 
 // ===== API 함수들 =====
+export async function getOriginalUserInput(
+  sessionId: string,
+): Promise<string | null> {
+  try {
+    const response = await fetch(
+      `/api/ai/session/${sessionId}/original-input`,
+      {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+      },
+    );
+
+    if (!response.ok) {
+      return null;
+    }
+
+    const result = await response.json();
+    return result.data?.original_input || null;
+  } catch (error) {
+    logger.error('원본 사용자 입력 조회 실패', { error });
+    return null;
+  }
+}
+
 export async function generateAIText(params: {
   prompt: string;
   style: string;
@@ -106,7 +136,7 @@ export async function generateAIText(params: {
 
     // 🚀 디버깅: 재생성 요청 시 백엔드로 전달되는 정보 확인
     if (regeneration_count > 1) {
-      console.log('🔄 재생성 요청 - 백엔드로 전달되는 정보:', {
+      logger.debug('재생성 요청 - 백엔드로 전달되는 정보', {
         url: '/api/ai/generate',
         method: 'POST',
         requestBody,
@@ -123,7 +153,7 @@ export async function generateAIText(params: {
 
     // ✅ 디버깅: API 호출 성공 시 응답 정보
     if (regeneration_count > 1) {
-      console.log('✅ 재생성 API 호출 성공:', {
+      logger.info('재생성 API 호출 성공', {
         response_status: 'success',
         session_id: response.data.session_id,
         ai_generated_text_length: response.data.ai_generated_text?.length || 0,
@@ -133,11 +163,11 @@ export async function generateAIText(params: {
 
     return response.data;
   } catch (error) {
-    console.error('❌ AI 텍스트 생성 API 호출 실패:', error);
+    logger.error('AI 텍스트 생성 API 호출 실패', { error });
 
     // 🚀 디버깅: 재생성 요청 실패 시 상세 정보
     if (params.regeneration_count && params.regeneration_count > 1) {
-      console.error('💥 재생성 요청 실패 상세:', {
+      logger.error('재생성 요청 실패 상세', {
         error_type: 'API_CALL_FAILED',
         regeneration_count: params.regeneration_count,
         sessionId: params.sessionId || '없음',
@@ -152,7 +182,7 @@ export async function generateAIText(params: {
 
       // 🚀 디버깅: 422 오류 시 백엔드 응답 상세 정보
       if (error instanceof Error && error.message.includes('422')) {
-        console.error('💥 422 오류 상세 분석:', {
+        logger.error('422 오류 상세 분석', {
           error_type: 'VALIDATION_ERROR',
           http_status: 422,
           request_body: {
@@ -180,6 +210,7 @@ interface CreateState {
 
   // 입력 상태
   prompt: string;
+  originalPrompt: string;
   style: WritingStyle;
   length: LengthOption;
   emotion: EmotionOption;
@@ -192,6 +223,7 @@ interface CreateState {
   generatedText: string | null;
   generatedKeywords: string[] | null;
   sessionId: string | null; // session_id 상태 추가
+  wasJustGenerated: boolean; // 방금 생성되었는지 추적
 
   // 기본 액션
   setPrompt: (prompt: string) => void;
@@ -207,6 +239,9 @@ interface CreateState {
   // 유틸리티
   getStyleDisplayName: (style: WritingStyle) => string;
   getLengthDisplayName: (length: LengthOption) => string;
+  markAsProcessed: () => void; // 처리 완료 마킹
+  restoreOriginalInput: () => Promise<void>; // 원본 입력 복구
+  resetToDefaults: () => void; // 기본값으로 초기화
 }
 
 export const useCreateStore = create<CreateState>()(
@@ -215,6 +250,7 @@ export const useCreateStore = create<CreateState>()(
       // 초기 상태
       config: DEFAULT_CONFIG,
       prompt: '',
+      originalPrompt: '',
       style: 'poem',
       length: 'short',
       emotion: '',
@@ -223,6 +259,7 @@ export const useCreateStore = create<CreateState>()(
       generatedText: null,
       generatedKeywords: null,
       sessionId: null, // 빈 문자열이 아닌 null로 설정
+      wasJustGenerated: false,
 
       // 기본 액션들
       setPrompt: (prompt) =>
@@ -278,7 +315,9 @@ export const useCreateStore = create<CreateState>()(
             state.generatedText = response.ai_generated_text;
             state.generatedKeywords = response.keywords;
             state.sessionId = response.session_id; // session_id 저장
+            state.originalPrompt = state.prompt; // 원본 입력 보존
             state.isGenerating = false;
+            state.wasJustGenerated = true; // 방금 생성되었음을 표시
           });
         } catch (error) {
           const errorMessage =
@@ -286,7 +325,7 @@ export const useCreateStore = create<CreateState>()(
               ? error.message
               : '텍스트 생성 중 오류가 발생했습니다.';
 
-          console.error('❌ AI 텍스트 생성 실패:', error);
+          logger.error('AI 텍스트 생성 실패', { error });
 
           set((state) => {
             state.error = errorMessage;
@@ -298,22 +337,49 @@ export const useCreateStore = create<CreateState>()(
       // 유틸리티 함수들
       getStyleDisplayName: (style) => {
         const { config } = get();
-        return (
-          config.styles.find((s) => s.value === style)?.displayName || style
-        );
+        return config.styles.find((s) => s.value === style)?.label || style;
       },
       getLengthDisplayName: (length) => {
         const { config } = get();
-        return (
-          config.lengths.find((l) => l.value === length)?.displayName || length
-        );
+        return config.lengths.find((l) => l.value === length)?.label || length;
       },
+      markAsProcessed: () =>
+        set((state) => {
+          state.wasJustGenerated = false;
+        }),
+
+      // 세션ID로 원본 입력 복구
+      restoreOriginalInput: async () => {
+        const { sessionId } = get();
+        if (!sessionId) return;
+
+        try {
+          const originalInput = await getOriginalUserInput(sessionId);
+          if (originalInput) {
+            set((state) => {
+              state.originalPrompt = originalInput;
+            });
+          }
+        } catch (error) {
+          logger.error('원본 입력 복구 실패', { error });
+        }
+      },
+      resetToDefaults: () =>
+        set((state) => {
+          state.prompt = '';
+          state.style = 'poem';
+          state.length = 'short';
+          state.emotion = '';
+          state.error = null;
+          state.generatedText = null;
+          state.generatedKeywords = null;
+          state.sessionId = null;
+          state.wasJustGenerated = false;
+        }),
     })),
     {
       name: 'create-store',
       partialize: (state) => ({
-        style: state.style,
-        length: state.length,
         generatedText: state.generatedText,
         generatedKeywords: state.generatedKeywords,
       }),

@@ -134,6 +134,7 @@ $RECYCLE.BIN/
 *.lnk
 
 # End of https://www.toptal.com/developers/gitignore/api/windows,macos,visualstudiocode,git,dotenv,nextjs
+.playwright-mcp/
 
 # Service Worker (generated from template)
 public/firebase-messaging-sw.js

@@ -11,6 +11,7 @@ import {
   CheckCircle,
   XCircle,
 } from 'lucide-react';
+import { getLogger } from '@/lib/logger';
 import { Button } from '../ui/button';
 import {
   Card,
@@ -21,6 +22,8 @@ import {
 } from '../ui/card';
 import { Badge } from '../ui/badge';
 import { useFCMStore, initializeFCM } from '../../stores/fcm';
+
+const logger = getLogger('FCMManager');
 
 export default function FCMManager() {
   const {
@@ -49,7 +52,7 @@ export default function FCMManager() {
         await initializeFCM();
         setIsInitialized(true);
       } catch (error) {
-        console.error('FCM 초기화 실패:', error);
+        logger.error('FCM 초기화 실패', { error });
       }
     };
 
@@ -93,7 +96,7 @@ export default function FCMManager() {
         });
       }
     } catch (error) {
-      console.error('테스트 알림 전송 실패:', error);
+      logger.error('테스트 알림 전송 실패', { error });
       alert('테스트 알림 전송에 실패했습니다.');
     }
   };
