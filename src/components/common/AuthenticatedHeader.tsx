@@ -70,7 +70,7 @@ export default function AuthenticatedHeader() {
 
   const isDark = resolvedTheme === 'dark';
 
-  const handleProfileClick = () => {
+  const _handleProfileClick = () => {
     router.push('/profile');
   };
 

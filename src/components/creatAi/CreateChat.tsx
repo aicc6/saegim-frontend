@@ -77,7 +77,7 @@ export default function CreateChat({ sessionId }: CreateChatProps) {
   const [generatedMessages, setGeneratedMessages] = useState<
     GeneratedMessage[]
   >([]);
-  const [regeneratingMessageIds, setRegeneratingMessageIds] = useState<
+  const [regeneratingMessageIds, _setRegeneratingMessageIds] = useState<
     Set<string>
   >(new Set());
 
@@ -126,17 +126,17 @@ export default function CreateChat({ sessionId }: CreateChatProps) {
   const generateId = (): string =>
     `${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
 
-  const applyOptions = useCallback((): void => {
+  const applyOptions = (): void => {
     setStyle(tempStyle);
     setLength(tempLength);
     setEmotion(tempEmotion);
-  }, [tempStyle, tempLength, tempEmotion, setStyle, setLength, setEmotion]);
+  };
 
-  const scrollToBottom = useCallback((): void => {
+  const scrollToBottom = (): void => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, []);
+  };
 
-  const adjustTextareaHeight = useCallback((): void => {
+  const adjustTextareaHeight = (): void => {
     const textarea = textareaRef.current;
     if (!textarea) return;
 
@@ -151,7 +151,7 @@ export default function CreateChat({ sessionId }: CreateChatProps) {
       textarea.style.height = `${maxHeight}px`;
       textarea.style.overflowY = 'auto';
     }
-  }, []);
+  };
 
   const copyToClipboard = useCallback(
     async (content: string): Promise<void> => {
@@ -241,14 +241,7 @@ export default function CreateChat({ sessionId }: CreateChatProps) {
     setPrompt('');
     clearGeneratedText(); // 기존 generatedText 초기화
     setTimeout(scrollToBottom, 200);
-  }, [
-    tempEmotion,
-    generateText,
-    scrollToBottom,
-    setPrompt,
-    applyOptions,
-    clearGeneratedText,
-  ]);
+  }, [tempEmotion, generateText, setPrompt, clearGeneratedText]);
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent): void => {
@@ -472,7 +465,7 @@ export default function CreateChat({ sessionId }: CreateChatProps) {
 
   useEffect(() => {
     adjustTextareaHeight();
-  }, [prompt, adjustTextareaHeight]);
+  }, [prompt]);
 
   // 페이지 로드 시 originalPrompt 복구
   useEffect(() => {
@@ -800,7 +793,6 @@ export default function CreateChat({ sessionId }: CreateChatProps) {
                   rows={1}
                   placeholder="메시지를 입력하세요..."
                   className="w-full rounded-2xl border border-gray-300 bg-white px-4 py-3 pr-10 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500 shadow-sm resize-none min-h-[44px]"
-                  style={{ height: 'auto' }}
                   onKeyDown={handleKeyDown}
                 />
 

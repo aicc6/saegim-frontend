@@ -146,25 +146,17 @@ export default function DiaryListView() {
   }, [buildFilters, fetchDiaries, clearError]);
 
   // 카드 클릭 핸들러
-  const handleCardClick = useCallback(
-    (diaryId: string) => {
-      // 현재 페이지 경로를 from 파라미터로 전달
-      const currentPath = '/list';
-      router.push(
-        `/viewPost/${diaryId}?from=${encodeURIComponent(currentPath)}`,
-      );
-    },
-    [router],
-  );
+  const handleCardClick = (diaryId: string) => {
+    // 현재 페이지 경로를 from 파라미터로 전달
+    const currentPath = '/list';
+    router.push(`/viewPost/${diaryId}?from=${encodeURIComponent(currentPath)}`);
+  };
 
   // 삭제 버튼 클릭 핸들러
-  const handleDeleteClick = useCallback(
-    (diaryId: string, diaryTitle: string) => {
-      setDiaryToDelete({ id: diaryId, title: diaryTitle });
-      setDeleteModalOpen(true);
-    },
-    [],
-  );
+  const handleDeleteClick = (diaryId: string, diaryTitle: string) => {
+    setDiaryToDelete({ id: diaryId, title: diaryTitle });
+    setDeleteModalOpen(true);
+  };
 
   // 삭제 확인 핸들러
   const handleDeleteConfirm = useCallback(async () => {
@@ -188,10 +180,10 @@ export default function DiaryListView() {
   }, [diaryToDelete, deleteDiary, toast]);
 
   // 삭제 모달 닫기 핸들러
-  const handleDeleteModalClose = useCallback(() => {
+  const handleDeleteModalClose = () => {
     setDeleteModalOpen(false);
     setDiaryToDelete(null);
-  }, []);
+  };
 
   // 초기 데이터 로드 및 필터 변경 시 재로드
   useEffect(() => {

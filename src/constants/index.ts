@@ -23,3 +23,14 @@ export {
   type LocaleKey,
   type ContentTypeKey,
 } from './locale';
+
+// UI 스타일 관련
+export {
+  INPUT_STYLES,
+  BUTTON_STYLES,
+  MODAL_STYLES,
+  CARD_STYLES,
+  createInputClassName,
+  createButtonClassName,
+  createCardClassName,
+} from './ui-styles';

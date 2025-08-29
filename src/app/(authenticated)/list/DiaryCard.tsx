@@ -1,6 +1,7 @@
 'use client';
 
 import { forwardRef } from 'react';
+import Image from 'next/image';
 
 const emotionConfig = {
   happy: {
@@ -81,10 +82,12 @@ const DiaryCard = forwardRef<HTMLDivElement, DiaryCardProps>(
       >
         {/* 썸네일 이미지 */}
         <div className="relative h-48 overflow-hidden">
-          <img
+          <Image
             src={diary.thumbnail}
-            alt={diary.title}
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+            alt={`${diary.title} 썸네일 이미지`}
+            fill
+            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+            className="object-cover group-hover:scale-105 transition-transform duration-300"
           />
           {/* 감정 이모지 오버레이 */}
           <div className="absolute top-3 left-3">

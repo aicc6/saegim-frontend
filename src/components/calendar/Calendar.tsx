@@ -285,9 +285,7 @@ export const Calendar = forwardRef<CalendarRef, CalendarProps>(
       startDate,
       endDate,
       diaries,
-      month,
       selectedDate,
-      currentDate,
       effectiveDate,
       deletedImageIds, // 이미지 삭제 상태 변화 감지 - 명시적으로 구독
     ]);

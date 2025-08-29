@@ -68,14 +68,14 @@ export default function CreateAi() {
   );
 
   // 이미지 삭제 핸들러
-  const handleImageRemove = useCallback((index: number) => {
+  const handleImageRemove = (index: number) => {
     setSelectedImages((prev) => prev.filter((_, i) => i !== index));
-  }, []);
+  };
 
   // 이미지 추가 버튼 클릭 핸들러
-  const handleAddImageClick = useCallback(() => {
+  const handleAddImageClick = () => {
     fileInputRef.current?.click();
-  }, []);
+  };
 
   // 컴포넌트 언마운트 시 URL 객체 정리
   useEffect(() => {
