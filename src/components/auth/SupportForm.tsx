@@ -2,6 +2,9 @@
 
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
+import { getLogger } from '@/lib/logger';
+
+const logger = getLogger('SupportForm');
 
 export default function SupportForm() {
   const [supportData, setSupportData] = useState({
@@ -28,9 +31,9 @@ export default function SupportForm() {
 
   const handleSubmit = () => {
     // TODO: API 연동
-    console.log('문의 제출:', supportData);
+    logger.info('문의 제출', { supportData });
     if (selectedImage) {
-      console.log('첨부된 이미지:', selectedImage.name);
+      logger.info('첨부된 이미지', { imageName: selectedImage.name });
     }
   };
 

@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { useDiaryStore } from '@/stores/diary';
 import { type DiaryFilters } from '@/types/diary';
+import { logger } from '@/lib/logger';
 import DiaryCard from './DiaryCard';
 
 export default function DiaryListView() {
@@ -101,7 +102,7 @@ export default function DiaryListView() {
       const filters = buildFilters(currentPage + 1);
       await fetchDiaries(filters);
     } catch (error) {
-      console.error('Failed to load more diaries:', error);
+      logger.error('Failed to load more diaries:', error);
     }
   }, [isLoading, currentPage, buildFilters, fetchDiaries]);
 
@@ -129,7 +130,7 @@ export default function DiaryListView() {
       const filters = buildFilters(1); // 첫 페이지부터 시작
       await fetchDiaries(filters);
     } catch (error) {
-      console.error('Failed to apply filters:', error);
+      logger.error('Failed to apply filters:', error);
     }
   }, [buildFilters, fetchDiaries, clearError]);
 

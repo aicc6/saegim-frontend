@@ -16,6 +16,9 @@ import {
   EMOTION_EMOJIS,
 } from '@/types/diary';
 import { cn } from '@/lib/utils';
+import { getLogger } from '@/lib/logger';
+
+const logger = getLogger('Calendar');
 
 interface CalendarDay {
   date: Date;
@@ -88,7 +91,7 @@ export const Calendar = forwardRef<CalendarRef, CalendarProps>(
       const startDateStr = startDate.toISOString().split('T')[0];
       const endDateStr = endDate.toISOString().split('T')[0];
 
-      console.log('📅 Calendar: 날짜 범위 계산', {
+      logger.debug('날짜 범위 계산', {
         year,
         month,
         startDate: startDateStr,
@@ -102,7 +105,7 @@ export const Calendar = forwardRef<CalendarRef, CalendarProps>(
 
     // 월이 변경될 때마다 해당 월의 다이어리 데이터 가져오기 - 의존성 배열 최적화
     useEffect(() => {
-      console.log('🔍 Calendar: 데이터 상태 확인', {
+      logger.debug('데이터 상태 확인', {
         startDate: dateRange.startDate,
         endDate: dateRange.endDate,
       });
@@ -125,7 +128,7 @@ export const Calendar = forwardRef<CalendarRef, CalendarProps>(
 
           if (response.ok) {
             const result = await response.json();
-            console.log('📡 Calendar: 쿠키 기반 API 호출 결과', result);
+            logger.info('쿠키 기반 API 호출 결과', { result });
 
             // 스토어 상태 업데이트
             if (result.data && Array.isArray(result.data)) {
@@ -138,11 +141,11 @@ export const Calendar = forwardRef<CalendarRef, CalendarProps>(
               });
             }
           } else if (response.status === 401) {
-            console.log('❌ Calendar: 인증 실패, 로그인 페이지로 리다이렉트');
+            logger.warn('인증 실패, 로그인 페이지로 리다이렉트');
             window.location.href = '/login';
           }
         } catch (error) {
-          console.error('❌ Calendar: API 호출 실패', error);
+          logger.error('API 호출 실패', { error });
           useDiaryStore.setState({
             error: '캘린더 데이터를 불러오는데 실패했습니다.',
             isLoading: false,
@@ -155,7 +158,7 @@ export const Calendar = forwardRef<CalendarRef, CalendarProps>(
 
     // 데이터 로딩 상태 디버깅
     useEffect(() => {
-      console.log('📊 Calendar: 데이터 상태', {
+      logger.debug('데이터 상태', {
         diariesCount: diaries.length,
         isLoading,
         error,
@@ -244,7 +247,7 @@ export const Calendar = forwardRef<CalendarRef, CalendarProps>(
 
               if (validImages.length > 0) {
                 thumbnailPath = validImages[0].thumbnail_path;
-                console.log('📷 Calendar: 썸네일 이미지 설정', {
+                logger.debug('썸네일 이미지 설정', {
                   date: dateStr,
                   imageId: validImages[0].id,
                   thumbnailPath: validImages[0].thumbnail_path,
@@ -305,7 +308,7 @@ export const Calendar = forwardRef<CalendarRef, CalendarProps>(
         onDateChange(newDate);
       }
 
-      console.log('📅 Calendar: 월 변경', {
+      logger.debug('월 변경', {
         direction,
         oldDate: effectiveDate,
         newDate,
@@ -373,7 +376,7 @@ export const Calendar = forwardRef<CalendarRef, CalendarProps>(
               behavior: 'smooth',
             });
 
-            console.log('📅 Calendar: 다이어리 기록 섹션 스크롤 완료', {
+            logger.debug('다이어리 기록 섹션 스크롤 완료', {
               dateStr,
               scrollTop,
               sectionTop: rect.top,
@@ -383,10 +386,7 @@ export const Calendar = forwardRef<CalendarRef, CalendarProps>(
             });
           }
         } else {
-          console.log(
-            '❌ Calendar: 다이어리 기록 섹션을 찾을 수 없습니다.',
-            dateStr,
-          );
+          logger.warn('다이어리 기록 섹션을 찾을 수 없습니다.', dateStr);
         }
       }, 800); // 다이어리 기록이 렌더링된 후 스크롤 조정 (시간 증가)
     };
@@ -630,8 +630,8 @@ export const Calendar = forwardRef<CalendarRef, CalendarProps>(
                             [day.dateStr]: nextIndex,
                           }));
 
-                          console.log(
-                            '다음 이미지로 넘어감:',
+                          logger.debug(
+                            '이미지 순환 - 다음',
                             nextIndex,
                             day.allImages[nextIndex],
                           );
@@ -653,8 +653,8 @@ export const Calendar = forwardRef<CalendarRef, CalendarProps>(
                               [day.dateStr]: nextIndex,
                             }));
 
-                            console.log(
-                              '다음 이미지로 넘어감 (키보드):',
+                            logger.debug(
+                              '이미지 순환 - 이전',
                               nextIndex,
                               day.allImages[nextIndex],
                             );
@@ -681,9 +681,11 @@ export const Calendar = forwardRef<CalendarRef, CalendarProps>(
                         }}
                         onError={(e) => {
                           // 이미지 로드 실패 시 처리
-                          console.warn(
-                            `캘린더 썸네일 이미지 로드 실패: ${day.allImages[imageIndices[day.dateStr] || 0]}`,
-                          );
+                          logger.warn('캘린더 썸네일 이미지 로드 실패', {
+                            imagePath:
+                              day.allImages[imageIndices[day.dateStr] || 0],
+                            dateStr: day.dateStr,
+                          });
                           e.currentTarget.style.display = 'none';
                         }}
                       />

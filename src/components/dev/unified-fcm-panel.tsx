@@ -24,6 +24,9 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useFCMStore, initializeFCM } from '@/stores/fcm';
 import { notificationApi } from '@/lib/notification-api';
+import { getLogger } from '@/lib/logger';
+
+const logger = getLogger('UnifiedFCMPanel');
 
 /**
  * 통합된 FCM 테스트 및 관리 패널 컴포넌트
@@ -68,7 +71,7 @@ export default function UnifiedFCMPanel() {
         await initializeFCM();
         setIsInitialized(true);
       } catch (error) {
-        console.error('FCM 초기화 실패:', error);
+        logger.error('FCM 초기화 실패', { error });
       }
     };
     init();
@@ -118,7 +121,7 @@ export default function UnifiedFCMPanel() {
       setTestResults((prev) => ({ ...prev, health: response.success }));
       return response.success;
     } catch (error) {
-      console.error('FCM 헬스 체크 실패:', error);
+      logger.error('FCM 헬스 체크 실패', { error });
       setTestResults((prev) => ({ ...prev, health: false }));
       return false;
     }
@@ -132,7 +135,7 @@ export default function UnifiedFCMPanel() {
       setTestResults((prev) => ({ ...prev, tokenRegistration: success }));
       return success;
     } catch (error) {
-      console.error('토큰 등록 테스트 실패:', error);
+      logger.error('토큰 등록 테스트 실패', { error });
       setTestResults((prev) => ({ ...prev, tokenRegistration: false }));
       return false;
     }
@@ -158,7 +161,7 @@ export default function UnifiedFCMPanel() {
       setTestResults((prev) => ({ ...prev, settingsSync: true }));
       return true;
     } catch (error) {
-      console.error('설정 동기화 테스트 실패:', error);
+      logger.error('설정 동기화 테스트 실패', { error });
       setTestResults((prev) => ({ ...prev, settingsSync: false }));
       return false;
     }
@@ -179,7 +182,7 @@ export default function UnifiedFCMPanel() {
       }));
       return response.success;
     } catch (error) {
-      console.error('테스트 알림 전송 실패:', error);
+      logger.error('테스트 알림 전송 실패', { error });
       setTestResults((prev) => ({ ...prev, notificationSend: false }));
       return false;
     }
@@ -203,7 +206,7 @@ export default function UnifiedFCMPanel() {
         });
       }
     } catch (error) {
-      console.error('테스트 알림 전송 실패:', error);
+      logger.error('테스트 알림 전송 실패', { error });
       alert('테스트 알림 전송에 실패했습니다.');
     }
   };

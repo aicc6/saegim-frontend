@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
+import { getLogger } from '@/lib/logger';
 import { Calendar, CalendarRef } from '@/components/calendar';
 import { EmotionPieChart } from '@/components/charts/EmotionPieChart';
 import { KeywordBarChart } from '@/components/charts/KeywordBarChart';
@@ -17,6 +18,8 @@ import {
   KeywordData,
 } from '@/types/diary';
 import { cn } from '@/lib/utils';
+
+const logger = getLogger('calendar');
 
 export default function CalendarPage() {
   const router = useRouter();
@@ -55,15 +58,13 @@ export default function CalendarPage() {
   // 월별 데이터 로딩 함수
   const loadMonthData = useCallback(async () => {
     if (!isAuthenticated) {
-      console.log(
-        '❌ CalendarPage: 인증되지 않아 데이터를 로드할 수 없습니다.',
-      );
+      logger.warn('인증되지 않아 데이터를 로드할 수 없습니다.');
       return;
     }
 
     // 이미 로딩 중이면 중복 호출 방지 (데이터가 있어도 날짜 변경 시에는 로드)
     if (isLoading) {
-      console.log('📝 CalendarPage: 이미 로딩 중이어서 중복 호출 방지', {
+      logger.debug('이미 로딩 중이어서 중복 호출 방지', {
         isLoading,
         diariesCount: diaries.length,
       });
@@ -71,7 +72,7 @@ export default function CalendarPage() {
     }
 
     try {
-      console.log('📅 CalendarPage: 월별 데이터 로딩 시작', {
+      logger.info('월별 데이터 로딩 시작', {
         year: viewDate.getFullYear(),
         month: viewDate.getMonth() + 1,
         startDate: dateRange.startDate,
@@ -102,7 +103,7 @@ export default function CalendarPage() {
 
       if (response.ok) {
         const result = await response.json();
-        console.log('📡 CalendarPage: 쿠키 기반 API 호출 결과', result);
+        logger.debug('쿠키 기반 API 호출 결과', result);
 
         // 스토어 상태 업데이트
         if (result.data && Array.isArray(result.data)) {
@@ -119,7 +120,7 @@ export default function CalendarPage() {
               error: null,
             });
 
-            console.log('✅ CalendarPage: 데이터 로딩 완료', {
+            logger.info('데이터 로딩 완료', {
               diariesCount: result.data.length,
             });
           } else {
@@ -128,18 +129,16 @@ export default function CalendarPage() {
               isLoading: false,
               error: null,
             });
-            console.log(
-              '📝 CalendarPage: 데이터 변경사항 없음 (로딩 상태만 해제)',
-            );
+            logger.debug('데이터 변경사항 없음 (로딩 상태만 해제)');
           }
         }
       } else if (response.status === 401) {
-        console.log('❌ CalendarPage: 인증 실패, 로그인 페이지로 리다이렉트');
+        logger.warn('인증 실패, 로그인 페이지로 리다이렉트');
         // 인증 실패 시 로그인 페이지로 리다이렉트
         router.push('/login');
       }
     } catch (error) {
-      console.error('❌ CalendarPage: API 호출 실패', error);
+      logger.error('API 호출 실패', error);
       useDiaryStore.setState({
         error: '월별 데이터를 불러오는데 실패했습니다.',
         isLoading: false,
@@ -222,7 +221,7 @@ export default function CalendarPage() {
 
   // 필터링된 다이어리 목록 (삭제된 이미지 제외)
   const filteredDiaries = useMemo(() => {
-    console.log('🔄 CalendarPage: 다이어리 필터링 시작', {
+    logger.debug('다이어리 필터링 시작', {
       총_다이어리_수: diaries.length,
       삭제된_이미지_ID_수: deletedImageIds.size,
       삭제된_이미지_ID들: Array.from(deletedImageIds),
@@ -235,7 +234,7 @@ export default function CalendarPage() {
       ),
     }));
 
-    console.log('✅ CalendarPage: 다이어리 필터링 완료', {
+    logger.debug('다이어리 필터링 완료', {
       필터링_전_이미지_수: diaries.reduce(
         (sum, d) => sum + (d.images?.length || 0),
         0,
@@ -266,35 +265,35 @@ export default function CalendarPage() {
 
   // 인증 상태 확인 - 메인 페이지와 동일한 로직
   useEffect(() => {
-    console.log('🔄 CalendarPage useEffect 실행됨 - hasChecked:', hasChecked);
+    logger.debug('useEffect 실행됨 - hasChecked:', hasChecked);
 
     if (hasChecked) {
-      console.log('⏭️ CalendarPage 이미 체크됨 - 스킵');
+      logger.debug('이미 체크됨 - 스킵');
       return;
     }
 
     const handleAuthCheck = async () => {
-      console.log('🚀 CalendarPage handleAuthCheck 시작');
+      logger.debug('handleAuthCheck 시작');
       try {
         // 인증 상태 확인
-        console.log('🔍 CalendarPage 인증 상태 확인:', {
+        logger.debug('인증 상태 확인:', {
           isAuthenticated,
           hasUser: !!user,
         });
 
         // 이미 인증된 상태라면 스킵
         if (isAuthenticated && user) {
-          console.log('✅ CalendarPage 이미 인증됨 - 스킵');
+          logger.debug('이미 인증됨 - 스킵');
           setIsLoading(false);
           setHasChecked(true);
           return;
         }
 
         // 쿠키 기반 인증 확인 (localStorage 토큰 불필요)
-        console.log('🔍 CalendarPage 쿠키 기반 인증 확인 중');
+        logger.debug('쿠키 기반 인증 확인 중');
 
         try {
-          console.log('🔍 CalendarPage 서버 인증 확인 중...');
+          logger.debug('서버 인증 확인 중...');
 
           const apiBaseUrl =
             process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000';
@@ -309,8 +308,8 @@ export default function CalendarPage() {
 
           if (response.ok) {
             const userData = await response.json();
-            console.log(
-              '✅ CalendarPage 서버 인증 성공:',
+            logger.info(
+              '서버 인증 성공:',
               userData.data.email
                 ? `${userData.data.email.substring(0, 3)}***@${userData.data.email.split('@')[1]}`
                 : '사용자',
@@ -331,21 +330,21 @@ export default function CalendarPage() {
             setIsLoading(false);
             setHasChecked(true);
           } else {
-            console.log('❌ CalendarPage 서버 인증 실패:', response.status);
+            logger.warn('서버 인증 실패:', response.status);
             // 서버 인증 실패 시 로그인 페이지로 이동
             setHasChecked(true);
             setIsLoading(false);
             router.push('/login');
           }
         } catch (err) {
-          console.error('❌ CalendarPage 서버 인증 확인 실패:', err);
+          logger.error('서버 인증 확인 실패:', err);
           // 에러 발생 시 로그인 페이지로 이동
           setHasChecked(true);
           setIsLoading(false);
           router.push('/login');
         }
       } catch (err) {
-        console.error('❌ CalendarPage 인증 체크 실패:', err);
+        logger.error('인증 체크 실패:', err);
         setHasChecked(true);
         setIsLoading(false);
         router.push('/login');
@@ -354,12 +353,12 @@ export default function CalendarPage() {
 
     // 약간의 지연을 두어 페이지 로딩 완료 후 인증 확인
     const timer = setTimeout(() => {
-      console.log('⏰ CalendarPage 타이머 실행 - 인증 확인 시작');
+      logger.debug('타이머 실행 - 인증 확인 시작');
       handleAuthCheck();
     }, 100);
 
     return () => {
-      console.log('🧹 CalendarPage useEffect 정리 - 타이머 취소');
+      logger.debug('useEffect 정리 - 타이머 취소');
       clearTimeout(timer);
     };
   }, [hasChecked, isAuthenticated, router, user]);
@@ -367,7 +366,7 @@ export default function CalendarPage() {
   // 페이지 포커스 시 데이터 새로고침 (다이어리 수정 후 돌아왔을 때)
   useEffect(() => {
     const handleFocus = () => {
-      console.log('📅 CalendarPage: 페이지 포커스 감지, 데이터 새로고침');
+      logger.debug('페이지 포커스 감지, 데이터 새로고침');
       // 포커스 시에만 데이터 새로고침 (중복 방지)
       if (isAuthenticated && !isLoading) {
         loadMonthData();
@@ -381,7 +380,7 @@ export default function CalendarPage() {
   // 월 변경 시 데이터 로드 (한 번만 실행)
   useEffect(() => {
     if (isAuthenticated && !hasChecked && !isLoading) {
-      console.log('📅 CalendarPage: 초기 데이터 로드 (한 번만)');
+      logger.debug('초기 데이터 로드 (한 번만)');
       loadMonthData();
     }
   }, [isAuthenticated, hasChecked, isLoading, loadMonthData]);
@@ -420,7 +419,7 @@ export default function CalendarPage() {
   };
 
   const handleDateChange = (date: Date) => {
-    console.log('📅 CalendarPage: Calendar에서 날짜 변경 감지', {
+    logger.debug('Calendar에서 날짜 변경 감지', {
       oldDate: viewDate,
       newDate: date,
       oldMonth: viewDate.getMonth() + 1,
@@ -435,11 +434,11 @@ export default function CalendarPage() {
       viewDate.getFullYear() === date.getFullYear();
 
     if (isSameMonth) {
-      console.log('�� CalendarPage: 같은 월이므로 데이터 로드 스킵');
+      logger.debug('같은 월이므로 데이터 로드 스킵');
       return;
     }
 
-    console.log('�� CalendarPage: 다른 월이므로 데이터 로드 시작');
+    logger.debug('다른 월이므로 데이터 로드 시작');
     setViewDate(date);
 
     // 날짜가 변경되면 데이터를 새로 로드
@@ -616,7 +615,7 @@ export default function CalendarPage() {
                                         }}
                                         onError={(e) => {
                                           // 이미지 로드 실패 시 처리
-                                          console.warn(
+                                          logger.warn(
                                             `이미지 로드 실패: ${image.thumbnail_path}`,
                                           );
                                           e.currentTarget.style.display =

@@ -15,6 +15,7 @@ import {
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useToast } from '@/hooks/use-toast';
 import { apiClient } from '@/lib/api';
+import { logger } from '@/lib/logger';
 
 function ResetPasswordForm() {
   const router = useRouter();
@@ -104,7 +105,7 @@ function ResetPasswordForm() {
         }, 2000);
       }
     } catch (error: unknown) {
-      console.error('비밀번호 재설정 오류:', error);
+      logger.error('비밀번호 재설정 오류:', error);
 
       const apiError = error as { response?: { data?: { detail?: string } } };
       if (apiError.response?.data?.detail) {

@@ -2,6 +2,9 @@
 
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
+import { getLogger } from '@/lib/logger';
+
+const logger = getLogger('ChangeEmailForm');
 
 export default function ChangeEmailForm() {
   const [currentPassword, setCurrentPassword] = useState('');
@@ -13,7 +16,7 @@ export default function ChangeEmailForm() {
 
   const handlePasswordVerify = () => {
     // TODO: 현재 비밀번호 확인 API 호출
-    console.log('비밀번호 확인:', currentPassword);
+    logger.info('비밀번호 확인', { currentPassword });
     setIsVerified(true);
   };
 
@@ -27,7 +30,7 @@ export default function ChangeEmailForm() {
 
   const handleProfileUpdate = () => {
     // TODO: 프로필 업데이트 API 호출
-    console.log('프로필 업데이트:', profileData);
+    logger.info('프로필 업데이트', { profileData });
   };
 
   return (

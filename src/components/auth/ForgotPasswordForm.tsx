@@ -4,6 +4,9 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { authApi } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
+import { getLogger } from '@/lib/logger';
+
+const logger = getLogger('ForgotPasswordForm');
 
 export default function ForgotPasswordForm() {
   const router = useRouter();
@@ -38,8 +41,7 @@ export default function ForgotPasswordForm() {
       // 비밀번호 재설정 이메일 발송
       const response = await authApi.sendPasswordResetEmail({ email });
 
-      console.log('API 응답:', response);
-      console.log('응답 데이터:', response.data);
+      logger.info('API 응답', { response: response.data });
 
       // 이메일 발송 성공 시 토스트 메시지 표시
       toast({
@@ -48,13 +50,15 @@ export default function ForgotPasswordForm() {
         duration: 5000,
       });
     } catch (error: unknown) {
-      console.error('비밀번호 재설정 이메일 발송 실패:', error);
+      logger.error('비밀번호 재설정 이메일 발송 실패', { error });
       const apiError = error as { response?: { data?: { detail?: string } } };
       const errorMsg =
         apiError.response?.data?.detail || '이메일 발송에 실패했습니다.';
 
-      console.log('에러 메시지:', errorMsg);
-      console.log('에러 응답:', apiError.response?.data);
+      logger.error('에러 정보', {
+        errorMsg,
+        errorResponse: apiError.response?.data,
+      });
 
       // 소셜 계정 사용자인 경우 에러 페이지로 리다이렉트
       if (
@@ -65,8 +69,7 @@ export default function ForgotPasswordForm() {
         errorMsg.includes('Google 계정') ||
         errorMsg.includes('계정으로 가입된 사용자')
       ) {
-        console.log('소셜 계정 감지됨, 에러 페이지로 리다이렉트');
-        console.log('감지된 에러 메시지:', errorMsg);
+        logger.warn('소셜 계정 감지됨, 에러 페이지로 리다이렉트', { errorMsg });
         router.push('/error/reset-password');
         return;
       }

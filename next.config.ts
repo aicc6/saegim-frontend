@@ -2,6 +2,13 @@ import fs from 'fs';
 import path from 'path';
 import type { NextConfig } from 'next';
 
+// 빌드 타임 로깅 유틸리티
+const buildLog = {
+  info: (message: string) => console.log(`[Next.js Build] ${message}`),
+  error: (message: string, ...args: unknown[]) =>
+    console.error(`[Next.js Build ERROR] ${message}`, ...args),
+};
+
 // Service Worker 환경변수 주입 함수
 function injectEnvToServiceWorker() {
   const templatePath = path.join(
@@ -41,9 +48,9 @@ function injectEnvToServiceWorker() {
     });
 
     fs.writeFileSync(outputPath, swContent);
-    console.log('✅ Service Worker 환경변수 주입 완료');
+    buildLog.info('✅ Service Worker 환경변수 주입 완료');
   } else {
-    console.error(
+    buildLog.error(
       '❌ Service Worker 템플릿 파일을 찾을 수 없습니다:',
       templatePath,
     );

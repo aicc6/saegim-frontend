@@ -6,10 +6,13 @@ import GoogleLoginButton from '@/components/ui/custom/GoogleLoginButton';
 import { authApi } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
 import { useAuthStore } from '@/stores/auth';
+import { getLogger } from '@/lib/logger';
 
 interface LoginFormProps {
   redirectTo?: string | null;
 }
+
+const logger = getLogger('LoginForm');
 
 export default function LoginForm({ redirectTo }: LoginFormProps) {
   const router = useRouter();
@@ -102,8 +105,7 @@ export default function LoginForm({ redirectTo }: LoginFormProps) {
             }
           : { message: '알 수 없는 오류' };
 
-      console.error('로그인 실패:', error);
-      console.error('에러 상세 정보:', errorInfo);
+      logger.error('로그인 실패', { error, errorInfo });
 
       // 상세한 에러 메시지 처리
       let errorTitle = '로그인 실패';

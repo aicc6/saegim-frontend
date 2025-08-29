@@ -6,6 +6,9 @@ import {
   onMessage,
   isSupported,
 } from 'firebase/messaging';
+import { getLogger } from './logger';
+
+const logger = getLogger('firebase');
 
 // Firebase 설정 (환경변수에서 가져옴)
 const firebaseConfig = {
@@ -33,13 +36,13 @@ if (typeof window !== 'undefined') {
       if (supported) {
         messaging = getMessaging(app);
         messagingInitialized = true;
-        console.log('Firebase Messaging 초기화 완료');
+        logger.info('Firebase Messaging 초기화 완료');
       } else {
-        console.warn('FCM이 지원되지 않는 브라우저입니다.');
+        logger.warn('FCM이 지원되지 않는 브라우저입니다.');
       }
     })
     .catch((error) => {
-      console.error('FCM 지원 확인 중 오류:', error);
+      logger.error('FCM 지원 확인 중 오류:', error);
     });
 }
 
@@ -47,7 +50,7 @@ if (typeof window !== 'undefined') {
 export const requestFCMToken = async (): Promise<string | null> => {
   // messaging 인스턴스가 초기화될 때까지 대기
   if (!messagingInitialized) {
-    console.log('FCM 초기화를 기다리는 중...');
+    logger.info('FCM 초기화를 기다리는 중...');
 
     // 최대 5초간 초기화 대기
     for (let i = 0; i < 50; i++) {
@@ -56,7 +59,7 @@ export const requestFCMToken = async (): Promise<string | null> => {
     }
 
     if (!messagingInitialized || !messaging) {
-      console.warn('FCM이 지원되지 않는 환경이거나 초기화에 실패했습니다.');
+      logger.warn('FCM이 지원되지 않는 환경이거나 초기화에 실패했습니다.');
       return null;
     }
   }
@@ -68,18 +71,18 @@ export const requestFCMToken = async (): Promise<string | null> => {
       throw new Error('VAPID 키가 설정되지 않았습니다.');
     }
 
-    console.log('FCM 토큰 요청 시작...');
+    logger.debug('FCM 토큰 요청 시작...');
     const token = await getToken(messaging!, { vapidKey });
 
     if (token) {
-      console.log('FCM 토큰 생성 성공:', token.substring(0, 50) + '...');
+      logger.info('FCM 토큰 생성 성공:', token.substring(0, 50) + '...');
       return token;
     } else {
-      console.log('FCM 토큰 생성 실패 또는 권한이 거부되었습니다.');
+      logger.warn('FCM 토큰 생성 실패 또는 권한이 거부되었습니다.');
       return null;
     }
   } catch (error) {
-    console.error('FCM 토큰 요청 중 오류:', error);
+    logger.error('FCM 토큰 요청 중 오류:', error);
     return null;
   }
 };
@@ -92,7 +95,7 @@ export const onMessageListener = () => {
 
   return new Promise((resolve) => {
     onMessage(messaging!, (payload) => {
-      console.log('포그라운드 메시지 수신:', payload);
+      logger.info('포그라운드 메시지 수신:', payload);
       resolve(payload);
     });
   });

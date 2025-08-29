@@ -4,6 +4,9 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { authApi } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
+import { getLogger } from '@/lib/logger';
+
+const logger = getLogger('SignupForm');
 
 export default function SignupForm() {
   const router = useRouter();
@@ -92,7 +95,7 @@ export default function SignupForm() {
         };
         [key: string]: unknown;
       };
-      console.error('회원가입 실패:', error);
+      logger.error('회원가입 실패', { error });
       toast({
         title: '회원가입 실패',
         description:
@@ -150,7 +153,7 @@ export default function SignupForm() {
         };
         [key: string]: unknown;
       };
-      console.error('인증 코드 발송 실패:', error);
+      logger.error('인증 코드 발송 실패', { error });
       toast({
         title: '인증 코드 발송 실패',
         description:
@@ -203,7 +206,7 @@ export default function SignupForm() {
         };
         [key: string]: unknown;
       };
-      console.error('인증 코드 확인 실패:', error);
+      logger.error('인증 코드 확인 실패', { error });
       toast({
         title: '인증 실패',
         description:
@@ -259,7 +262,7 @@ export default function SignupForm() {
         });
       }
     } catch (error: unknown) {
-      console.error('닉네임 확인 실패:', error);
+      logger.error('닉네임 확인 실패', { error });
       toast({
         title: '닉네임 확인 실패',
         description: '닉네임 확인 중 오류가 발생했습니다.',

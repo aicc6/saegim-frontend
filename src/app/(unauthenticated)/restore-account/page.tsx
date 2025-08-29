@@ -4,6 +4,7 @@ import { useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { authApi } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
+import { logger } from '@/lib/logger';
 
 function RestoreAccountContent() {
   const router = useRouter();
@@ -37,7 +38,7 @@ function RestoreAccountContent() {
     } catch (error: unknown) {
       const errorMessage =
         error instanceof Error ? error.message : '알 수 없는 오류';
-      console.error('복구 이메일 발송 실패:', errorMessage);
+      logger.error('복구 이메일 발송 실패:', errorMessage);
 
       let displayMessage = '복구 이메일 발송에 실패했습니다.';
       const apiError = error as { response?: { data?: { detail?: string } } };
@@ -85,7 +86,7 @@ function RestoreAccountContent() {
     } catch (error: unknown) {
       const errorMessage =
         error instanceof Error ? error.message : '알 수 없는 오류';
-      console.error('계정 복구 실패:', errorMessage);
+      logger.error('계정 복구 실패:', errorMessage);
 
       let displayMessage = '계정 복구에 실패했습니다.';
       const apiError = error as { response?: { data?: { detail?: string } } };

@@ -14,6 +14,9 @@ import {
   useEmotionStore,
   EmotionConfig,
 } from '@/stores/emotion';
+import { getLogger } from '@/lib/logger';
+
+const logger = getLogger('CreateChat');
 
 // 타입 정의
 interface MessageVersion {
@@ -143,7 +146,7 @@ export default function CreateChat({ sessionId }: CreateChatProps) {
         setShowToast(true);
         setTimeout(() => setShowToast(false), 2000);
       } catch (error) {
-        console.error('클립보드 복사 실패:', error);
+        logger.error('클립보드 복사 실패', { error });
       }
     },
     [],
@@ -225,7 +228,7 @@ export default function CreateChat({ sessionId }: CreateChatProps) {
       }
 
       if (message && message.versions.length >= 5) {
-        console.log('⚠️ 재생성 횟수 제한 도달');
+        logger.warn('재생성 횟수 제한 도달');
         return;
       }
 
@@ -278,7 +281,7 @@ export default function CreateChat({ sessionId }: CreateChatProps) {
           }
         });
       } catch (error) {
-        console.error('💥 재생성 실패:', error);
+        logger.error('재생성 실패', { error });
       }
     },
     [prompt, emotion, isGenerating, style, length, sessionId],
@@ -331,7 +334,7 @@ export default function CreateChat({ sessionId }: CreateChatProps) {
           JSON.stringify(messagesForStorage),
         );
       } catch (error) {
-        console.error('localStorage 저장 실패:', error);
+        logger.error('localStorage 저장 실패', { error });
       }
     },
     [],
@@ -354,7 +357,7 @@ export default function CreateChat({ sessionId }: CreateChatProps) {
           })),
         }));
       } catch (error) {
-        console.error('localStorage 파싱 오류:', error);
+        logger.error('localStorage 파싱 오류', { error });
         const localStorageKey = `ai_messages_${sessionId}`;
         localStorage.removeItem(localStorageKey);
         return [];

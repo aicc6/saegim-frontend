@@ -15,6 +15,9 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { useFCMStore, initializeFCM } from '@/stores/fcm';
 import { notificationApi } from '@/lib/notification-api';
+import { getLogger } from '@/lib/logger';
+
+const logger = getLogger('FCMTestPanel');
 
 /**
  * FCM API 연동 테스트 패널 컴포넌트
@@ -54,7 +57,7 @@ export default function FCMTestPanel() {
         await initializeFCM();
         setIsInitialized(true);
       } catch (error) {
-        console.error('FCM 초기화 실패:', error);
+        logger.error('FCM 초기화 실패', { error });
       }
     };
     init();
@@ -67,7 +70,7 @@ export default function FCMTestPanel() {
       setTestResults((prev) => ({ ...prev, health: response.success }));
       return response.success;
     } catch (error) {
-      console.error('FCM 헬스 체크 실패:', error);
+      logger.error('FCM 헬스 체크 실패', { error });
       setTestResults((prev) => ({ ...prev, health: false }));
       return false;
     }
@@ -81,7 +84,7 @@ export default function FCMTestPanel() {
       setTestResults((prev) => ({ ...prev, tokenRegistration: success }));
       return success;
     } catch (error) {
-      console.error('토큰 등록 테스트 실패:', error);
+      logger.error('토큰 등록 테스트 실패', { error });
       setTestResults((prev) => ({ ...prev, tokenRegistration: false }));
       return false;
     }
@@ -106,7 +109,7 @@ export default function FCMTestPanel() {
 
       return true;
     } catch (error) {
-      console.error('설정 동기화 테스트 실패:', error);
+      logger.error('설정 동기화 테스트 실패', { error });
       setTestResults((prev) => ({ ...prev, settingsSync: false }));
       return false;
     }
@@ -128,7 +131,7 @@ export default function FCMTestPanel() {
       }));
       return response.success;
     } catch (error) {
-      console.error('테스트 알림 전송 실패:', error);
+      logger.error('테스트 알림 전송 실패', { error });
       setTestResults((prev) => ({ ...prev, notificationSend: false }));
       return false;
     }

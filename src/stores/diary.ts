@@ -10,6 +10,9 @@ import {
   DiaryFilters,
   CalendarDateRange,
 } from '@/types/diary';
+import { getLogger } from '../lib/logger';
+
+const logger = getLogger('diary');
 
 interface DiaryState {
   // 상태
@@ -129,7 +132,7 @@ export const useDiaryStore = create<DiaryState>((set, get) => ({
   // 캘린더용 다이어리 조회
   fetchCalendarDiaries: async (dateRange: CalendarDateRange) => {
     try {
-      console.log('🚀 DiaryStore: 캘린더 다이어리 조회 시작', {
+      logger.debug('캘린더 다이어리 조회 시작', {
         dateRange,
       });
 
@@ -140,7 +143,7 @@ export const useDiaryStore = create<DiaryState>((set, get) => ({
         dateRange.endDate,
       );
 
-      console.log('📡 DiaryStore: API 응답', {
+      logger.debug('API 응답', {
         response,
         data: response.data,
         dataType: typeof response.data,
@@ -150,7 +153,7 @@ export const useDiaryStore = create<DiaryState>((set, get) => ({
       // 백엔드 API 응답 구조에 맞게 처리
       const diaries = Array.isArray(response.data) ? response.data : [];
 
-      console.log('✅ DiaryStore: 처리된 데이터', {
+      logger.info('처리된 데이터', {
         diariesCount: diaries.length,
         diaries: diaries.slice(0, 3), // 처음 3개만 로그
       });
@@ -162,7 +165,7 @@ export const useDiaryStore = create<DiaryState>((set, get) => ({
         error: null,
       });
     } catch (error) {
-      console.error('❌ DiaryStore: 에러 발생', error);
+      logger.error('에러 발생', { error });
       set({
         error:
           error instanceof Error

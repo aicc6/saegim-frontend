@@ -4,6 +4,9 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { immer } from 'zustand/middleware/immer';
 import { apiClient } from '@/lib/api';
+import { getLogger } from '../lib/logger';
+
+const logger = getLogger('create');
 
 // ===== 타입 정의 =====
 export type WritingStyle = 'poem' | 'short_story';
@@ -106,7 +109,7 @@ export async function generateAIText(params: {
 
     // 🚀 디버깅: 재생성 요청 시 백엔드로 전달되는 정보 확인
     if (regeneration_count > 1) {
-      console.log('🔄 재생성 요청 - 백엔드로 전달되는 정보:', {
+      logger.debug('재생성 요청 - 백엔드로 전달되는 정보', {
         url: '/api/ai/generate',
         method: 'POST',
         requestBody,
@@ -123,7 +126,7 @@ export async function generateAIText(params: {
 
     // ✅ 디버깅: API 호출 성공 시 응답 정보
     if (regeneration_count > 1) {
-      console.log('✅ 재생성 API 호출 성공:', {
+      logger.info('재생성 API 호출 성공', {
         response_status: 'success',
         session_id: response.data.session_id,
         ai_generated_text_length: response.data.ai_generated_text?.length || 0,
@@ -133,11 +136,11 @@ export async function generateAIText(params: {
 
     return response.data;
   } catch (error) {
-    console.error('❌ AI 텍스트 생성 API 호출 실패:', error);
+    logger.error('AI 텍스트 생성 API 호출 실패', { error });
 
     // 🚀 디버깅: 재생성 요청 실패 시 상세 정보
     if (params.regeneration_count && params.regeneration_count > 1) {
-      console.error('💥 재생성 요청 실패 상세:', {
+      logger.error('재생성 요청 실패 상세', {
         error_type: 'API_CALL_FAILED',
         regeneration_count: params.regeneration_count,
         sessionId: params.sessionId || '없음',
@@ -152,7 +155,7 @@ export async function generateAIText(params: {
 
       // 🚀 디버깅: 422 오류 시 백엔드 응답 상세 정보
       if (error instanceof Error && error.message.includes('422')) {
-        console.error('💥 422 오류 상세 분석:', {
+        logger.error('422 오류 상세 분석', {
           error_type: 'VALIDATION_ERROR',
           http_status: 422,
           request_body: {
@@ -279,7 +282,7 @@ export const useCreateStore = create<CreateState>()(
               ? error.message
               : '텍스트 생성 중 오류가 발생했습니다.';
 
-          console.error('❌ AI 텍스트 생성 실패:', error);
+          logger.error('AI 텍스트 생성 실패', { error });
 
           set((state) => {
             state.error = errorMessage;
