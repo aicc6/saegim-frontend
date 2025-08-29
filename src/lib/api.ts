@@ -403,6 +403,18 @@ export const diaryApi = {
       end_date: endDate,
     }),
 
+  // 다이어리 생성
+  createDiary: async (data: {
+    title?: string;
+    content: string;
+    user_emotion?: string;
+    ai_generated_text?: string;
+    ai_emotion?: string;
+    ai_emotion_confidence?: number;
+    keywords?: string[];
+    is_public?: boolean;
+  }) => apiClient.post('/api/diary', data),
+
   // 다이어리 삭제
   deleteDiary: (id: string) => apiClient.delete(`/api/diary/${id}`),
 };

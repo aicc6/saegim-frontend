@@ -15,6 +15,7 @@ import {
   EmotionConfig,
 } from '@/stores/emotion';
 import { getLogger } from '@/lib/logger';
+import { diaryApi } from '@/lib/api';
 
 const logger = getLogger('CreateChat');
 
@@ -182,12 +183,34 @@ export default function CreateChat({ sessionId }: CreateChatProps) {
   }, []);
 
   const handleMoveToDiary = useCallback(
-    (messageContent: string, _messageEmotion?: string): void => {
-      alert(
-        `다이어리로 이동 기능은 아직 구현되지 않았습니다.\n\n생성된 텍스트: ${messageContent.substring(0, 100)}...`,
-      );
+    async (
+      messageContent: string,
+      messageEmotion?: string,
+      messageKeywords?: string[],
+    ): Promise<void> => {
+      try {
+        if (!prompt.trim()) {
+          alert('사용자 입력이 없어 다이어리를 저장할 수 없습니다.');
+          return;
+        }
+
+        await diaryApi.createDiary({
+          content: prompt.trim(),
+          user_emotion: emotion || undefined,
+          ai_generated_text: messageContent,
+          ai_emotion: messageEmotion || undefined,
+          ai_emotion_confidence: 0.8,
+          keywords: messageKeywords || [],
+          is_public: false,
+        });
+
+        alert('다이어리에 성공적으로 저장되었습니다!');
+      } catch (error) {
+        logger.error('다이어리 저장 실패:', error);
+        alert('다이어리 저장 중 오류가 발생했습니다. 다시 시도해주세요.');
+      }
     },
-    [],
+    [prompt, emotion],
   );
 
   const handleOptionKeyDown = useCallback(
@@ -594,6 +617,7 @@ export default function CreateChat({ sessionId }: CreateChatProps) {
                       handleMoveToDiary(
                         currentVersion.text,
                         currentVersion.emotion,
+                        currentVersion.keywords,
                       )
                     }
                     disabled={isGenerating}

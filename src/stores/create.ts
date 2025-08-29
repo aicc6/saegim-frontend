@@ -211,6 +211,7 @@ interface CreateState {
   getStyleDisplayName: (style: WritingStyle) => string;
   getLengthDisplayName: (length: LengthOption) => string;
   markAsProcessed: () => void; // 처리 완료 마킹
+  resetToDefaults: () => void; // 기본값으로 초기화
 }
 
 export const useCreateStore = create<CreateState>()(
@@ -308,12 +309,22 @@ export const useCreateStore = create<CreateState>()(
         set((state) => {
           state.wasJustGenerated = false;
         }),
+      resetToDefaults: () =>
+        set((state) => {
+          state.prompt = '';
+          state.style = 'poem';
+          state.length = 'short';
+          state.emotion = '';
+          state.error = null;
+          state.generatedText = null;
+          state.generatedKeywords = null;
+          state.sessionId = null;
+          state.wasJustGenerated = false;
+        }),
     })),
     {
       name: 'create-store',
       partialize: (state) => ({
-        style: state.style,
-        length: state.length,
         generatedText: state.generatedText,
         generatedKeywords: state.generatedKeywords,
       }),
