@@ -57,7 +57,9 @@ export const useDiaryStore = create<DiaryState>((set, get) => ({
   totalCount: 0,
   currentPage: 1,
   pageSize: 20,
-  deletedImageIds: new Set(), // 초기화
+  deletedImageIds: new Set(
+    JSON.parse(localStorage.getItem('deletedImageIds') || '[]'),
+  ), // localStorage에서 복원
 
   // 다이어리 목록 조회
   fetchDiaries: async (filters?: DiaryFilters) => {
@@ -252,22 +254,36 @@ export const useDiaryStore = create<DiaryState>((set, get) => ({
 
   // 이미지 삭제 ID 추가
   addDeletedImageId: (imageId: string) => {
-    set((state) => ({
-      deletedImageIds: new Set([...state.deletedImageIds, imageId]),
-    }));
+    set((state) => {
+      const newDeletedImageIds = new Set([...state.deletedImageIds, imageId]);
+      // localStorage에 저장
+      localStorage.setItem(
+        'deletedImageIds',
+        JSON.stringify(Array.from(newDeletedImageIds)),
+      );
+      return { deletedImageIds: newDeletedImageIds };
+    });
   },
 
   // 이미지 삭제 ID 제거
   removeDeletedImageId: (imageId: string) => {
-    set((state) => ({
-      deletedImageIds: new Set(
+    set((state) => {
+      const newDeletedImageIds = new Set(
         [...state.deletedImageIds].filter((id) => id !== imageId),
-      ),
-    }));
+      );
+      // localStorage에 저장
+      localStorage.setItem(
+        'deletedImageIds',
+        JSON.stringify(Array.from(newDeletedImageIds)),
+      );
+      return { deletedImageIds: newDeletedImageIds };
+    });
   },
 
   // 모든 삭제된 이미지 ID 초기화
   clearDeletedImageIds: () => {
+    // localStorage에서도 제거
+    localStorage.removeItem('deletedImageIds');
     set({ deletedImageIds: new Set() });
   },
 }));

@@ -429,8 +429,10 @@ export default function ViewPostPage({
     // 전역 상태 강제 업데이트
     useDiaryStore.setState({
       diaries: updatedDiaries,
-      deletedImageIds: new Set([...store.deletedImageIds, imageId]),
     });
+
+    // 삭제된 이미지 ID를 스토어에 추가 (localStorage 자동 저장)
+    useDiaryStore.getState().addDeletedImageId(imageId);
 
     // 이미지 삭제 상태 설정 (상태 잠금)
     setIsImageDeleted(true);
@@ -496,14 +498,10 @@ export default function ViewPostPage({
 
           // 현재 다이어리의 이미지 ID를 deletedImageIds에서 완전히 제거
           const currentStore = useDiaryStore.getState();
-          const updatedDeletedImageIds = new Set(
-            Array.from(currentStore.deletedImageIds).filter(
-              (id) => !existingImages.some((img: ImageInfo) => img.id === id),
-            ),
-          );
-
-          useDiaryStore.setState({
-            deletedImageIds: updatedDeletedImageIds,
+          existingImages.forEach((img: ImageInfo) => {
+            if (currentStore.deletedImageIds.has(img.id)) {
+              useDiaryStore.getState().removeDeletedImageId(img.id);
+            }
           });
 
           // localStorage에서도 해당 다이어리의 삭제된 이미지 ID 제거
@@ -521,7 +519,9 @@ export default function ViewPostPage({
             백엔드_이미지_수: existingImages.length,
             복원된_이미지_수: filteredImages.length,
             현재_삭제된_이미지_ID: Array.from(deletedImageIds),
-            업데이트된_삭제된_이미지_ID: Array.from(updatedDeletedImageIds),
+            업데이트된_삭제된_이미지_ID: Array.from(
+              useDiaryStore.getState().deletedImageIds,
+            ),
           });
 
           alert(

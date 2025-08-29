@@ -588,7 +588,6 @@ export default function CalendarPage() {
                               <div className="flex flex-wrap gap-1.5 justify-center">
                                 {entry.images
                                   .filter((img) => img.thumbnail_path)
-                                  .slice(0, 4) // 최대 4개 이미지 표시
                                   .map((image, index) => (
                                     <div
                                       key={index}

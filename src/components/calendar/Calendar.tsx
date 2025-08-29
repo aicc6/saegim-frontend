@@ -671,6 +671,8 @@ export const Calendar = forwardRef<CalendarRef, CalendarProps>(
                           'http://localhost:8000'
                         }/api/public/image-proxy?url=${encodeURIComponent(day.allImages[imageIndices[day.dateStr] || 0])}`}
                         alt="다이어리 이미지"
+                        width={90}
+                        height={70}
                         className="w-full h-full object-contain rounded-sm border border-white shadow-sm transition-all duration-200 bg-gray-50"
                         style={{
                           width: '100%',
