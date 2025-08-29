@@ -7,6 +7,7 @@ import { authApi } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
 import { useAuthStore } from '@/stores/auth';
 import { getLogger } from '@/lib/logger';
+import { BRAND_COLORS } from '@/constants/brand';
 
 interface LoginFormProps {
   redirectTo?: string | null;
@@ -235,11 +236,14 @@ export default function LoginForm({ redirectTo }: LoginFormProps) {
       <div className="mt-8 text-center">
         <h2
           className="text-3xl font-serif mb-5 tracking-tight"
-          style={{ color: '#5C8D89' }}
+          style={{ color: BRAND_COLORS.PRIMARY }}
         >
           새김에 오신 것을 환영합니다
         </h2>
-        <div className="mb-10 space-y-2 text-[#7BA098] dark:text-background-dark-brand/80 transition-colors">
+        <div
+          className="mb-10 space-y-2"
+          style={{ color: BRAND_COLORS.SECONDARY }}
+        >
           <p className="text-base font-light tracking-wide">
             AI와 함께하는 감성 다이어리로
           </p>

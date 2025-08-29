@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { authApi } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
 import { getLogger } from '@/lib/logger';
+import { BRAND_COLORS } from '@/constants/brand';
 
 const logger = getLogger('SignupForm');
 
@@ -300,11 +301,14 @@ export default function SignupForm() {
       <div className="mt-8 text-center">
         <h2
           className="text-3xl font-serif mb-5 tracking-tight"
-          style={{ color: '#5C8D89' }}
+          style={{ color: BRAND_COLORS.PRIMARY }}
         >
           새김에 가입하세요
         </h2>
-        <div className="mb-10 space-y-2 text-[#7BA098] dark:text-background-dark-brand/80 transition-colors">
+        <div
+          className="mb-10 space-y-2"
+          style={{ color: BRAND_COLORS.SECONDARY }}
+        >
           <p className="text-base font-light tracking-wide">
             AI와 함께하는 감성 다이어리로
           </p>
@@ -334,7 +338,7 @@ export default function SignupForm() {
               onClick={handleSendVerificationCode}
               disabled={!formData.email || emailVerified || isSendingCode}
               className="px-4 py-3 text-white dark:text-text-dark-on-color rounded-lg hover:opacity-90 active:opacity-100 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 text-sm font-medium shadow-sm hover:shadow-md focus:outline-none focus:ring-2 focus:ring-sage-50 dark:focus:ring-border-dark-focus focus:ring-offset-2 dark:focus:ring-offset-background-dark-secondary"
-              style={{ backgroundColor: '#5C8D89' }}
+              style={{ backgroundColor: BRAND_COLORS.PRIMARY }}
             >
               {isSendingCode
                 ? '발송중...'
@@ -369,7 +373,7 @@ export default function SignupForm() {
                   isVerifyingCode
                 }
                 className="px-4 py-3 text-white dark:text-text-dark-on-color rounded-lg hover:opacity-90 active:opacity-100 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 text-sm font-medium shadow-sm hover:shadow-md focus:outline-none focus:ring-2 focus:ring-sage-50 dark:focus:ring-border-dark-focus focus:ring-offset-2 dark:focus:ring-offset-background-dark-secondary"
-                style={{ backgroundColor: '#5C8D89' }}
+                style={{ backgroundColor: BRAND_COLORS.PRIMARY }}
               >
                 {isVerifyingCode ? '확인중...' : '확인'}
               </button>
@@ -428,7 +432,7 @@ export default function SignupForm() {
               onClick={handleNicknameCheck}
               disabled={!formData.nickname || nicknameChecked}
               className="px-4 py-3 text-white dark:text-text-dark-on-color rounded-lg hover:opacity-90 active:opacity-100 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 text-sm font-medium shadow-sm hover:shadow-md focus:outline-none focus:ring-2 focus:ring-sage-50 dark:focus:ring-border-dark-focus focus:ring-offset-2 dark:focus:ring-offset-background-dark-secondary"
-              style={{ backgroundColor: '#5C8D89' }}
+              style={{ backgroundColor: BRAND_COLORS.PRIMARY }}
             >
               {nicknameChecked ? '확인완료' : '중복확인'}
             </button>

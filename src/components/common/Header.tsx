@@ -7,6 +7,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTheme } from 'next-themes';
 import { useAuthStore } from '@/stores/auth';
+import { BRAND_ASSETS, BRAND_COLORS } from '@/constants/brand';
 import { Button } from '../ui/button';
 import ThemeToggle from '../ui/custom/ThemeToggle';
 
@@ -54,7 +55,7 @@ export default function Header() {
           >
             <div className="w-18 h-18 rounded-full flex items-center justify-center">
               <Image
-                src="/images/logoop.png"
+                src={BRAND_ASSETS.LOGO}
                 alt="새김 로고"
                 width={72}
                 height={72}
@@ -70,7 +71,7 @@ export default function Header() {
               className={`transition-colors flex items-center ${
                 isDark
                   ? 'text-gray-300 hover:text-white'
-                  : 'text-sage-80 hover:text-sage-100'
+                  : `text-[${BRAND_COLORS.SAGE_80}] hover:text-[${BRAND_COLORS.SAGE_100}]`
               }`}
             >
               로그인
@@ -80,7 +81,7 @@ export default function Header() {
               className={`transition-colors flex items-center ${
                 isDark
                   ? 'text-gray-300 hover:text-white'
-                  : 'text-sage-80 hover:text-sage-100'
+                  : `text-[${BRAND_COLORS.SAGE_80}] hover:text-[${BRAND_COLORS.SAGE_100}]`
               }`}
             >
               회원가입

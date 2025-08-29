@@ -202,9 +202,15 @@
   --emotion-unrest-secondary: #4c1d95; /* 어두운 보라색 */
 }
 
-/* 공통 버튼 스타일 */
+/* 공통 버튼 스타일 - 브랜드 색상 변수 사용 */
 .saegim-button {
-  @apply bg-[#5C8D89] text-white hover:bg-[#4A7A76] transition-colors;
+  background-color: var(--brand-primary, #5c8d89);
+  color: white;
+  transition: background-color 0.2s;
+}
+
+.saegim-button:hover {
+  background-color: var(--brand-primary-hover, #4a7a76);
 }
 
 .saegim-button-small {
@@ -217,11 +223,6 @@
 
 .saegim-button-large {
   @apply px-6 py-3 text-base rounded-lg font-medium;
-}
-
-/* 공통 버튼 스타일 */
-.saegim-button {
-  @apply bg-[#5C8D89] text-white hover:bg-[#4A7A76] transition-colors;
 }
 
 .saegim-button-small {

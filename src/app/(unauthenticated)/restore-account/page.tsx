@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { authApi } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
 import { logger } from '@/lib/logger';
+import { BRAND_COLORS } from '@/constants/brand';
 
 function RestoreAccountContent() {
   const router = useRouter();
@@ -112,11 +113,14 @@ function RestoreAccountContent() {
             <div className="text-center">
               <h2
                 className="text-3xl font-serif mb-5 tracking-tight"
-                style={{ color: '#5C8D89' }}
+                style={{ color: BRAND_COLORS.PRIMARY }}
               >
                 🔄 계정 복구
               </h2>
-              <div className="mb-10 space-y-2 text-[#7BA098] dark:text-background-dark-brand/80 transition-colors">
+              <div
+                className="mb-10 space-y-2"
+                style={{ color: BRAND_COLORS.SECONDARY }}
+              >
                 <p className="text-base font-light tracking-wide">
                   탈퇴된 계정을 복구할 수 있습니다
                 </p>
