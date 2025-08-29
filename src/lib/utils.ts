@@ -1,4 +1,5 @@
 import { type ClassValue, clsx } from 'clsx';
+import { LOCALES } from '@/constants/locale';
 
 export function cn(...inputs: ClassValue[]) {
   return clsx(inputs);
@@ -15,7 +16,7 @@ export function formatDate(date: string | Date): string {
     d = date;
   }
 
-  return d.toLocaleDateString('ko-KR', {
+  return d.toLocaleDateString(LOCALES.KOREAN, {
     year: 'numeric',
     month: 'long',
     day: 'numeric',
@@ -24,7 +25,7 @@ export function formatDate(date: string | Date): string {
 
 export function formatTime(date: string | Date): string {
   const d = new Date(date);
-  return d.toLocaleTimeString('ko-KR', {
+  return d.toLocaleTimeString(LOCALES.KOREAN, {
     hour: '2-digit',
     minute: '2-digit',
   });

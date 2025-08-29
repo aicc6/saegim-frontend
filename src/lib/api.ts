@@ -4,6 +4,7 @@
 
 import { DiaryListEntry } from '@/types/diary';
 import { TIMEOUTS } from '@/constants/timeouts';
+import { CONTENT_TYPES, ACCEPT_TYPES } from '@/constants/locale';
 import { getLogger } from './logger';
 
 // HTTPS 강제 - 보안상 HTTP 프로토콜 사용 금지
@@ -77,8 +78,8 @@ class ApiClient {
     const defaultOptions: RequestInit = {
       credentials: 'include', // 모든 API 호출에 쿠키 포함 (통일된 인증 방식)
       headers: {
-        'Content-Type': 'application/json; charset=utf-8',
-        Accept: 'application/json; charset=utf-8',
+        'Content-Type': CONTENT_TYPES.JSON_UTF8,
+        Accept: ACCEPT_TYPES.JSON_UTF8,
         'Accept-Charset': 'utf-8',
         ...options.headers,
       },
@@ -183,7 +184,7 @@ class ApiClient {
         method: 'POST',
         credentials: 'include', // 쿠키에서 refresh_token 자동 전송
         headers: {
-          'Content-Type': 'application/json',
+          'Content-Type': CONTENT_TYPES.JSON,
         },
         signal: controller.signal,
       });

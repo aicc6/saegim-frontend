@@ -7,6 +7,7 @@ import { useToast } from '@/hooks/use-toast';
 import { getLogger } from '@/lib/logger';
 import { BRAND_COLORS } from '@/constants/brand';
 import { VALIDATION } from '@/constants/timeouts';
+import { REGEX_PATTERNS } from '@/constants/locale';
 
 const logger = getLogger('SignupForm');
 
@@ -63,8 +64,7 @@ export default function SignupForm() {
     }
 
     // 닉네임 유효성 검사 (한글과 영문만 허용)
-    const koreanEnglishOnly = /^[가-힣a-zA-Z]+$/;
-    if (!koreanEnglishOnly.test(formData.nickname)) {
+    if (!REGEX_PATTERNS.KOREAN_ENGLISH_ONLY.test(formData.nickname)) {
       toast({
         title: '닉네임 형식 오류',
         description: '닉네임은 한글과 영문만 사용 가능합니다.',
@@ -233,8 +233,7 @@ export default function SignupForm() {
     }
 
     // 닉네임 유효성 검사 (한글과 영문만 허용)
-    const koreanEnglishOnly = /^[가-힣a-zA-Z]+$/;
-    if (!koreanEnglishOnly.test(formData.nickname)) {
+    if (!REGEX_PATTERNS.KOREAN_ENGLISH_ONLY.test(formData.nickname)) {
       toast({
         title: '닉네임 형식 오류',
         description: '닉네임은 한글과 영문만 사용 가능합니다.',
@@ -287,9 +286,13 @@ export default function SignupForm() {
       formData.password.length >= VALIDATION.PASSWORD_MIN_LENGTH;
 
     // 비밀번호 복잡성 검사 (영문, 숫자, 특수문자 포함)
-    const hasLetter = /[a-zA-Z]/.test(formData.password);
-    const hasNumber = /\d/.test(formData.password);
-    const hasSpecialChar = /[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/.test(
+    const hasLetter = REGEX_PATTERNS.PASSWORD_COMPLEXITY.LETTER.test(
+      formData.password,
+    );
+    const hasNumber = REGEX_PATTERNS.PASSWORD_COMPLEXITY.NUMBER.test(
+      formData.password,
+    );
+    const hasSpecialChar = REGEX_PATTERNS.PASSWORD_COMPLEXITY.SPECIAL_CHAR.test(
       formData.password,
     );
     const isPasswordComplex = hasLetter && hasNumber && hasSpecialChar;
