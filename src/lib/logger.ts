@@ -41,7 +41,7 @@ class Logger {
     this.config = {
       level: this.getDefaultLevel(),
       prefix: name,
-      enableColors: process.env.NODE_ENV === 'development',
+      enableColors: false, // 브라우저에서는 ANSI 색상 코드 비활성화
       enableTimestamp: true,
       ...config,
     };
