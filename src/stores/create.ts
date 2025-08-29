@@ -195,6 +195,7 @@ interface CreateState {
   generatedText: string | null;
   generatedKeywords: string[] | null;
   sessionId: string | null; // session_id 상태 추가
+  wasJustGenerated: boolean; // 방금 생성되었는지 추적
 
   // 기본 액션
   setPrompt: (prompt: string) => void;
@@ -209,6 +210,7 @@ interface CreateState {
   // 유틸리티
   getStyleDisplayName: (style: WritingStyle) => string;
   getLengthDisplayName: (length: LengthOption) => string;
+  markAsProcessed: () => void; // 처리 완료 마킹
 }
 
 export const useCreateStore = create<CreateState>()(
@@ -225,6 +227,7 @@ export const useCreateStore = create<CreateState>()(
       generatedText: null,
       generatedKeywords: null,
       sessionId: null, // 빈 문자열이 아닌 null로 설정
+      wasJustGenerated: false,
 
       // 기본 액션들
       setPrompt: (prompt) =>
@@ -275,6 +278,7 @@ export const useCreateStore = create<CreateState>()(
             state.generatedKeywords = response.keywords;
             state.sessionId = response.session_id; // session_id 저장
             state.isGenerating = false;
+            state.wasJustGenerated = true; // 방금 생성되었음을 표시
           });
         } catch (error) {
           const errorMessage =
@@ -304,6 +308,10 @@ export const useCreateStore = create<CreateState>()(
           config.lengths.find((l) => l.value === length)?.displayName || length
         );
       },
+      markAsProcessed: () =>
+        set((state) => {
+          state.wasJustGenerated = false;
+        }),
     })),
     {
       name: 'create-store',

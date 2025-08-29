@@ -88,12 +88,14 @@ export default function CreateChat({ sessionId }: CreateChatProps) {
     generatedText,
     generatedKeywords,
     sessionId: storeSessionId,
+    wasJustGenerated,
     setPrompt,
     setStyle,
     setLength,
     generateText,
     getStyleDisplayName,
     getLengthDisplayName,
+    markAsProcessed,
   } = useCreateStore();
 
   const {
@@ -391,7 +393,7 @@ export default function CreateChat({ sessionId }: CreateChatProps) {
   }, [generatedMessages, sessionId, saveMessagesToLocalStorage]);
 
   useEffect(() => {
-    if (generatedText && !isGenerating) {
+    if (generatedText && !isGenerating && wasJustGenerated) {
       const newVersion: MessageVersion = {
         id: `version_${generateId()}`,
         text: generatedText,
@@ -411,6 +413,7 @@ export default function CreateChat({ sessionId }: CreateChatProps) {
       };
 
       setGeneratedMessages((prev) => [...prev, newMessage]);
+      markAsProcessed(); // 처리 완료 마킹
     }
   }, [
     generatedText,
@@ -421,6 +424,8 @@ export default function CreateChat({ sessionId }: CreateChatProps) {
     sessionId,
     storeSessionId,
     isGenerating,
+    wasJustGenerated,
+    markAsProcessed,
   ]);
 
   useEffect(() => {
