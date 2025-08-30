@@ -5,10 +5,7 @@ import { useForm } from 'react-hook-form';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { authApi } from '@/lib/api';
 import { useApiError } from '@/hooks/use-api-error';
-import {
-  validatePassword,
-  validatePasswordConfirmation,
-} from '@/lib/validation';
+import { useFormValidationRules } from '@/hooks/use-form-validation-rules';
 import { FormInput } from '@/components/ui/form-input';
 
 interface FormData {
@@ -22,6 +19,7 @@ export default function ResetPasswordForm() {
   const { handleApiError, showSuccess } = useApiError({
     loggerName: 'ResetPasswordForm',
   });
+  const { passwordRules, passwordConfirmRules } = useFormValidationRules();
 
   const {
     register,
@@ -120,13 +118,7 @@ export default function ResetPasswordForm() {
           <FormInput
             type="password"
             id="newPassword"
-            {...register('newPassword', {
-              required: '비밀번호를 입력해주세요.',
-              validate: (value) => {
-                const validation = validatePassword(value);
-                return validation.isValid || validation.errors[0];
-              },
-            })}
+            {...register('newPassword', passwordRules)}
             placeholder="새 비밀번호를 입력하세요"
             error={errors.newPassword?.message}
             disabled={isSubmitting}
@@ -144,16 +136,7 @@ export default function ResetPasswordForm() {
           <FormInput
             type="password"
             id="confirmPassword"
-            {...register('confirmPassword', {
-              required: '비밀번호 확인을 입력해주세요.',
-              validate: (value) => {
-                const validation = validatePasswordConfirmation(
-                  newPassword,
-                  value,
-                );
-                return validation.isValid || validation.error;
-              },
-            })}
+            {...register('confirmPassword', passwordConfirmRules(newPassword))}
             placeholder="새 비밀번호를 다시 입력하세요"
             error={errors.confirmPassword?.message}
             disabled={isSubmitting}

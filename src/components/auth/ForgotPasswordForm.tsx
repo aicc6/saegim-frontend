@@ -4,7 +4,7 @@ import { useForm } from 'react-hook-form';
 import { useRouter } from 'next/navigation';
 import { authApi } from '@/lib/api';
 import { useApiError } from '@/hooks/use-api-error';
-import { validateEmail } from '@/lib/validation';
+import { useFormValidationRules } from '@/hooks/use-form-validation-rules';
 import { FormInput } from '@/components/ui/form-input';
 
 interface FormData {
@@ -17,6 +17,7 @@ export default function ForgotPasswordForm() {
     loggerName: 'ForgotPasswordForm',
     socialAccountRedirectPath: '/error/reset-password',
   });
+  const { emailRules } = useFormValidationRules();
 
   const {
     register,
@@ -75,13 +76,7 @@ export default function ForgotPasswordForm() {
             <FormInput
               type="email"
               id="email"
-              {...register('email', {
-                required: '이메일을 입력해주세요.',
-                validate: (value) => {
-                  const validation = validateEmail(value);
-                  return validation.isValid || validation.error;
-                },
-              })}
+              {...register('email', emailRules)}
               placeholder="example@email.com"
               error={errors.email?.message}
             />

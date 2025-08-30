@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { EmotionType } from '@/types';
+import { EmotionType } from '@/types/diary';
 import { getEmotionColor, cn } from '@/lib/utils';
 
 interface AIQuote {

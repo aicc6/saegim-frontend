@@ -1,5 +1,5 @@
 // 공통 타입 정의
-export type EmotionType = 'happy' | 'sad' | 'angry' | 'peaceful' | 'unrest';
+import type { EmotionType } from './diary';
 
 export interface User {
   id: string;
@@ -8,20 +8,6 @@ export interface User {
   profileImage?: string;
   provider: 'google' | 'kakao' | 'naver' | 'email';
   createdAt: string;
-}
-
-export interface DiaryEntry {
-  id: string;
-  title: string;
-  content: string;
-  user_emotion?: EmotionType;
-  ai_emotion?: EmotionType;
-  ai_emotion_confidence?: number;
-  ai_generated_text?: string;
-  keywords?: string[];
-  is_public: boolean;
-  created_at: string;
-  updated_at: string;
 }
 
 export interface AIStyle {
@@ -47,52 +33,6 @@ export interface MonthlyReport {
   totalEntries: number;
   mostCommonEmotion: EmotionType;
   summary: string;
-}
-
-export interface CalendarDay {
-  date: string;
-  entries: DiaryEntry[];
-  dominantEmotion?: EmotionType;
-  hasEntries: boolean;
-}
-
-// API 에러 처리 타입
-export interface ApiError {
-  message: string;
-  status: number;
-  code?: string;
-  detail?: string | Record<string, unknown>;
-  validation_errors?: Record<string, string[]>;
-}
-
-export interface ApiErrorResponse {
-  data: unknown;
-  status: number;
-}
-
-// 형식화된 에러 타입
-export class FormattedError extends Error {
-  public status: number;
-  public code?: string;
-  public detail?: string | Record<string, unknown>;
-  public response?: ApiErrorResponse;
-
-  constructor(
-    message: string,
-    status: number,
-    options?: {
-      code?: string;
-      detail?: string | Record<string, unknown>;
-      response?: ApiErrorResponse;
-    },
-  ) {
-    super(message);
-    this.name = 'FormattedError';
-    this.status = status;
-    this.code = options?.code;
-    this.detail = options?.detail;
-    this.response = options?.response;
-  }
 }
 
 // 인증 관련 에러 타입

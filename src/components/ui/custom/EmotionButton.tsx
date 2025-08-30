@@ -1,5 +1,5 @@
 import { ButtonHTMLAttributes } from 'react';
-import { EmotionType } from '@/types';
+import { EmotionType } from '@/types/diary';
 import { cn, getEmotionColor, getEmotionEmoji } from '@/lib/utils';
 
 interface EmotionButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {

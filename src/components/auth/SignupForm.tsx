@@ -1,125 +1,70 @@
 'use client';
 
 import { useState } from 'react';
+import { useForm } from 'react-hook-form';
 import { useRouter } from 'next/navigation';
 
 import { FormInput } from '@/components/ui/form-input';
 import { useApiError } from '@/hooks/use-api-error';
-import {
-  authApi,
-  validateEmail,
-  validatePassword,
-  validatePasswordConfirmation,
-  validateNickname,
-  validateVerificationCode,
-} from '@/lib';
+import { useFormValidationRules } from '@/hooks/use-form-validation-rules';
+import { authApi } from '@/lib/api';
 import { BRAND_COLORS, VALIDATION } from '@/constants';
+
+interface FormData {
+  email: string;
+  password: string;
+  confirmPassword: string;
+  nickname: string;
+  verificationCode: string;
+}
 
 export default function SignupForm() {
   const router = useRouter();
   const { handleApiError, showSuccess } = useApiError({
     loggerName: 'SignupForm',
   });
+  const {
+    emailRules,
+    passwordRules,
+    passwordConfirmRules,
+    nicknameRules,
+    verificationCodeRules,
+  } = useFormValidationRules();
 
-  const [formData, setFormData] = useState({
-    email: '',
-    password: '',
-    confirmPassword: '',
-    nickname: '',
-    verificationCode: '',
+  const {
+    register,
+    handleSubmit,
+    watch,
+    formState: { errors, isSubmitting },
+    trigger,
+  } = useForm<FormData>({
+    mode: 'onChange',
   });
 
-  // 검증 에러 상태
-  const [errors, setErrors] = useState<{
-    email?: string;
-    password?: string;
-    confirmPassword?: string;
-    nickname?: string;
-    verificationCode?: string;
-  }>({});
+  // Watch specific fields for business logic
+  const email = watch('email');
+  const password = watch('password');
+  const nickname = watch('nickname');
+  const verificationCode = watch('verificationCode');
 
+  // Business logic states (kept as useState)
   const [emailVerified, setEmailVerified] = useState(false);
   const [nicknameChecked, setNicknameChecked] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
   const [isSendingCode, setIsSendingCode] = useState(false);
   const [isVerifyingCode, setIsVerifyingCode] = useState(false);
   const [codeSent, setCodeSent] = useState(false);
 
-  // 폼 검증 함수
-  const validateForm = (): boolean => {
-    const newErrors: typeof errors = {};
-
-    // 이메일 검증
-    const emailValidation = validateEmail(formData.email);
-    if (!emailValidation.isValid) {
-      newErrors.email = emailValidation.error;
-    }
-
-    // 비밀번호 검증
-    const passwordValidation = validatePassword(formData.password);
-    if (!passwordValidation.isValid) {
-      newErrors.password = passwordValidation.errors[0]; // 첫 번째 에러만 표시
-    }
-
-    // 비밀번호 확인 검증
-    const confirmValidation = validatePasswordConfirmation(
-      formData.password,
-      formData.confirmPassword,
-    );
-    if (!confirmValidation.isValid) {
-      newErrors.confirmPassword = confirmValidation.error;
-    }
-
-    // 닉네임 검증
-    const nicknameValidation = validateNickname(
-      formData.nickname,
-      VALIDATION.NICKNAME_MIN_LENGTH,
-      VALIDATION.NICKNAME_MAX_LENGTH,
-    );
-    if (!nicknameValidation.isValid) {
-      newErrors.nickname = nicknameValidation.error;
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+  // Reset business logic states when fields change
+  const resetEmailVerification = () => {
+    setEmailVerified(false);
+    setCodeSent(false);
   };
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
-
-    // 에러 상태 초기화
-    if (errors[name as keyof typeof errors]) {
-      setErrors((prev) => ({
-        ...prev,
-        [name]: undefined,
-      }));
-    }
-
-    // 닉네임 필드인 경우 중복 확인 상태 초기화
-    if (name === 'nickname' && nicknameChecked) {
-      setNicknameChecked(false);
-    }
-
-    // 이메일 필드인 경우 인증 상태 초기화
-    if (name === 'email' && emailVerified) {
-      setEmailVerified(false);
-      setCodeSent(false);
-    }
+  const resetNicknameCheck = () => {
+    setNicknameChecked(false);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    // 폼 검증
-    if (!validateForm()) {
-      return;
-    }
-
+  const onSubmit = async (data: FormData) => {
     if (!emailVerified || !nicknameChecked) {
       handleApiError(
         new Error('입력 확인 필요'),
@@ -129,18 +74,14 @@ export default function SignupForm() {
       return;
     }
 
-    setIsLoading(true);
-
     try {
       await authApi.signup({
-        email: formData.email,
-        password: formData.password,
-        nickname: formData.nickname,
+        email: data.email,
+        password: data.password,
+        nickname: data.nickname,
       });
 
       showSuccess('회원가입 성공', '새김에 가입해주셔서 감사합니다!');
-
-      // 로그인 페이지로 이동
       router.push('/login');
     } catch (error: unknown) {
       handleApiError(
@@ -148,23 +89,21 @@ export default function SignupForm() {
         '회원가입 실패',
         '회원가입 중 오류가 발생했습니다.',
       );
-    } finally {
-      setIsLoading(false);
     }
   };
 
   const handleSendVerificationCode = async () => {
-    const emailValidation = validateEmail(formData.email);
-    if (!emailValidation.isValid) {
-      setErrors((prev) => ({ ...prev, email: emailValidation.error }));
-      return;
-    }
+    if (!email) return;
+
+    // 폼 검증 트리거
+    const isEmailValid = await trigger('email');
+    if (!isEmailValid) return;
 
     setIsSendingCode(true);
 
     try {
       // 먼저 이메일 중복 확인
-      const emailCheckResponse = await authApi.checkEmail(formData.email);
+      const emailCheckResponse = await authApi.checkEmail(email);
 
       const emailCheckData = emailCheckResponse.data as {
         available?: boolean;
@@ -172,15 +111,16 @@ export default function SignupForm() {
       };
 
       if (!emailCheckData.available) {
-        setErrors((prev) => ({
-          ...prev,
-          email: '이미 사용 중인 이메일입니다.',
-        }));
+        handleApiError(
+          new Error('이메일 중복'),
+          '이메일 사용 불가',
+          '이미 사용 중인 이메일입니다.',
+        );
         return;
       }
 
       // 인증 코드 발송
-      await authApi.sendVerificationEmail({ email: formData.email });
+      await authApi.sendVerificationEmail({ email });
 
       setCodeSent(true);
       showSuccess('인증 코드 발송', '이메일로 인증 코드가 발송되었습니다.');
@@ -196,24 +136,18 @@ export default function SignupForm() {
   };
 
   const handleVerifyCode = async () => {
-    const codeValidation = validateVerificationCode(
-      formData.verificationCode,
-      VALIDATION.VERIFICATION_CODE_LENGTH,
-    );
-    if (!codeValidation.isValid) {
-      setErrors((prev) => ({
-        ...prev,
-        verificationCode: codeValidation.error,
-      }));
-      return;
-    }
+    if (!verificationCode || !email) return;
+
+    // 폼 검증 트리거
+    const isCodeValid = await trigger('verificationCode');
+    if (!isCodeValid) return;
 
     setIsVerifyingCode(true);
 
     try {
       await authApi.verifyEmail({
-        email: formData.email,
-        verification_code: formData.verificationCode,
+        email,
+        verification_code: verificationCode,
       });
 
       setEmailVerified(true);
@@ -226,18 +160,14 @@ export default function SignupForm() {
   };
 
   const handleNicknameCheck = async () => {
-    const nicknameValidation = validateNickname(
-      formData.nickname,
-      VALIDATION.NICKNAME_MIN_LENGTH,
-      VALIDATION.NICKNAME_MAX_LENGTH,
-    );
-    if (!nicknameValidation.isValid) {
-      setErrors((prev) => ({ ...prev, nickname: nicknameValidation.error }));
-      return;
-    }
+    if (!nickname) return;
+
+    // 폼 검증 트리거
+    const isNicknameValid = await trigger('nickname');
+    if (!isNicknameValid) return;
 
     try {
-      const response = await authApi.checkNickname(formData.nickname);
+      const response = await authApi.checkNickname(nickname);
 
       const responseData = response.data as {
         available?: boolean;
@@ -248,10 +178,11 @@ export default function SignupForm() {
         setNicknameChecked(true);
         showSuccess('닉네임 확인 완료', '사용 가능한 닉네임입니다.');
       } else {
-        setErrors((prev) => ({
-          ...prev,
-          nickname: '이미 사용 중인 닉네임입니다.',
-        }));
+        handleApiError(
+          new Error('닉네임 중복'),
+          '닉네임 사용 불가',
+          '이미 사용 중인 닉네임입니다.',
+        );
       }
     } catch (error: unknown) {
       handleApiError(
@@ -264,17 +195,9 @@ export default function SignupForm() {
 
   // 회원가입 버튼 활성화 조건
   const isFormValid = () => {
-    const hasRequiredFields =
-      formData.email &&
-      formData.password &&
-      formData.confirmPassword &&
-      formData.nickname;
-    const passwordsMatch = formData.password === formData.confirmPassword;
-    // 비밀번호 복잡성 검사 (통합 검증 사용)
-    const passwordValidation = validatePassword(formData.password);
-    const isPasswordComplex = passwordValidation.isValid;
-
-    return hasRequiredFields && passwordsMatch && isPasswordComplex;
+    const hasRequiredFields = email && password && nickname;
+    const hasNoErrors = Object.keys(errors).length === 0;
+    return hasRequiredFields && hasNoErrors && emailVerified && nicknameChecked;
   };
 
   return (
@@ -300,7 +223,7 @@ export default function SignupForm() {
         </div>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-6">
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
         {/* 이메일 입력 */}
         <div className="space-y-2">
           <div className="flex space-x-2">
@@ -308,19 +231,22 @@ export default function SignupForm() {
               <FormInput
                 type="email"
                 id="email"
-                name="email"
-                value={formData.email}
-                onChange={handleInputChange}
+                {...register('email', {
+                  ...emailRules,
+                  onChange: () => {
+                    resetEmailVerification();
+                  },
+                })}
                 placeholder="이메일 입력"
-                error={errors.email}
+                error={errors.email?.message}
                 required
-                disabled={emailVerified}
+                disabled={emailVerified || isSubmitting}
               />
             </div>
             <button
               type="button"
               onClick={handleSendVerificationCode}
-              disabled={!formData.email || emailVerified || isSendingCode}
+              disabled={!email || emailVerified || isSendingCode}
               className="saegim-button saegim-button-small"
             >
               {isSendingCode
@@ -340,21 +266,19 @@ export default function SignupForm() {
                 <FormInput
                   type="text"
                   id="verificationCode"
-                  name="verificationCode"
-                  value={formData.verificationCode}
-                  onChange={handleInputChange}
+                  {...register('verificationCode', verificationCodeRules)}
                   placeholder={`인증 코드 ${VALIDATION.VERIFICATION_CODE_LENGTH}자리 입력`}
-                  error={errors.verificationCode}
+                  error={errors.verificationCode?.message}
                   maxLength={VALIDATION.VERIFICATION_CODE_LENGTH}
-                  disabled={isVerifyingCode}
+                  disabled={isVerifyingCode || isSubmitting}
                 />
               </div>
               <button
                 type="button"
                 onClick={handleVerifyCode}
                 disabled={
-                  !formData.verificationCode ||
-                  formData.verificationCode.length !==
+                  !verificationCode ||
+                  verificationCode.length !==
                     VALIDATION.VERIFICATION_CODE_LENGTH ||
                   isVerifyingCode
                 }
@@ -373,24 +297,22 @@ export default function SignupForm() {
         <FormInput
           type="password"
           id="password"
-          name="password"
-          value={formData.password}
-          onChange={handleInputChange}
+          {...register('password', passwordRules)}
           placeholder={`비밀번호 입력 (영문, 숫자, 특수문자 포함 ${VALIDATION.PASSWORD_MIN_LENGTH}자 이상)`}
-          error={errors.password}
+          error={errors.password?.message}
           required
+          disabled={isSubmitting}
         />
 
         {/* 비밀번호 확인 */}
         <FormInput
           type="password"
           id="confirmPassword"
-          name="confirmPassword"
-          value={formData.confirmPassword}
-          onChange={handleInputChange}
+          {...register('confirmPassword', passwordConfirmRules(password))}
           placeholder="비밀번호 확인"
-          error={errors.confirmPassword}
+          error={errors.confirmPassword?.message}
           required
+          disabled={isSubmitting}
         />
 
         {/* 닉네임 입력 */}
@@ -400,20 +322,23 @@ export default function SignupForm() {
               <FormInput
                 type="text"
                 id="nickname"
-                name="nickname"
-                value={formData.nickname}
-                onChange={handleInputChange}
+                {...register('nickname', {
+                  ...nicknameRules,
+                  onChange: () => {
+                    resetNicknameCheck();
+                  },
+                })}
                 maxLength={VALIDATION.NICKNAME_MAX_LENGTH}
                 placeholder={`닉네임 입력 (${VALIDATION.NICKNAME_MIN_LENGTH}-${VALIDATION.NICKNAME_MAX_LENGTH}자, 한글/영문만)`}
-                error={errors.nickname}
+                error={errors.nickname?.message}
                 required
-                disabled={nicknameChecked}
+                disabled={nicknameChecked || isSubmitting}
               />
             </div>
             <button
               type="button"
               onClick={handleNicknameCheck}
-              disabled={!formData.nickname || nicknameChecked}
+              disabled={!nickname || nicknameChecked}
               className="saegim-button saegim-button-small"
             >
               {nicknameChecked ? '확인완료' : '중복확인'}
@@ -424,11 +349,11 @@ export default function SignupForm() {
         {/* 회원가입하기 버튼 */}
         <button
           type="submit"
-          disabled={!isFormValid() || isLoading}
+          disabled={!isFormValid() || isSubmitting}
           className="w-full text-white dark:text-text-dark-on-color py-3 px-4 rounded-lg hover:opacity-90 active:opacity-100 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 font-medium text-base tracking-wide shadow-sm hover:shadow-md focus:outline-none focus:ring-2 focus:ring-sage-50 dark:focus:ring-border-dark-focus focus:ring-offset-2 dark:focus:ring-offset-background-dark-secondary"
           style={{ backgroundColor: '#5C8D89' }}
         >
-          {isLoading ? '회원가입 중...' : '회원가입하기'}
+          {isSubmitting ? '회원가입 중...' : '회원가입하기'}
         </button>
       </form>
     </div>

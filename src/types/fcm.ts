@@ -1,6 +1,6 @@
 // FCM 푸시 알림 관련 타입 정의
 
-import type { EmotionType } from './index';
+import type { EmotionType } from './diary';
 
 // FCM 메시지 페이로드 타입
 export interface FCMPayload {

@@ -5,10 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { apiClient } from '@/lib/api';
 import { useApiError } from '@/hooks/use-api-error';
-import {
-  validatePassword,
-  validatePasswordConfirmation,
-} from '@/lib/validation';
+import { useFormValidationRules } from '@/hooks/use-form-validation-rules';
 import { FormInput } from '@/components/ui/form-input';
 
 interface FormData {
@@ -28,6 +25,8 @@ export default function ChangePasswordForm() {
   const { handleApiError, showSuccess } = useApiError({
     loggerName: 'ChangePasswordForm',
   });
+  const { requiredRule, newPasswordRules, passwordConfirmRules } =
+    useFormValidationRules();
 
   const {
     register,
@@ -106,9 +105,10 @@ export default function ChangePasswordForm() {
           <FormInput
             type="password"
             id="currentPassword"
-            {...register('currentPassword', {
-              required: '현재 비밀번호를 입력해주세요.',
-            })}
+            {...register(
+              'currentPassword',
+              requiredRule('현재 비밀번호를 입력해주세요.'),
+            )}
             placeholder="현재 비밀번호를 입력하세요"
             error={errors.currentPassword?.message}
             disabled={isSubmitting}
@@ -126,19 +126,7 @@ export default function ChangePasswordForm() {
           <FormInput
             type="password"
             id="newPassword"
-            {...register('newPassword', {
-              required: '새 비밀번호를 입력해주세요.',
-              validate: (value) => {
-                const validation = validatePassword(value);
-                if (!validation.isValid) {
-                  return validation.errors[0];
-                }
-                if (currentPassword && value === currentPassword) {
-                  return '새 비밀번호는 현재 비밀번호와 달라야 합니다.';
-                }
-                return true;
-              },
-            })}
+            {...register('newPassword', newPasswordRules(currentPassword))}
             placeholder="새 비밀번호를 입력하세요"
             error={errors.newPassword?.message}
             disabled={isSubmitting}
@@ -159,16 +147,7 @@ export default function ChangePasswordForm() {
           <FormInput
             type="password"
             id="confirmPassword"
-            {...register('confirmPassword', {
-              required: '비밀번호 확인을 입력해주세요.',
-              validate: (value) => {
-                const validation = validatePasswordConfirmation(
-                  newPassword,
-                  value,
-                );
-                return validation.isValid || validation.error;
-              },
-            })}
+            {...register('confirmPassword', passwordConfirmRules(newPassword))}
             placeholder="새 비밀번호를 다시 입력하세요"
             error={errors.confirmPassword?.message}
             disabled={isSubmitting}
