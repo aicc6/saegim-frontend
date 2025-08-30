@@ -109,9 +109,9 @@ export default function CreateAi() {
     isEditMode,
     editedText,
     regenerationCount,
+    uploadedImages,
     regenerationHistory,
     startStreaming,
-    stopStreaming,
     resetState,
     setEditMode,
     updateEditedText,
@@ -140,6 +140,7 @@ export default function CreateAi() {
         style,
         length,
         emotion: emotion || undefined,
+        images: selectedImages.length > 0 ? selectedImages : undefined,
       });
     } catch (error) {
       logger.error('스트리밍 글 생성 실패', { error });
@@ -153,6 +154,7 @@ export default function CreateAi() {
     validateForm,
     showValidationAlert,
     startStreaming,
+    selectedImages,
   ]);
 
   const handleNewGeneration = useCallback(() => {
@@ -171,11 +173,21 @@ export default function CreateAi() {
         length,
         emotion: emotion || undefined,
         sessionId,
+        images: selectedImages.length > 0 ? selectedImages : undefined,
       });
     } catch (error) {
       logger.error('재생성 실패', { error });
     }
-  }, [isStreaming, sessionId, startStreaming, prompt, style, length, emotion]);
+  }, [
+    isStreaming,
+    sessionId,
+    startStreaming,
+    prompt,
+    style,
+    length,
+    emotion,
+    selectedImages,
+  ]);
 
   // 다이어리 저장 기능
   const handleSaveDiary = useCallback(async () => {
@@ -199,6 +211,7 @@ export default function CreateAi() {
         ai_emotion_confidence: aiEmotion ? 0.8 : undefined, // 기본 신뢰도
         keywords: keywords.length > 0 ? keywords : undefined,
         is_public: false,
+        uploaded_images: uploadedImages || undefined, // 업로드된 이미지 정보 포함
       });
 
       if (result.success) {
@@ -232,6 +245,7 @@ export default function CreateAi() {
     emotion,
     aiEmotion,
     keywords,
+    uploadedImages,
     showToastMessage,
     router,
   ]);

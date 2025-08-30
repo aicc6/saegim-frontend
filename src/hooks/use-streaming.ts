@@ -19,6 +19,14 @@ export interface StreamingState {
   isEditMode: boolean; // 편집 모드 상태
   editedText: string; // 편집된 텍스트
   regenerationCount: number; // 현재 재생성 횟수
+  uploadedImages: Array<{
+    file_id: string;
+    original_url: string;
+    thumbnail_url: string;
+    mime_type: string;
+    file_size: number;
+    filename: string;
+  }> | null; // 업로드된 이미지 정보
   regenerationHistory: Array<{
     text: string;
     emotion: string | null;
@@ -55,6 +63,7 @@ export const useStreaming = () => {
     isEditMode: false,
     editedText: '',
     regenerationCount: 0,
+    uploadedImages: null,
     regenerationHistory: [],
   });
 
@@ -113,6 +122,7 @@ export const useStreaming = () => {
       length: string;
       emotion?: string;
       sessionId?: string;
+      images?: File[];
     }) => {
       try {
         // 기존 연결 정리
@@ -129,18 +139,60 @@ export const useStreaming = () => {
         }
 
         // 초기 상태 설정
-        setState({
+        setState((prev) => ({
+          ...prev,
           isStreaming: true,
           streamedText: '',
           accumulatedText: '',
           displayText: '',
           error: null,
-          sessionId: null,
+          sessionId: prev.sessionId || null,
           emotion: null,
           keywords: [],
           isComplete: false,
           isTyping: false,
-        });
+          isEditMode: false,
+          editedText: '',
+        }));
+
+        // 이미지 업로드 처리 (있는 경우)
+        let uploadedImages = null;
+        if (data.images && data.images.length > 0) {
+          try {
+            const formData = new FormData();
+            data.images.forEach((image) => {
+              formData.append(`images`, image);
+            });
+
+            const imageUploadResponse = await fetch(
+              'http://localhost:8000/api/diary/images/upload',
+              {
+                method: 'POST',
+                body: formData,
+                credentials: 'include',
+              },
+            );
+
+            if (imageUploadResponse.ok) {
+              const imageResult = await imageUploadResponse.json();
+              uploadedImages = imageResult.data;
+
+              // 업로드된 이미지를 상태에 저장
+              setState((prev) => ({
+                ...prev,
+                uploadedImages: uploadedImages,
+              }));
+
+              logger.info('이미지 업로드 성공', { uploadedImages });
+            } else {
+              logger.warn('이미지 업로드 실패, 텍스트만 생성 진행');
+            }
+          } catch (imageError) {
+            logger.warn('이미지 업로드 중 오류 발생, 텍스트만 생성 진행', {
+              imageError,
+            });
+          }
+        }
 
         // JSON 형식 요청 데이터 생성
         const requestData = {
@@ -149,6 +201,7 @@ export const useStreaming = () => {
           length: data.length,
           emotion: data.emotion || '',
           session_id: data.sessionId || undefined,
+          uploaded_images: uploadedImages,
         };
 
         // 스트리밍 요청 시작
@@ -283,7 +336,7 @@ export const useStreaming = () => {
         }));
       }
     },
-    [],
+    [startStreamingTypingAnimation, startTypingAnimation],
   );
 
   const stopStreaming = useCallback(() => {
@@ -354,6 +407,7 @@ export const useStreaming = () => {
       isEditMode: false,
       editedText: '',
       regenerationCount: 0,
+      uploadedImages: null,
       regenerationHistory: [],
     });
   }, []);
