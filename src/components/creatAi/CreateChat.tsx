@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback } from 'react';
+import { useCallback, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   useCreateStore,
@@ -37,12 +37,18 @@ export default function CreateChat({ sessionId }: CreateChatProps) {
     style,
     length,
     isGenerating,
+    generatedText,
+    generatedKeywords,
+    sessionId: storeSessionId,
+    wasJustGenerated,
+    originalPrompt,
     setPrompt,
     setStyle,
     setLength,
     setEmotion,
     getStyleDisplayName,
     getLengthDisplayName,
+    markAsProcessed,
   } = useCreateStore();
 
   const {
@@ -79,6 +85,46 @@ export default function CreateChat({ sessionId }: CreateChatProps) {
 
   const { textareaRef, messagesEndRef, scrollToBottom, adjustTextareaHeight } =
     useChatUi(prompt);
+
+  // 초기 생성된 텍스트를 메시지로 추가
+  useEffect(() => {
+    if (
+      wasJustGenerated &&
+      generatedText &&
+      storeSessionId === sessionId &&
+      generatedMessages.length === 0
+    ) {
+      const initialVersion = {
+        id: `version_${generateId()}`,
+        text: generatedText,
+        keywords: generatedKeywords || [],
+        emotion: emotion,
+        style,
+        length,
+        regenerationCount: 1,
+        createdAt: new Date(),
+        images: [],
+        userPrompt: originalPrompt,
+      };
+
+      addVersionToMessage(sessionId, initialVersion);
+      markAsProcessed();
+    }
+  }, [
+    wasJustGenerated,
+    generatedText,
+    storeSessionId,
+    sessionId,
+    generatedMessages.length,
+    generatedKeywords,
+    emotion,
+    style,
+    length,
+    originalPrompt,
+    addVersionToMessage,
+    generateId,
+    markAsProcessed,
+  ]);
 
   const onApplyOptions = useCallback(
     (tempStyle: string, tempLength: string, tempEmotion: string) => {
