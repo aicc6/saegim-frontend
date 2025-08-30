@@ -2,7 +2,16 @@
 
 import { create } from 'zustand';
 import { immer } from 'zustand/middleware/immer';
+
+import { toast } from '@/hooks/use-toast';
 import { VALIDATION } from '@/constants/timeouts';
+import { requestFCMToken, onMessageListener } from '../lib/firebase';
+import {
+  notificationApi,
+  type FCMTokenRegisterRequest,
+  type NotificationSettingsUpdate,
+} from '../lib/notification-api';
+import { getLogger } from '../lib/logger';
 import type {
   FCMState,
   NotificationSettings,
@@ -11,13 +20,6 @@ import type {
   SaeGimNotificationData,
 } from '../types/fcm';
 import type { EmotionType } from '../types/diary';
-import { requestFCMToken, onMessageListener } from '../lib/firebase';
-import {
-  notificationApi,
-  type FCMTokenRegisterRequest,
-  type NotificationSettingsUpdate,
-} from '../lib/notification-api';
-import { getLogger } from '../lib/logger';
 
 const logger = getLogger('fcm');
 
@@ -376,10 +378,16 @@ const showBrowserNotification = (notification: NotificationHistory): void => {
 
 // 인앱 알림 표시 (토스트)
 const showInAppNotification = (notification: NotificationHistory): void => {
-  // TODO: toast 라이브러리 연동
   logger.debug('인앱 알림 표시:', notification);
 
-  // 임시로 브라우저 알림으로 대체
+  // toast 라이브러리 연동
+  toast({
+    title: notification.title,
+    description: notification.body,
+    duration: 5000,
+  });
+
+  // 브라우저 알림도 함께 표시 (사용자가 페이지를 보지 않을 수 있음)
   showBrowserNotification(notification);
 };
 
