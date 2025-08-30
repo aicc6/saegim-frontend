@@ -104,6 +104,27 @@ export const changePasswordSchema = z
     path: ['newPassword'],
   });
 
+// 이메일 변경 폼 스키마
+export const changeEmailSchema = z.object({
+  currentPassword: z.string().min(1, '현재 비밀번호를 입력해주세요.'),
+  newEmail: emailSchema,
+  nickname: nicknameSchema,
+});
+
+// 지원/문의 폼 스키마
+export const supportSchema = z.object({
+  title: z
+    .string()
+    .min(1, '제목을 입력해주세요.')
+    .min(3, '제목은 3자 이상이어야 합니다.')
+    .max(100, '제목은 100자 이하여야 합니다.'),
+  content: z
+    .string()
+    .min(1, '내용을 입력해주세요.')
+    .min(10, '내용은 10자 이상이어야 합니다.')
+    .max(1000, '내용은 1000자 이하여야 합니다.'),
+});
+
 /**
  * 타입 추론
  */
@@ -112,3 +133,5 @@ export type SignupFormData = z.infer<typeof signupSchema>;
 export type ForgotPasswordFormData = z.infer<typeof forgotPasswordSchema>;
 export type ResetPasswordFormData = z.infer<typeof resetPasswordSchema>;
 export type ChangePasswordFormData = z.infer<typeof changePasswordSchema>;
+export type ChangeEmailFormData = z.infer<typeof changeEmailSchema>;
+export type SupportFormData = z.infer<typeof supportSchema>;

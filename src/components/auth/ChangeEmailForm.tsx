@@ -1,36 +1,74 @@
 'use client';
 
 import { useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { Button } from '@/components/ui/button';
-import { getLogger } from '@/lib/logger';
-
-const logger = getLogger('ChangeEmailForm');
+import { FormInput } from '@/components/ui/form-input';
+import { useApiError } from '@/hooks/use-api-error';
+import { apiClient } from '@/lib/api';
+import { changeEmailSchema, type ChangeEmailFormData } from '@/schemas/auth';
 
 export default function ChangeEmailForm() {
-  const [currentPassword, setCurrentPassword] = useState('');
   const [isVerified, setIsVerified] = useState(false);
-  const [profileData, setProfileData] = useState({
-    nickname: '새김사용자',
-    email: 'user@saegim.com',
+  const { handleApiError, showSuccess } = useApiError({
+    loggerName: 'ChangeEmailForm',
   });
 
-  const handlePasswordVerify = () => {
-    // TODO: 현재 비밀번호 확인 API 호출
-    logger.info('비밀번호 확인', { currentPassword });
-    setIsVerified(true);
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+    getValues,
+  } = useForm<ChangeEmailFormData>({
+    resolver: zodResolver(changeEmailSchema),
+    mode: 'onBlur',
+    defaultValues: {
+      nickname: '새김사용자',
+      newEmail: 'user@saegim.com',
+    },
+  });
+
+  const handlePasswordVerify = async () => {
+    const currentPassword = getValues('currentPassword');
+    if (!currentPassword) return;
+
+    try {
+      // 현재 비밀번호 확인 API 호출
+      await apiClient.post('/api/auth/verify-password/', {
+        current_password: currentPassword,
+      });
+
+      setIsVerified(true);
+      showSuccess('비밀번호 확인 완료', '프로필을 수정할 수 있습니다.');
+    } catch (error: unknown) {
+      handleApiError(
+        error,
+        '비밀번호 확인 실패',
+        '현재 비밀번호가 올바르지 않습니다.',
+      );
+    }
   };
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setProfileData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
-  };
+  const onSubmit = async (data: ChangeEmailFormData) => {
+    try {
+      // 프로필 업데이트 API 호출
+      await apiClient.put('/api/user/profile/', {
+        nickname: data.nickname,
+        email: data.newEmail,
+      });
 
-  const handleProfileUpdate = () => {
-    // TODO: 프로필 업데이트 API 호출
-    logger.info('프로필 업데이트', { profileData });
+      showSuccess(
+        '프로필 업데이트 완료',
+        '프로필이 성공적으로 업데이트되었습니다.',
+      );
+    } catch (error: unknown) {
+      handleApiError(
+        error,
+        '프로필 업데이트 실패',
+        '프로필 업데이트 중 오류가 발생했습니다.',
+      );
+    }
   };
 
   return (
@@ -48,12 +86,12 @@ export default function ChangeEmailForm() {
           </div>
 
           <div>
-            <input
+            <FormInput
               type="password"
-              value={currentPassword}
-              onChange={(e) => setCurrentPassword(e.target.value)}
-              className="w-full px-4 py-3 bg-background-primary dark:bg-background-dark border border-border-subtle dark:border-border-dark rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 text-text-primary dark:text-text-dark"
+              {...register('currentPassword')}
               placeholder="현재 비밀번호를 입력하세요"
+              error={errors.currentPassword?.message}
+              disabled={isSubmitting}
             />
           </div>
 
@@ -73,7 +111,7 @@ export default function ChangeEmailForm() {
             </p>
           </div>
 
-          <div className="space-y-4">
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             {/* 닉네임 입력 */}
             <div>
               <label
@@ -82,13 +120,12 @@ export default function ChangeEmailForm() {
               >
                 닉네임 입력
               </label>
-              <input
+              <FormInput
                 type="text"
-                name="nickname"
-                value={profileData.nickname}
-                onChange={handleInputChange}
-                className="w-full px-4 py-3 bg-background-primary dark:bg-background-dark border border-border-subtle dark:border-border-dark rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 text-text-primary dark:text-text-dark"
+                {...register('nickname')}
                 placeholder="닉네임을 입력하세요"
+                error={errors.nickname?.message}
+                disabled={isSubmitting}
               />
             </div>
 
@@ -96,24 +133,28 @@ export default function ChangeEmailForm() {
             <div>
               <label
                 className="block text-sm font-medium text-text-primary dark:text-text-dark mb-2"
-                htmlFor="email"
+                htmlFor="newEmail"
               >
-                이메일 정보
+                새 이메일 주소
               </label>
-              <input
+              <FormInput
                 type="email"
-                name="email"
-                value={profileData.email}
-                onChange={handleInputChange}
-                className="w-full px-4 py-3 bg-background-primary dark:bg-background-dark border border-border-subtle dark:border-border-dark rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 text-text-primary dark:text-text-dark"
-                placeholder="이메일을 입력하세요"
+                {...register('newEmail')}
+                placeholder="새 이메일을 입력하세요"
+                error={errors.newEmail?.message}
+                disabled={isSubmitting}
               />
             </div>
 
-            <Button onClick={handleProfileUpdate} className="w-full" size="lg">
-              프로필 업데이트
+            <Button
+              type="submit"
+              className="w-full"
+              size="lg"
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? '업데이트 중...' : '프로필 업데이트'}
             </Button>
-          </div>
+          </form>
         </>
       )}
     </div>
