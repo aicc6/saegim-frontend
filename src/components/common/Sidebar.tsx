@@ -24,16 +24,11 @@ import { useNotifications } from '@/hooks/use-notifications';
 import { useAuthStore } from '@/stores/auth';
 import { useFCMStore } from '@/stores/fcm';
 import { authApi, getLogger } from '@/lib';
+import { AuthUserResponse } from '@/types/api';
 import ThemeToggle from '../ui/custom/ThemeToggle';
 import NotificationPopover from './NotificationPopover';
 
 const logger = getLogger('Sidebar');
-
-interface UserInfo {
-  email: string;
-  nickname: string;
-  account_type: string;
-}
 
 const navigation = [
   { name: '글쓰기', href: '/', icon: PenTool },
@@ -44,7 +39,7 @@ const navigation = [
 export function Sidebar() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
-  const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
+  const [userInfo, setUserInfo] = useState<AuthUserResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const { isCollapsed, setIsCollapsed } = useSidebar();
   const { resolvedTheme } = useTheme();
@@ -69,7 +64,7 @@ export function Sidebar() {
       try {
         const response = await authApi.getCurrentUser();
         if (response.data) {
-          setUserInfo(response.data as UserInfo);
+          setUserInfo(response.data as AuthUserResponse);
         }
       } catch (error) {
         logger.error('사용자 정보 가져오기 실패', { error });

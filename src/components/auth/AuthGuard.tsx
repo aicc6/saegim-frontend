@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 
 import { useAuthStore } from '@/stores/auth';
 import { authApi, getLogger } from '@/lib';
+import { AuthUserResponse } from '@/types/api';
 
 const logger = getLogger('AuthGuard');
 
@@ -29,11 +30,7 @@ export default function AuthGuard({ children }: AuthGuardProps) {
           throw new Error('Invalid server response structure');
         }
 
-        const userData = response.data as {
-          user_id?: string;
-          email?: string;
-          [key: string]: unknown;
-        };
+        const userData = response.data as AuthUserResponse;
 
         // 사용자 데이터 유효성 검증
         if (!userData.user_id || !userData.email) {

@@ -8,6 +8,12 @@ import { FormInput } from '@/components/ui/form-input';
 import { apiClient } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
 import { getLogger } from '@/lib/logger';
+import {
+  UserProfileResponse,
+  EmailTokenVerificationResponse,
+  EmailChangeResponse,
+  NicknameCheckResponse,
+} from '@/types/api';
 
 const logger = getLogger('ProfileForm');
 
@@ -48,11 +54,7 @@ export default function ProfileForm() {
         const response = await apiClient.get(
           `/api/auth/change-email/verify-token?token=${token}`,
         );
-        const data = response.data as {
-          valid?: string;
-          email?: string;
-          [key: string]: unknown;
-        };
+        const data = response.data as EmailTokenVerificationResponse;
 
         if (data.valid === 'true') {
           setEmailChangeData({
@@ -84,14 +86,7 @@ export default function ProfileForm() {
     try {
       setIsLoading(true);
       const response = await apiClient.get('/api/auth/profile');
-      const profile = response.data as {
-        nickname: string;
-        email: string;
-        user_id: string;
-        account_type: string;
-        provider?: string;
-        is_active: boolean;
-      };
+      const profile = response.data as UserProfileResponse;
 
       setProfileData({
         nickname: profile.nickname,
@@ -243,10 +238,7 @@ export default function ProfileForm() {
         },
       );
 
-      const responseData = response.data as {
-        requires_logout?: string;
-        [key: string]: unknown;
-      };
+      const responseData = response.data as EmailChangeResponse;
 
       if (responseData.requires_logout === 'true') {
         // 성공 메시지 표시
@@ -313,7 +305,7 @@ export default function ProfileForm() {
       const response = await apiClient.get(
         `/api/auth/profile/check-nickname/${profileData.nickname}`,
       );
-      const result = response.data as { available: boolean; message: string };
+      const result = response.data as NicknameCheckResponse;
 
       // 모달로 결과 표시
       setNicknameCheckResult({

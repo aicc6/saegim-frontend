@@ -10,6 +10,7 @@ import { useApiError } from '@/hooks/use-api-error';
 import { authApi } from '@/lib/api';
 import { BRAND_COLORS, VALIDATION } from '@/constants';
 import { signupSchema, type SignupFormData } from '@/schemas/auth';
+import { NicknameAvailabilityResponse } from '@/types/api';
 
 export default function SignupForm() {
   const router = useRouter();
@@ -156,10 +157,7 @@ export default function SignupForm() {
     try {
       const response = await authApi.checkNickname(nickname);
 
-      const responseData = response.data as {
-        available?: boolean;
-        [key: string]: unknown;
-      };
+      const responseData = response.data as NicknameAvailabilityResponse;
 
       if (responseData.available) {
         setNicknameChecked(true);

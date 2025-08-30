@@ -27,3 +27,41 @@ export interface ValidationErrorResponse {
   detail: string;
   validation_errors?: Record<string, string[]>;
 }
+
+/**
+ * 인증 관련 API 응답 타입 정의
+ */
+
+export interface UserProfileResponse {
+  nickname: string;
+  email: string;
+  user_id: string;
+  account_type: string;
+  provider?: string;
+  is_active: boolean;
+}
+
+export interface AuthUserResponse {
+  user_id: string;
+  email: string;
+  nickname?: string;
+  account_type?: string;
+}
+
+export interface EmailTokenVerificationResponse {
+  valid: string;
+  email?: string;
+}
+
+export interface EmailChangeResponse {
+  requires_logout: string;
+}
+
+export interface NicknameCheckResponse {
+  available: boolean;
+  message: string;
+}
+
+export interface NicknameAvailabilityResponse {
+  available: boolean;
+}
