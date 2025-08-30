@@ -65,3 +65,19 @@ export interface NicknameCheckResponse {
 export interface NicknameAvailabilityResponse {
   available: boolean;
 }
+
+/**
+ * 알림 관련 API 응답 타입 정의
+ */
+
+export interface NotificationResponse {
+  id: string;
+  title: string;
+  body: string;
+  notification_type: string;
+  status: 'sent' | 'failed' | 'pending' | 'delivered' | 'opened';
+  created_at: string;
+  fcm_response?: Record<string, unknown>;
+  isRead?: boolean;
+  actionUrl?: string;
+}

@@ -9,23 +9,13 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import PageHeader from '@/components/common/PageHeader';
 import { getLogger } from '@/lib/logger';
+import { NotificationResponse } from '@/types/api';
 import NotificationSettings from './notification-settings';
 
 const logger = getLogger('NotificationPage');
 
-// 백엔드 API 응답 타입에 맞춘 알림 인터페이스
-interface Notification {
-  id: string;
-  title: string;
-  body: string; // 백엔드는 'body' 사용
-  notification_type: string; // 백엔드는 'notification_type' 사용
-  status: 'sent' | 'failed' | 'pending' | 'delivered' | 'opened';
-  created_at: string; // 백엔드는 'created_at' 사용
-  fcm_response?: Record<string, unknown>;
-  // 프론트엔드 전용 추가 필드
-  isRead?: boolean; // 로컬 읽음 상태 관리용
-  actionUrl?: string; // fcm_response.url에서 추출
-}
+// NotificationResponse 타입을 Notification으로 별칭 지정
+type Notification = NotificationResponse;
 
 // 알림 타입을 UI 표시용으로 변환하는 함수
 const getNotificationDisplayType = (
@@ -76,7 +66,9 @@ const notificationColors = {
 };
 
 export function NotificationPage() {
-  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [notifications, setNotifications] = useState<NotificationResponse[]>(
+    [],
+  );
   const [filter, setFilter] = useState<'all' | 'unread'>('all');
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
