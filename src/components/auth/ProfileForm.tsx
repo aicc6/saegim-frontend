@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import ConfirmModal from '@/components/ui/custom/ConfirmModal';
@@ -42,58 +42,45 @@ export default function ProfileForm() {
     password: '',
   });
 
-  // 프로필 정보 로드
-  useEffect(() => {
-    loadProfile();
-  }, []);
+  const verifyTokenAndGetEmail = useCallback(
+    async (token: string) => {
+      try {
+        const response = await apiClient.get(
+          `/api/auth/change-email/verify-token?token=${token}`,
+        );
+        const data = response.data as {
+          valid?: string;
+          email?: string;
+          [key: string]: unknown;
+        };
 
-  // URL 파라미터 확인 (이메일 변경 토큰)
-  useEffect(() => {
-    const token = searchParams.get('token');
-    const action = searchParams.get('action');
-
-    if (token && action === 'change-email') {
-      // 토큰으로 이메일 정보 가져오기
-      verifyTokenAndGetEmail(token);
-    }
-  }, [searchParams]);
-
-  const verifyTokenAndGetEmail = async (token: string) => {
-    try {
-      const response = await apiClient.get(
-        `/api/auth/change-email/verify-token?token=${token}`,
-      );
-      const data = response.data as {
-        valid?: string;
-        email?: string;
-        [key: string]: unknown;
-      };
-
-      if (data.valid === 'true') {
-        setEmailChangeData({
-          token: token,
-          email: data.email || '',
-          password: '',
-        });
-        setIsEmailChangeModalOpen(true);
-      } else {
+        if (data.valid === 'true') {
+          setEmailChangeData({
+            token: token,
+            email: data.email || '',
+            password: '',
+          });
+          setIsEmailChangeModalOpen(true);
+        } else {
+          toast({
+            title: '오류',
+            description: '유효하지 않은 인증 링크입니다.',
+            variant: 'destructive',
+          });
+        }
+      } catch (error) {
+        logger.error('토큰 검증 실패', { error });
         toast({
           title: '오류',
-          description: '유효하지 않은 인증 링크입니다.',
+          description: '인증 링크가 유효하지 않습니다.',
           variant: 'destructive',
         });
       }
-    } catch (error) {
-      logger.error('토큰 검증 실패', { error });
-      toast({
-        title: '오류',
-        description: '인증 링크가 유효하지 않습니다.',
-        variant: 'destructive',
-      });
-    }
-  };
+    },
+    [toast],
+  );
 
-  const loadProfile = async () => {
+  const loadProfile = useCallback(async () => {
     try {
       setIsLoading(true);
       const response = await apiClient.get('/api/auth/profile');
@@ -124,7 +111,23 @@ export default function ProfileForm() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [toast]);
+
+  // 프로필 정보 로드
+  useEffect(() => {
+    loadProfile();
+  }, [loadProfile]);
+
+  // URL 파라미터 확인 (이메일 변경 토큰)
+  useEffect(() => {
+    const token = searchParams.get('token');
+    const action = searchParams.get('action');
+
+    if (token && action === 'change-email') {
+      // 토큰으로 이메일 정보 가져오기
+      verifyTokenAndGetEmail(token);
+    }
+  }, [searchParams, verifyTokenAndGetEmail]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;

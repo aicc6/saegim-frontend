@@ -2,7 +2,7 @@
  * 구조화된 데이터(JSON-LD) 생성 유틸리티
  */
 
-export interface WebsiteSchema {
+export interface WebsiteSchema extends Record<string, unknown> {
   '@context': 'https://schema.org';
   '@type': 'WebApplication';
   name: string;
@@ -32,7 +32,7 @@ export interface BreadcrumbSchema {
   }>;
 }
 
-export interface FAQSchema {
+export interface FAQSchema extends Record<string, unknown> {
   '@context': 'https://schema.org';
   '@type': 'FAQPage';
   mainEntity: Array<{

@@ -98,7 +98,7 @@ export const useChatGeneration = (
           length: responseData.length || length,
           regenerationCount: newCount,
           createdAt: new Date(),
-          images: message?.versions[message.currentVersionIndex || 0]?.images,
+          images: message?.versions[0]?.images || [],
           userPrompt: responseData.user_prompt || '',
         };
 

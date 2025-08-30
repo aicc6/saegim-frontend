@@ -1,10 +1,10 @@
 'use client';
 
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { createStandardStore } from '@/lib/store-helpers';
 import { EmotionService } from '@/services/emotion-service';
 
-// ===== 타입 정의 =====
+// 타입 정의
 export type EmotionOption =
   | ''
   | 'happy'
@@ -24,7 +24,7 @@ export interface EmotionConfig {
   };
 }
 
-// ===== 감정 설정 데이터 =====
+// 감정 설정 데이터
 const EMOTION_CONFIGS: EmotionConfig[] = [
   {
     value: 'peaceful',
@@ -78,22 +78,19 @@ const EMOTION_CONFIGS: EmotionConfig[] = [
   },
 ];
 
-// ===== 스토어 상태 타입 =====
+// 스토어 상태 인터페이스
 interface EmotionState {
-  // 감정 설정
   emotions: EmotionConfig[];
   selectedEmotion: EmotionOption;
-
-  // 감정 히스토리 (최근 사용한 감정들)
   recentEmotions: EmotionOption[];
+}
 
-  // 액션들
+// 스토어 액션 인터페이스
+interface EmotionActions {
   setSelectedEmotion: (emotion: EmotionOption) => void;
   toggleEmotion: (emotion: EmotionOption) => void;
   clearEmotion: () => void;
   addToRecent: (emotion: EmotionOption) => void;
-
-  // 유틸리티
   getEmotionConfig: (emotion: EmotionOption) => EmotionConfig | undefined;
   getEmotionLabel: (emotion: EmotionOption) => string;
   getEmotionEmoji: (emotion: EmotionOption) => string;
@@ -101,18 +98,23 @@ interface EmotionState {
   getEmotionTone: (emotion: EmotionOption) => string;
 }
 
-// ===== Zustand 스토어 =====
-export const useEmotionStore = create<EmotionState>()(
-  persist(
+// 초기 상태
+const createInitialState = (): EmotionState => ({
+  emotions: EMOTION_CONFIGS,
+  selectedEmotion: 'peaceful',
+  recentEmotions: [],
+});
+
+// 스토어 생성
+export const useEmotionStore = create<EmotionState & EmotionActions>()(
+  createStandardStore(
     (set, get) => ({
       // 초기 상태
-      emotions: EMOTION_CONFIGS,
-      selectedEmotion: 'peaceful',
-      recentEmotions: [],
+      ...createInitialState(),
 
       // 기본 액션들
       setSelectedEmotion: (emotion) => {
-        set({ selectedEmotion: emotion });
+        set((state) => ({ ...state, selectedEmotion: emotion }));
         get().addToRecent(emotion);
       },
 
@@ -133,6 +135,7 @@ export const useEmotionStore = create<EmotionState>()(
         if (!emotion) return;
 
         set((state) => ({
+          ...state,
           recentEmotions: [
             emotion,
             ...state.recentEmotions.filter((e) => e !== emotion),
@@ -140,7 +143,7 @@ export const useEmotionStore = create<EmotionState>()(
         }));
       },
 
-      // 유틸리티 함수들
+      // 유틸리티 함수들 (서비스 레이어 사용)
       getEmotionConfig: (emotion) => {
         const { emotions } = get();
         return emotions.find((e) => e.value === emotion);
@@ -165,11 +168,14 @@ export const useEmotionStore = create<EmotionState>()(
       },
     }),
     {
-      name: 'emotion-store',
-      partialize: (state) => ({
-        selectedEmotion: state.selectedEmotion,
-        recentEmotions: state.recentEmotions,
-      }),
+      persist: {
+        name: 'emotion-store',
+        partialize: (state) => ({
+          selectedEmotion: state.selectedEmotion,
+          recentEmotions: state.recentEmotions,
+        }),
+      },
+      enableImmer: true,
     },
   ),
 );

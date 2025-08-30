@@ -124,3 +124,5 @@ export const Calendar = forwardRef<CalendarRef, CalendarProps>(
 );
 
 Calendar.displayName = 'Calendar';
+
+export type { CalendarRef } from '@/types/calendar';

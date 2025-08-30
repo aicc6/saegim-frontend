@@ -2,7 +2,11 @@
 
 import { useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { useCreateStore } from '@/stores/create';
+import {
+  useCreateStore,
+  type WritingStyle,
+  type LengthOption,
+} from '@/stores/create';
 import { useEmotionStore } from '@/stores/emotion';
 import { useMessageManagement } from '@/hooks/use-message-management';
 import { useImageHandler } from '@/hooks/use-image-handler';
@@ -78,8 +82,8 @@ export default function CreateChat({ sessionId }: CreateChatProps) {
 
   const onApplyOptions = useCallback(
     (tempStyle: string, tempLength: string, tempEmotion: string) => {
-      setStyle(tempStyle);
-      setLength(tempLength);
+      setStyle(tempStyle as WritingStyle);
+      setLength(tempLength as LengthOption);
       setEmotion(tempEmotion);
     },
     [setStyle, setLength, setEmotion],

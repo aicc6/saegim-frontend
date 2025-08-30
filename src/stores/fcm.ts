@@ -10,7 +10,7 @@ import type {
   NotificationPermission,
   SaeGimNotificationData,
 } from '../types/fcm';
-import type { EmotionType } from '../types';
+import type { EmotionType } from '../types/diary';
 import { requestFCMToken, onMessageListener } from '../lib/firebase';
 import {
   notificationApi,

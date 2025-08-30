@@ -1,7 +1,7 @@
 import { CiLocationArrow1 } from 'react-icons/ci';
 
 interface ChatInputProps {
-  textareaRef: React.RefObject<HTMLTextAreaElement>;
+  textareaRef: React.RefObject<HTMLTextAreaElement | null>;
   prompt: string;
   isGenerating: boolean;
   selectedImages: File[];

@@ -3,7 +3,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { immer } from 'zustand/middleware/immer';
-import { apiClient } from '@/lib/api';
+import { AIService } from '@/services/ai-service';
 import { getLogger } from '../lib/logger';
 
 const logger = getLogger('create');
@@ -65,143 +65,6 @@ const DEFAULT_CONFIG: CreateConfig = {
     { value: 'long', label: '장문', displayName: 'long' },
   ],
 };
-
-// ===== API 함수들 =====
-export async function getOriginalUserInput(
-  sessionId: string,
-): Promise<string | null> {
-  try {
-    const response = await fetch(
-      `/api/ai/session/${sessionId}/original-input`,
-      {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-      },
-    );
-
-    if (!response.ok) {
-      return null;
-    }
-
-    const result = await response.json();
-    return result.data?.original_input || null;
-  } catch (error) {
-    logger.error('원본 사용자 입력 조회 실패', { error });
-    return null;
-  }
-}
-
-export async function generateAIText(params: {
-  prompt: string;
-  style: string;
-  length: string;
-  emotion?: string;
-  regeneration_count?: number;
-  sessionId?: string;
-  images?: File[];
-}): Promise<AIGenerationResult> {
-  try {
-    const {
-      prompt,
-      style,
-      length,
-      emotion = '',
-      regeneration_count = 0,
-      sessionId,
-      images,
-    } = params;
-
-    // API 요청 본문 구성 (undefined 값은 제외)
-    const requestBody: Record<string, unknown> = {
-      prompt,
-      style,
-      length,
-      emotion,
-      regeneration_count,
-    };
-
-    // sessionId가 있을 때만 추가 (백엔드 호환성을 위해 둘 다 전송)
-    if (sessionId) {
-      requestBody.sessionId = sessionId;
-      requestBody.session_id = sessionId; // 백엔드 호환성
-    }
-
-    // images가 있을 때만 추가
-    if (images && images.length > 0) {
-      requestBody.images = images;
-    }
-
-    // 🚀 디버깅: 재생성 요청 시 백엔드로 전달되는 정보 확인
-    if (regeneration_count > 1) {
-      logger.debug('재생성 요청 - 백엔드로 전달되는 정보', {
-        url: '/api/ai/generate',
-        method: 'POST',
-        requestBody,
-        regeneration_count,
-        sessionId: sessionId || '없음',
-        hasImages: images && images.length > 0,
-      });
-    }
-
-    const response = await apiClient.post<AIGenerationResult>(
-      '/api/ai/generate',
-      requestBody,
-    );
-
-    // ✅ 디버깅: API 호출 성공 시 응답 정보
-    if (regeneration_count > 1) {
-      logger.info('재생성 API 호출 성공', {
-        response_status: 'success',
-        session_id: response.data.session_id,
-        ai_generated_text_length: response.data.ai_generated_text?.length || 0,
-        regeneration_count,
-      });
-    }
-
-    return response.data;
-  } catch (error) {
-    logger.error('AI 텍스트 생성 API 호출 실패', { error });
-
-    // 🚀 디버깅: 재생성 요청 실패 시 상세 정보
-    if (params.regeneration_count && params.regeneration_count > 1) {
-      logger.error('재생성 요청 실패 상세', {
-        error_type: 'API_CALL_FAILED',
-        regeneration_count: params.regeneration_count,
-        sessionId: params.sessionId || '없음',
-        request_params: {
-          prompt: params.prompt?.substring(0, 50) + '...',
-          style: params.style,
-          length: params.length,
-          emotion: params.emotion,
-        },
-        error_message: error instanceof Error ? error.message : String(error),
-      });
-
-      // 🚀 디버깅: 422 오류 시 백엔드 응답 상세 정보
-      if (error instanceof Error && error.message.includes('422')) {
-        logger.error('422 오류 상세 분석', {
-          error_type: 'VALIDATION_ERROR',
-          http_status: 422,
-          request_body: {
-            prompt: params.prompt,
-            style: params.style,
-            length: params.length,
-            emotion: params.emotion,
-            regeneration_count: params.regeneration_count,
-            sessionId: params.sessionId,
-            images: params.images ? `${params.images.length}개` : '없음',
-          },
-          validation_issues: '백엔드에서 데이터 검증 실패',
-        });
-      }
-    }
-
-    throw error;
-  }
-}
 
 // ===== Zustand 스토어 =====
 interface CreateState {
@@ -289,7 +152,7 @@ export const useCreateStore = create<CreateState>()(
           state.sessionId = null;
         }),
 
-      // AI 텍스트 생성
+      // AI 텍스트 생성 (서비스 레이어 사용)
       generateText: async (emotion?: EmotionOption) => {
         const { prompt, style, length } = get();
         if (!prompt.trim()) return;
@@ -300,24 +163,26 @@ export const useCreateStore = create<CreateState>()(
         });
 
         try {
-          // AI 텍스트 생성 API 호출 (새 생성 시 sessionId는 전달하지 않음)
-          const response = await generateAIText({
+          const response = await AIService.generateText({
             prompt: prompt.trim(),
             style,
             length,
             emotion: emotion || '',
             regeneration_count: 1,
-            // sessionId는 전달하지 않음 (백엔드에서 새로 생성)
           });
 
-          // 결과 저장
           set((state) => {
             state.generatedText = response.ai_generated_text;
             state.generatedKeywords = response.keywords;
-            state.sessionId = response.session_id; // session_id 저장
-            state.originalPrompt = state.prompt; // 원본 입력 보존
+            state.sessionId = response.session_id;
+            state.originalPrompt = state.prompt;
             state.isGenerating = false;
-            state.wasJustGenerated = true; // 방금 생성되었음을 표시
+            state.wasJustGenerated = true;
+          });
+
+          logger.info('AI 텍스트 생성 성공', {
+            sessionId: response.session_id,
+            textLength: response.ai_generated_text.length,
           });
         } catch (error) {
           const errorMessage =
@@ -348,13 +213,13 @@ export const useCreateStore = create<CreateState>()(
           state.wasJustGenerated = false;
         }),
 
-      // 세션ID로 원본 입력 복구
+      // 세션ID로 원본 입력 복구 (서비스 레이어 사용)
       restoreOriginalInput: async () => {
         const { sessionId } = get();
         if (!sessionId) return;
 
         try {
-          const originalInput = await getOriginalUserInput(sessionId);
+          const originalInput = await AIService.getOriginalUserInput(sessionId);
           if (originalInput) {
             set((state) => {
               state.originalPrompt = originalInput;

@@ -75,9 +75,13 @@ export const DEFAULT_METADATA: Metadata = {
     images: ['/images/twitter-image.png'],
   },
   verification: {
-    google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION,
+    ...(process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION && {
+      google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION,
+    }),
     other: {
-      naver: process.env.NEXT_PUBLIC_NAVER_SITE_VERIFICATION,
+      ...(process.env.NEXT_PUBLIC_NAVER_SITE_VERIFICATION && {
+        naver: process.env.NEXT_PUBLIC_NAVER_SITE_VERIFICATION,
+      }),
     },
   },
   category: 'technology',

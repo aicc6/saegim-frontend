@@ -46,8 +46,13 @@ Object.defineProperty(global, 'crypto', {
 global.fetch = jest.fn();
 
 // Mock IntersectionObserver
-global.IntersectionObserver = jest.fn(() => ({
-  observe: jest.fn(),
-  unobserve: jest.fn(),
-  disconnect: jest.fn(),
-})) as unknown as IntersectionObserver;
+global.IntersectionObserver = class IntersectionObserver {
+  observe = jest.fn();
+  unobserve = jest.fn();
+  disconnect = jest.fn();
+  root = null;
+  rootMargin = '';
+  thresholds = [];
+
+  constructor() {}
+} as unknown as typeof IntersectionObserver;

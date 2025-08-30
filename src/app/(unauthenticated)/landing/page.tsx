@@ -174,7 +174,7 @@ function LandingWithSearchParams() {
         clearTimeout(statusTimerRef.current);
       }
     };
-  }, [searchParams, router]);
+  }, [searchParams, router, toast]);
 
   const handleStartNow = () => {
     // 타이머가 있으면 정리하고 URL 파라미터도 정리
