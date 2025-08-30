@@ -3,33 +3,19 @@
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useRouter } from 'next/navigation';
+import { zodResolver } from '@hookform/resolvers/zod';
 
 import { FormInput } from '@/components/ui/form-input';
 import { useApiError } from '@/hooks/use-api-error';
-import { useFormValidationRules } from '@/hooks/use-form-validation-rules';
 import { authApi } from '@/lib/api';
 import { BRAND_COLORS, VALIDATION } from '@/constants';
-
-interface FormData {
-  email: string;
-  password: string;
-  confirmPassword: string;
-  nickname: string;
-  verificationCode: string;
-}
+import { signupSchema, type SignupFormData } from '@/schemas/auth';
 
 export default function SignupForm() {
   const router = useRouter();
   const { handleApiError, showSuccess } = useApiError({
     loggerName: 'SignupForm',
   });
-  const {
-    emailRules,
-    passwordRules,
-    passwordConfirmRules,
-    nicknameRules,
-    verificationCodeRules,
-  } = useFormValidationRules();
 
   const {
     register,
@@ -37,8 +23,9 @@ export default function SignupForm() {
     watch,
     formState: { errors, isSubmitting },
     trigger,
-  } = useForm<FormData>({
-    mode: 'onChange',
+  } = useForm<SignupFormData>({
+    resolver: zodResolver(signupSchema),
+    mode: 'onBlur',
   });
 
   // Watch specific fields for business logic
@@ -64,7 +51,7 @@ export default function SignupForm() {
     setNicknameChecked(false);
   };
 
-  const onSubmit = async (data: FormData) => {
+  const onSubmit = async (data: SignupFormData) => {
     if (!emailVerified || !nicknameChecked) {
       handleApiError(
         new Error('입력 확인 필요'),
@@ -232,7 +219,6 @@ export default function SignupForm() {
                 type="email"
                 id="email"
                 {...register('email', {
-                  ...emailRules,
                   onChange: () => {
                     resetEmailVerification();
                   },
@@ -266,7 +252,7 @@ export default function SignupForm() {
                 <FormInput
                   type="text"
                   id="verificationCode"
-                  {...register('verificationCode', verificationCodeRules)}
+                  {...register('verificationCode')}
                   placeholder={`인증 코드 ${VALIDATION.VERIFICATION_CODE_LENGTH}자리 입력`}
                   error={errors.verificationCode?.message}
                   maxLength={VALIDATION.VERIFICATION_CODE_LENGTH}
@@ -297,8 +283,8 @@ export default function SignupForm() {
         <FormInput
           type="password"
           id="password"
-          {...register('password', passwordRules)}
-          placeholder={`비밀번호 입력 (영문, 숫자, 특수문자 포함 ${VALIDATION.PASSWORD_MIN_LENGTH}자 이상)`}
+          {...register('password')}
+          placeholder={`비밀번호 입력 (영문, 숫자, 특수문자 포함 8자 이상)`}
           error={errors.password?.message}
           required
           disabled={isSubmitting}
@@ -307,10 +293,10 @@ export default function SignupForm() {
         {/* 비밀번호 확인 */}
         <FormInput
           type="password"
-          id="confirmPassword"
-          {...register('confirmPassword', passwordConfirmRules(password))}
+          id="passwordConfirm"
+          {...register('passwordConfirm')}
           placeholder="비밀번호 확인"
-          error={errors.confirmPassword?.message}
+          error={errors.passwordConfirm?.message}
           required
           disabled={isSubmitting}
         />
@@ -323,7 +309,6 @@ export default function SignupForm() {
                 type="text"
                 id="nickname"
                 {...register('nickname', {
-                  ...nicknameRules,
                   onChange: () => {
                     resetNicknameCheck();
                   },

@@ -2,14 +2,14 @@
 
 import { useForm } from 'react-hook-form';
 import { useRouter } from 'next/navigation';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { authApi } from '@/lib/api';
 import { useApiError } from '@/hooks/use-api-error';
-import { useFormValidationRules } from '@/hooks/use-form-validation-rules';
 import { FormInput } from '@/components/ui/form-input';
-
-interface FormData {
-  email: string;
-}
+import {
+  forgotPasswordSchema,
+  type ForgotPasswordFormData,
+} from '@/schemas/auth';
 
 export default function ForgotPasswordForm() {
   const router = useRouter();
@@ -17,17 +17,17 @@ export default function ForgotPasswordForm() {
     loggerName: 'ForgotPasswordForm',
     socialAccountRedirectPath: '/error/reset-password',
   });
-  const { emailRules } = useFormValidationRules();
 
   const {
     register,
     handleSubmit,
     formState: { errors, isSubmitting },
-  } = useForm<FormData>({
-    mode: 'onChange',
+  } = useForm<ForgotPasswordFormData>({
+    resolver: zodResolver(forgotPasswordSchema),
+    mode: 'onBlur',
   });
 
-  const onSubmit = async (data: FormData) => {
+  const onSubmit = async (data: ForgotPasswordFormData) => {
     try {
       // 비밀번호 재설정 이메일 발송
       await authApi.sendPasswordResetEmail({ email: data.email });
@@ -76,7 +76,7 @@ export default function ForgotPasswordForm() {
             <FormInput
               type="email"
               id="email"
-              {...register('email', emailRules)}
+              {...register('email')}
               placeholder="example@email.com"
               error={errors.email?.message}
             />

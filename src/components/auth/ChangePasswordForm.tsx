@@ -2,17 +2,15 @@
 
 import { useForm } from 'react-hook-form';
 import { useRouter } from 'next/navigation';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { Button } from '@/components/ui/button';
 import { apiClient } from '@/lib/api';
 import { useApiError } from '@/hooks/use-api-error';
-import { useFormValidationRules } from '@/hooks/use-form-validation-rules';
 import { FormInput } from '@/components/ui/form-input';
-
-interface FormData {
-  currentPassword: string;
-  newPassword: string;
-  confirmPassword: string;
-}
+import {
+  changePasswordSchema,
+  type ChangePasswordFormData,
+} from '@/schemas/auth';
 
 interface ChangePasswordRequest {
   current_password: string;
@@ -25,33 +23,18 @@ export default function ChangePasswordForm() {
   const { handleApiError, showSuccess } = useApiError({
     loggerName: 'ChangePasswordForm',
   });
-  const { requiredRule, newPasswordRules, passwordConfirmRules } =
-    useFormValidationRules();
 
   const {
     register,
     handleSubmit,
     formState: { errors, isSubmitting },
-    watch,
-  } = useForm<FormData>({
-    mode: 'onChange',
+  } = useForm<ChangePasswordFormData>({
+    resolver: zodResolver(changePasswordSchema),
+    mode: 'onBlur',
   });
 
-  const newPassword = watch('newPassword');
-  const currentPassword = watch('currentPassword');
-
-  const onSubmit = async (data: FormData) => {
+  const onSubmit = async (data: ChangePasswordFormData) => {
     try {
-      // 현재 비밀번호와 새 비밀번호가 같은지 확인
-      if (data.currentPassword === data.newPassword) {
-        handleApiError(
-          new Error('동일한 비밀번호'),
-          '비밀번호 오류',
-          '새 비밀번호는 현재 비밀번호와 달라야 합니다.',
-        );
-        return;
-      }
-
       // API 호출
       const requestData: ChangePasswordRequest = {
         current_password: data.currentPassword,
@@ -105,10 +88,7 @@ export default function ChangePasswordForm() {
           <FormInput
             type="password"
             id="currentPassword"
-            {...register(
-              'currentPassword',
-              requiredRule('현재 비밀번호를 입력해주세요.'),
-            )}
+            {...register('currentPassword')}
             placeholder="현재 비밀번호를 입력하세요"
             error={errors.currentPassword?.message}
             disabled={isSubmitting}
@@ -126,7 +106,7 @@ export default function ChangePasswordForm() {
           <FormInput
             type="password"
             id="newPassword"
-            {...register('newPassword', newPasswordRules(currentPassword))}
+            {...register('newPassword')}
             placeholder="새 비밀번호를 입력하세요"
             error={errors.newPassword?.message}
             disabled={isSubmitting}
@@ -140,16 +120,16 @@ export default function ChangePasswordForm() {
         <div>
           <label
             className="block text-sm font-medium text-text-primary dark:text-text-dark mb-2"
-            htmlFor="confirmPassword"
+            htmlFor="newPasswordConfirm"
           >
             새 비밀번호 확인
           </label>
           <FormInput
             type="password"
-            id="confirmPassword"
-            {...register('confirmPassword', passwordConfirmRules(newPassword))}
+            id="newPasswordConfirm"
+            {...register('newPasswordConfirm')}
             placeholder="새 비밀번호를 다시 입력하세요"
-            error={errors.confirmPassword?.message}
+            error={errors.newPasswordConfirm?.message}
             disabled={isSubmitting}
           />
         </div>

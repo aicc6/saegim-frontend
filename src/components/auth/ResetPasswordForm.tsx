@@ -3,15 +3,14 @@
 import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { authApi } from '@/lib/api';
 import { useApiError } from '@/hooks/use-api-error';
-import { useFormValidationRules } from '@/hooks/use-form-validation-rules';
 import { FormInput } from '@/components/ui/form-input';
-
-interface FormData {
-  newPassword: string;
-  confirmPassword: string;
-}
+import {
+  resetPasswordSchema,
+  type ResetPasswordFormData,
+} from '@/schemas/auth';
 
 export default function ResetPasswordForm() {
   const router = useRouter();
@@ -19,18 +18,15 @@ export default function ResetPasswordForm() {
   const { handleApiError, showSuccess } = useApiError({
     loggerName: 'ResetPasswordForm',
   });
-  const { passwordRules, passwordConfirmRules } = useFormValidationRules();
 
   const {
     register,
     handleSubmit,
     formState: { errors, isSubmitting },
-    watch,
-  } = useForm<FormData>({
+  } = useForm<ResetPasswordFormData>({
+    resolver: zodResolver(resetPasswordSchema),
     mode: 'onChange',
   });
-
-  const newPassword = watch('newPassword');
 
   // URL에서 이메일과 인증 코드 추출
   useEffect(() => {
@@ -48,7 +44,7 @@ export default function ResetPasswordForm() {
     }
   }, [searchParams, router, handleApiError]);
 
-  const onSubmit = async (data: FormData) => {
+  const onSubmit = async (data: ResetPasswordFormData) => {
     const emailParam = searchParams.get('email');
     const codeParam = searchParams.get('code');
 
@@ -66,7 +62,7 @@ export default function ResetPasswordForm() {
       await authApi.resetPassword({
         email: decodeURIComponent(emailParam),
         verification_code: decodeURIComponent(codeParam),
-        new_password: data.newPassword,
+        new_password: data.password,
       });
 
       showSuccess(
@@ -111,16 +107,16 @@ export default function ResetPasswordForm() {
         <div>
           <label
             className="block text-sm font-medium text-text-primary dark:text-text-dark mb-2"
-            htmlFor="newPassword"
+            htmlFor="password"
           >
             새 비밀번호 입력
           </label>
           <FormInput
             type="password"
-            id="newPassword"
-            {...register('newPassword', passwordRules)}
+            id="password"
+            {...register('password')}
             placeholder="새 비밀번호를 입력하세요"
-            error={errors.newPassword?.message}
+            error={errors.password?.message}
             disabled={isSubmitting}
           />
         </div>
@@ -129,16 +125,16 @@ export default function ResetPasswordForm() {
         <div>
           <label
             className="block text-sm font-medium text-text-primary dark:text-text-dark mb-2"
-            htmlFor="confirmPassword"
+            htmlFor="passwordConfirm"
           >
             새 비밀번호 확인
           </label>
           <FormInput
             type="password"
-            id="confirmPassword"
-            {...register('confirmPassword', passwordConfirmRules(newPassword))}
+            id="passwordConfirm"
+            {...register('passwordConfirm')}
             placeholder="새 비밀번호를 다시 입력하세요"
-            error={errors.confirmPassword?.message}
+            error={errors.passwordConfirm?.message}
             disabled={isSubmitting}
           />
         </div>

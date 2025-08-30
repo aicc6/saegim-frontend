@@ -1,7 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 
 import GoogleLoginButton from '@/components/ui/custom/GoogleLoginButton';
 import { FormInput } from '@/components/ui/form-input';
@@ -9,6 +11,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuthStore } from '@/stores/auth';
 import { authApi, getLogger } from '@/lib';
 import { BRAND_COLORS } from '@/constants';
+import { loginSchema, type LoginFormData } from '@/schemas/auth';
 
 interface LoginFormProps {
   redirectTo?: string | null;
@@ -22,11 +25,14 @@ export default function LoginForm({ redirectTo }: LoginFormProps) {
   const { toast } = useToast();
   const { login } = useAuthStore();
 
-  const [formData, setFormData] = useState({
-    email: '',
-    password: '',
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+  } = useForm<LoginFormData>({
+    resolver: zodResolver(loginSchema),
+    mode: 'onBlur',
   });
-  const [isLoading, setIsLoading] = useState(false);
 
   // URL 파라미터로 전달된 에러 처리
   useEffect(() => {
@@ -54,23 +60,11 @@ export default function LoginForm({ redirectTo }: LoginFormProps) {
     }
   }, [searchParams, toast]);
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    setIsLoading(true);
-
+  const onSubmit = async (data: LoginFormData) => {
     try {
       const response = await authApi.login({
-        email: formData.email,
-        password: formData.password,
+        email: data.email,
+        password: data.password,
       });
 
       // 로그인 성공 시 사용자 정보를 스토어에 저장
@@ -217,8 +211,6 @@ export default function LoginForm({ redirectTo }: LoginFormProps) {
         description: errorDescription,
         variant: 'destructive',
       });
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -254,19 +246,21 @@ export default function LoginForm({ redirectTo }: LoginFormProps) {
         </div>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-6">
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
         {/* 아이디(메일계정) 입력 */}
         <div>
           <FormInput
             type="email"
             id="email"
-            name="email"
-            value={formData.email}
-            onChange={handleInputChange}
             placeholder="아이디(메일계정) 입력"
-            required
             aria-describedby="email-help"
+            {...register('email')}
           />
+          {errors.email && (
+            <p className="mt-1 text-sm text-red-600 dark:text-red-400">
+              {errors.email.message}
+            </p>
+          )}
           <p id="email-help" className="sr-only">
             이메일 주소를 입력해주세요
           </p>
@@ -277,13 +271,15 @@ export default function LoginForm({ redirectTo }: LoginFormProps) {
           <FormInput
             type="password"
             id="password"
-            name="password"
-            value={formData.password}
-            onChange={handleInputChange}
             placeholder="비밀번호 입력"
-            required
             aria-describedby="password-help"
+            {...register('password')}
           />
+          {errors.password && (
+            <p className="mt-1 text-sm text-red-600 dark:text-red-400">
+              {errors.password.message}
+            </p>
+          )}
           <p id="password-help" className="sr-only">
             비밀번호를 입력해주세요
           </p>
@@ -292,10 +288,10 @@ export default function LoginForm({ redirectTo }: LoginFormProps) {
         {/* 로그인하기 버튼 */}
         <button
           type="submit"
-          disabled={isLoading}
+          disabled={isSubmitting}
           className="w-full saegim-button saegim-button-large disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          {isLoading ? '로그인 중...' : '로그인하기'}
+          {isSubmitting ? '로그인 중...' : '로그인하기'}
         </button>
 
         {/* 구글 로그인 버튼 */}
