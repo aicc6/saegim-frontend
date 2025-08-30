@@ -1,6 +1,5 @@
 import type { Metadata } from 'next';
 
-import Footer from '@/components/common/Footer';
 import AuthenticatedHeader from '@/components/common/AuthenticatedHeader';
 import { Sidebar } from '@/components/common/Sidebar';
 import AuthGuard from '@/components/auth/AuthGuard';
@@ -29,11 +28,8 @@ export default function AuthenticatedLayout({
               {/* 헤더 */}
               <AuthenticatedHeader />
 
-              {/* 메인 콘텐츠 영역 - flex-1로 확장 */}
+              {/* 메인 콘텐츠 영역 - flex-1로 확장하여 전체 높이 채움 */}
               <div className="flex-1 bg-background-primary">{children}</div>
-
-              {/* 푸터 - 항상 바닥에 위치 */}
-              <Footer />
             </MainContent>
           </div>
         </SidebarProvider>
