@@ -11,6 +11,7 @@ import {
   changePasswordSchema,
   type ChangePasswordFormData,
 } from '@/schemas/auth';
+import { TEXT_STYLES } from '@/constants';
 
 interface ChangePasswordRequest {
   current_password: string;
@@ -68,10 +69,8 @@ export default function ChangePasswordForm() {
   return (
     <div className="space-y-6">
       <div className="text-center">
-        <h1 className="text-2xl font-semibold text-text-primary dark:text-text-dark">
-          비밀번호 변경
-        </h1>
-        <p className="mt-2 text-text-secondary dark:text-text-dark-secondary">
+        <h1 className={TEXT_STYLES.heading.h1}>비밀번호 변경</h1>
+        <p className={TEXT_STYLES.description}>
           계정 보안을 위한 비밀번호를 변경합니다
         </p>
       </div>
@@ -79,10 +78,7 @@ export default function ChangePasswordForm() {
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         {/* 현재 비밀번호 입력 */}
         <div>
-          <label
-            className="block text-sm font-medium text-text-primary dark:text-text-dark mb-2"
-            htmlFor="currentPassword"
-          >
+          <label className={TEXT_STYLES.label} htmlFor="currentPassword">
             현재 비밀번호 입력
           </label>
           <FormInput
@@ -97,10 +93,7 @@ export default function ChangePasswordForm() {
 
         {/* 새 비밀번호 입력 */}
         <div>
-          <label
-            className="block text-sm font-medium text-text-primary dark:text-text-dark mb-2"
-            htmlFor="newPassword"
-          >
+          <label className={TEXT_STYLES.label} htmlFor="newPassword">
             새 비밀번호 입력
           </label>
           <FormInput
@@ -111,17 +104,14 @@ export default function ChangePasswordForm() {
             error={errors.newPassword?.message}
             disabled={isSubmitting}
           />
-          <p className="mt-1 text-xs text-text-secondary dark:text-text-dark-secondary">
+          <p className={`mt-1 ${TEXT_STYLES.help}`}>
             8자 이상, 소문자, 숫자, 특수문자를 포함해야 합니다.
           </p>
         </div>
 
         {/* 새 비밀번호 확인 */}
         <div>
-          <label
-            className="block text-sm font-medium text-text-primary dark:text-text-dark mb-2"
-            htmlFor="newPasswordConfirm"
-          >
+          <label className={TEXT_STYLES.label} htmlFor="newPasswordConfirm">
             새 비밀번호 확인
           </label>
           <FormInput

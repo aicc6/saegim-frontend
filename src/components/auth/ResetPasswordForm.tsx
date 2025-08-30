@@ -11,6 +11,7 @@ import {
   resetPasswordSchema,
   type ResetPasswordFormData,
 } from '@/schemas/auth';
+import { TEXT_STYLES } from '@/constants';
 
 export default function ResetPasswordForm() {
   const router = useRouter();
@@ -94,10 +95,8 @@ export default function ResetPasswordForm() {
       </div>
 
       <div className="text-center">
-        <h1 className="text-2xl font-semibold text-text-primary dark:text-text-dark">
-          비밀번호 재설정
-        </h1>
-        <p className="mt-2 text-text-secondary dark:text-text-dark-secondary">
+        <h1 className={TEXT_STYLES.heading.h1}>비밀번호 재설정</h1>
+        <p className={TEXT_STYLES.description}>
           새로운 비밀번호를 입력해주세요
         </p>
       </div>
@@ -105,10 +104,7 @@ export default function ResetPasswordForm() {
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
         {/* 새 비밀번호 입력 */}
         <div>
-          <label
-            className="block text-sm font-medium text-text-primary dark:text-text-dark mb-2"
-            htmlFor="password"
-          >
+          <label className={TEXT_STYLES.label} htmlFor="password">
             새 비밀번호 입력
           </label>
           <FormInput
@@ -123,10 +119,7 @@ export default function ResetPasswordForm() {
 
         {/* 새 비밀번호 확인 */}
         <div>
-          <label
-            className="block text-sm font-medium text-text-primary dark:text-text-dark mb-2"
-            htmlFor="passwordConfirm"
-          >
+          <label className={TEXT_STYLES.label} htmlFor="passwordConfirm">
             새 비밀번호 확인
           </label>
           <FormInput
@@ -141,10 +134,10 @@ export default function ResetPasswordForm() {
 
         {/* 비밀번호 보안 요구사항 안내 */}
         <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800/30 rounded-lg p-4">
-          <h3 className="text-sm font-medium text-blue-800 dark:text-blue-200 mb-2">
+          <h3 className={`text-sm font-medium ${TEXT_STYLES.info.blue} mb-2`}>
             비밀번호 요구사항
           </h3>
-          <ul className="text-xs text-blue-700 dark:text-blue-300 space-y-1">
+          <ul className={`text-xs ${TEXT_STYLES.info.blueSecondary} space-y-1`}>
             <li>• 8자 이상</li>
             <li>• 소문자, 숫자, 특수문자 포함</li>
           </ul>
@@ -165,7 +158,7 @@ export default function ResetPasswordForm() {
         <button
           type="button"
           onClick={() => router.push('/login')}
-          className="text-sm text-sage-50 dark:text-sage-40 hover:text-sage-60 dark:hover:text-sage-30 transition-colors"
+          className={TEXT_STYLES.link}
         >
           로그인 페이지로 돌아가기
         </button>

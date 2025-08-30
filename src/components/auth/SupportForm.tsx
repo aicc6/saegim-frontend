@@ -8,6 +8,7 @@ import { FormInput } from '@/components/ui/form-input';
 import { useApiError } from '@/hooks/use-api-error';
 import { apiClient } from '@/lib/api';
 import { supportSchema, type SupportFormData } from '@/schemas/auth';
+import { TEXT_STYLES } from '@/constants';
 
 export default function SupportForm() {
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
@@ -60,10 +61,8 @@ export default function SupportForm() {
   return (
     <div className="space-y-6">
       <div className="text-center">
-        <h1 className="text-2xl font-semibold text-text-primary dark:text-text-dark">
-          고객센터 문의
-        </h1>
-        <p className="mt-2 text-text-secondary dark:text-text-dark-secondary">
+        <h1 className={TEXT_STYLES.heading.h1}>고객센터 문의</h1>
+        <p className={TEXT_STYLES.description}>
           문제 발생, 제안 등을 자유롭게 작성해주세요.
           <br />
           빠시간 내에 답변 드리겠습니다.
@@ -73,10 +72,7 @@ export default function SupportForm() {
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
         {/* 제목 입력 */}
         <div>
-          <label
-            className="block text-sm font-medium text-text-primary dark:text-text-dark mb-2"
-            htmlFor="title"
-          >
+          <label className={TEXT_STYLES.label} htmlFor="title">
             제목 입력
           </label>
           <FormInput
@@ -90,10 +86,7 @@ export default function SupportForm() {
 
         {/* 내용 입력 */}
         <div>
-          <label
-            className="block text-sm font-medium text-text-primary dark:text-text-dark mb-2"
-            htmlFor="content"
-          >
+          <label className={TEXT_STYLES.label} htmlFor="content">
             내용 입력
           </label>
           <textarea
@@ -112,10 +105,7 @@ export default function SupportForm() {
 
         {/* 이미지 업로드 */}
         <div>
-          <label
-            className="block text-sm font-medium text-text-primary dark:text-text-dark mb-2"
-            htmlFor="file-upload"
-          >
+          <label className={TEXT_STYLES.label} htmlFor="file-upload">
             스크린샷/이미지 업로드
           </label>
           <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-border-subtle dark:border-border-dark border-dashed rounded-lg cursor-pointer hover:border-primary/50 dark:hover:border-primary/50 transition-colors">

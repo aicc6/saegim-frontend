@@ -8,6 +8,7 @@ import { FormInput } from '@/components/ui/form-input';
 import { useApiError } from '@/hooks/use-api-error';
 import { apiClient } from '@/lib/api';
 import { changeEmailSchema, type ChangeEmailFormData } from '@/schemas/auth';
+import { TEXT_STYLES } from '@/constants';
 
 export default function ChangeEmailForm() {
   const [isVerified, setIsVerified] = useState(false);
@@ -77,10 +78,8 @@ export default function ChangeEmailForm() {
         // 비밀번호 확인 단계
         <>
           <div className="text-center">
-            <h1 className="text-2xl font-semibold text-text-primary dark:text-text-dark">
-              현재 비밀번호 입력
-            </h1>
-            <p className="mt-2 text-text-secondary dark:text-text-dark-secondary">
+            <h1 className={TEXT_STYLES.heading.h1}>현재 비밀번호 입력</h1>
+            <p className={TEXT_STYLES.description}>
               프로필을 변경하기 위해 현재 비밀번호를 입력해주세요
             </p>
           </div>
@@ -103,10 +102,8 @@ export default function ChangeEmailForm() {
         // 프로필 업데이트 폼
         <>
           <div className="text-center">
-            <h1 className="text-2xl font-semibold text-text-primary dark:text-text-dark">
-              프로필 업데이트
-            </h1>
-            <p className="mt-2 text-text-secondary dark:text-text-dark-secondary">
+            <h1 className={TEXT_STYLES.heading.h1}>프로필 업데이트</h1>
+            <p className={TEXT_STYLES.description}>
               닉네임과 이메일 정보를 변경할 수 있습니다
             </p>
           </div>
@@ -114,10 +111,7 @@ export default function ChangeEmailForm() {
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             {/* 닉네임 입력 */}
             <div>
-              <label
-                className="block text-sm font-medium text-text-primary dark:text-text-dark mb-2"
-                htmlFor="nickname"
-              >
+              <label className={TEXT_STYLES.label} htmlFor="nickname">
                 닉네임 입력
               </label>
               <FormInput
@@ -131,10 +125,7 @@ export default function ChangeEmailForm() {
 
             {/* 이메일 입력 */}
             <div>
-              <label
-                className="block text-sm font-medium text-text-primary dark:text-text-dark mb-2"
-                htmlFor="newEmail"
-              >
+              <label className={TEXT_STYLES.label} htmlFor="newEmail">
                 새 이메일 주소
               </label>
               <FormInput

@@ -85,3 +85,28 @@ export const createCardClassName = (
 ) => {
   return `${CARD_STYLES.base} ${withHover ? CARD_STYLES.hover : ''} ${CARD_STYLES.padding[padding]} ${custom || ''}`.trim();
 };
+
+// 공통 텍스트 스타일
+export const TEXT_STYLES = {
+  primary: 'text-text-primary dark:text-text-dark',
+  secondary: 'text-text-secondary dark:text-text-dark-secondary',
+  heading: {
+    h1: 'text-2xl font-semibold text-text-primary dark:text-text-dark',
+    h2: 'text-xl font-semibold text-text-primary dark:text-text-dark',
+    h3: 'text-lg font-medium text-text-primary dark:text-text-dark',
+  },
+  label: 'block text-sm font-medium text-text-primary dark:text-text-dark mb-2',
+  description: 'mt-2 text-text-secondary dark:text-text-dark-secondary',
+  error: 'text-red-600 dark:text-red-400 text-sm',
+  link: 'text-sm text-sage-50 dark:text-sage-40 hover:text-sage-60 dark:hover:text-sage-30 transition-colors',
+  success: 'text-green-600 dark:text-green-400 font-medium',
+  help: 'text-xs text-text-secondary dark:text-text-dark-secondary',
+  info: {
+    blue: 'text-blue-800 dark:text-blue-200',
+    blueSecondary: 'text-blue-700 dark:text-blue-300',
+  },
+  button: {
+    secondary:
+      'px-4 py-3 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors font-medium',
+  },
+} as const;

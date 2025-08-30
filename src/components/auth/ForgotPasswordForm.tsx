@@ -10,6 +10,7 @@ import {
   forgotPasswordSchema,
   type ForgotPasswordFormData,
 } from '@/schemas/auth';
+import { TEXT_STYLES } from '@/constants';
 
 export default function ForgotPasswordForm() {
   const router = useRouter();
@@ -55,10 +56,10 @@ export default function ForgotPasswordForm() {
     <div className="w-full max-w-md mx-auto">
       <div className="bg-background-primary dark:bg-background-dark-secondary rounded-2xl shadow-2xl p-8 border border-border-subtle dark:border-border-dark">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-text-primary dark:text-text-dark mb-2">
+          <h1 className={`text-3xl font-bold ${TEXT_STYLES.primary} mb-2`}>
             🔐 비밀번호 찾기
           </h1>
-          <p className="text-text-secondary dark:text-text-dark-secondary">
+          <p className={TEXT_STYLES.secondary}>
             가입한 이메일 주소를 입력하시면
             <br />
             비밀번호 재설정 링크를 발송해드립니다.
@@ -67,10 +68,7 @@ export default function ForgotPasswordForm() {
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
           <div>
-            <label
-              htmlFor="email"
-              className="block text-sm font-medium text-text-primary dark:text-text-dark mb-2"
-            >
+            <label htmlFor="email" className={TEXT_STYLES.label}>
               이메일 주소
             </label>
             <FormInput
@@ -95,7 +93,7 @@ export default function ForgotPasswordForm() {
           <button
             type="button"
             onClick={handleGoToLogin}
-            className="text-sm text-sage-50 dark:text-sage-40 hover:text-sage-60 dark:hover:text-sage-30 transition-colors"
+            className={TEXT_STYLES.link}
           >
             로그인 페이지로 돌아가기
           </button>

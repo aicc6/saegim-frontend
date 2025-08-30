@@ -30,6 +30,7 @@ export {
   BUTTON_STYLES,
   MODAL_STYLES,
   CARD_STYLES,
+  TEXT_STYLES,
   createInputClassName,
   createButtonClassName,
   createCardClassName,

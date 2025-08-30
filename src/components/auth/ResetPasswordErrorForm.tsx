@@ -1,6 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
+import { TEXT_STYLES } from '@/constants';
 
 export default function ResetPasswordErrorForm() {
   const router = useRouter();
@@ -26,10 +27,8 @@ export default function ResetPasswordErrorForm() {
 
       {/* 에러 메시지 */}
       <div className="space-y-2">
-        <h1 className="text-2xl font-semibold text-text-primary dark:text-text-dark">
-          이메일 인증 실패
-        </h1>
-        <p className="text-text-secondary dark:text-text-dark-secondary">
+        <h1 className={TEXT_STYLES.heading.h1}>이메일 인증 실패</h1>
+        <p className={TEXT_STYLES.secondary}>
           소셜계정 사용자입니까?
           <br />
           비밀번호를 설정할 수 없습니다.
@@ -40,7 +39,7 @@ export default function ResetPasswordErrorForm() {
       <div className="space-y-4 pt-4">
         {/* 에러 표시 카드 */}
         <div className="bg-red-50 dark:bg-red-900/20 rounded-lg p-4">
-          <p className="text-red-600 dark:text-red-400 text-sm">
+          <p className={TEXT_STYLES.error}>
             소셜계정에서 이메일 알림받기로도 직접 비밀번호 설정은 불가 안내
           </p>
         </div>
@@ -56,7 +55,7 @@ export default function ResetPasswordErrorForm() {
         {/* 고객센터 문의 버튼 */}
         <button
           onClick={handleGoToHelp}
-          className="w-full px-4 py-3 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors font-medium"
+          className={`w-full ${TEXT_STYLES.button.secondary}`}
         >
           고객센터 문의 안내
         </button>

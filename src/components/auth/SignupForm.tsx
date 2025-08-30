@@ -8,7 +8,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { FormInput } from '@/components/ui/form-input';
 import { useApiError } from '@/hooks/use-api-error';
 import { authApi } from '@/lib/api';
-import { BRAND_COLORS, VALIDATION } from '@/constants';
+import { BRAND_COLORS, VALIDATION, TEXT_STYLES } from '@/constants';
 import { signupSchema, type SignupFormData } from '@/schemas/auth';
 import { NicknameAvailabilityResponse } from '@/types/api';
 
@@ -271,7 +271,7 @@ export default function SignupForm() {
                 {isVerifyingCode ? '확인중...' : '확인'}
               </button>
             </div>
-            <p className="text-sm text-gray-500 dark:text-text-dark-secondary">
+            <p className={`text-sm ${TEXT_STYLES.secondary}`}>
               이메일로 발송된 6자리 인증 코드를 입력해주세요.
             </p>
           </div>
