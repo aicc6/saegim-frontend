@@ -85,7 +85,7 @@ export default function ProfileForm() {
   const loadProfile = useCallback(async () => {
     try {
       setIsLoading(true);
-      const response = await apiClient.get('/api/auth/profile');
+      const response = await apiClient.get('/api/auth/me');
       const profile = response.data as UserProfileResponse;
 
       setProfileData({
