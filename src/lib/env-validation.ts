@@ -102,8 +102,8 @@ export function getEnvVar(name: string, fallback?: string): string {
   return value;
 }
 
-// 개발 모드에서만 환경변수 검증 실행
-if (process.env.NODE_ENV === 'development') {
+// 개발 모드에서만 환경변수 검증 실행 (클라이언트 사이드에서만)
+if (process.env.NODE_ENV === 'development' && typeof window !== 'undefined') {
   const validation = validateEnvironment();
 
   if (!validation.isValid) {

@@ -268,7 +268,7 @@ export function NotificationPage() {
   };
 
   return (
-    <div className="min-h-screen bg-sage-10 dark:bg-gray-900">
+    <div className="h-full bg-sage-10 dark:bg-gray-900 flex flex-col">
       {/* PageHeader 사용 */}
       <PageHeader
         title="알림"
@@ -294,7 +294,7 @@ export function NotificationPage() {
         }
       />
 
-      <div className="max-w-4xl mx-auto p-4">
+      <div className="max-w-4xl mx-auto p-4 flex-1 min-h-0">
         <Tabs defaultValue="notifications" className="space-y-6">
           <TabsList className="grid w-full grid-cols-2 bg-sage-10 dark:bg-gray-800 p-2 rounded-xl border border-sage-20 dark:border-gray-700">
             <TabsTrigger

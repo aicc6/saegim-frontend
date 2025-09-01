@@ -28,8 +28,10 @@ export default function AuthenticatedLayout({
               {/* 헤더 */}
               <AuthenticatedHeader />
 
-              {/* 메인 콘텐츠 영역 - flex-1로 확장하여 전체 높이 채움 */}
-              <div className="flex-1 bg-background-primary">{children}</div>
+              {/* 메인 콘텐츠 영역 - 헤더를 제외한 전체 높이 채움 */}
+              <div className="flex-1 bg-background-primary min-h-0 overflow-auto">
+                {children}
+              </div>
             </MainContent>
           </div>
         </SidebarProvider>

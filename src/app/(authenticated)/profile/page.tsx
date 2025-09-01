@@ -22,8 +22,8 @@ function ProfileFormWrapper() {
 
 export default function ProfilePage() {
   return (
-    <div className="min-h-screen bg-background-secondary dark:bg-background-dark transition-colors">
-      <main className="container mx-auto px-4 py-16">
+    <div className="h-full bg-background-secondary dark:bg-background-dark transition-colors flex flex-col">
+      <main className="container mx-auto px-4 py-16 flex-1 flex items-center justify-center">
         <div className="max-w-4xl mx-auto">
           <div className="bg-background-primary dark:bg-background-dark-secondary rounded-2xl shadow-2xl p-10 border border-border-subtle dark:border-border-dark transition-colors">
             <ProfileFormWrapper />

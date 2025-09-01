@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { getLogger } from '@/lib/logger';
 
 const logger = getLogger('useStreaming');
@@ -67,9 +67,64 @@ export const useStreaming = () => {
     regenerationHistory: [],
   });
 
+  // 로컬 스토리지 키 생성
+  const getStorageKey = useCallback((sessionId: string) => {
+    return `regeneration_history_${sessionId}`;
+  }, []);
+
+  // 로컬 스토리지에서 regenerationHistory 로드
+  const loadRegenerationHistory = useCallback(
+    (sessionId: string) => {
+      try {
+        const storageKey = getStorageKey(sessionId);
+        const savedHistory = localStorage.getItem(storageKey);
+        if (savedHistory) {
+          return JSON.parse(savedHistory);
+        }
+      } catch (error) {
+        logger.error('regenerationHistory 로드 실패', { error });
+      }
+      return [];
+    },
+    [getStorageKey],
+  );
+
+  // 로컬 스토리지에 regenerationHistory 저장
+  const saveRegenerationHistory = useCallback(
+    (sessionId: string, history: StreamingState['regenerationHistory']) => {
+      try {
+        const storageKey = getStorageKey(sessionId);
+        localStorage.setItem(storageKey, JSON.stringify(history));
+      } catch (error) {
+        logger.error('regenerationHistory 저장 실패', { error });
+      }
+    },
+    [getStorageKey],
+  );
+
   const eventSourceRef = useRef<EventSource | null>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const streamingTypingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // sessionId가 변경될 때 저장된 regenerationHistory 로드
+  useEffect(() => {
+    if (state.sessionId) {
+      const savedHistory = loadRegenerationHistory(state.sessionId);
+      if (savedHistory.length > 0) {
+        setState((prev) => ({
+          ...prev,
+          regenerationHistory: savedHistory,
+        }));
+      }
+    }
+  }, [state.sessionId, loadRegenerationHistory]);
+
+  // regenerationHistory가 변경될 때 로컬 스토리지에 저장
+  useEffect(() => {
+    if (state.sessionId && state.regenerationHistory.length > 0) {
+      saveRegenerationHistory(state.sessionId, state.regenerationHistory);
+    }
+  }, [state.sessionId, state.regenerationHistory, saveRegenerationHistory]);
 
   // 실시간 스트리밍 타이핑 애니메이션 함수
   const startStreamingTypingAnimation = useCallback(
@@ -156,7 +211,14 @@ export const useStreaming = () => {
         }));
 
         // 이미지 업로드 처리 (있는 경우)
-        let uploadedImages = null;
+        let uploadedImages: Array<{
+          file_id: string;
+          original_url: string;
+          thumbnail_url: string;
+          mime_type: string;
+          file_size: number;
+          filename: string;
+        }> | null = null;
         if (data.images && data.images.length > 0) {
           try {
             const formData = new FormData();
@@ -374,32 +436,35 @@ export const useStreaming = () => {
         const selectedResult = history[historyIndex];
         return {
           ...prev,
+          streamedText: selectedResult.text, // streamedText도 업데이트
           accumulatedText: selectedResult.text,
           displayText: selectedResult.text,
           emotion: selectedResult.emotion,
           keywords: selectedResult.keywords,
           isEditMode: false,
           editedText: selectedResult.text,
+          isTyping: false, // 타이핑 애니메이션 중지
+          isComplete: true, // 완료 상태로 설정
         };
       }
       return prev;
     });
   }, []);
 
-  const resetState = useCallback(() => {
+  const resetState = useCallback((preserveSession: boolean = false) => {
     if (typingTimeoutRef.current) {
       clearTimeout(typingTimeoutRef.current);
     }
     if (streamingTypingTimeoutRef.current) {
       clearTimeout(streamingTypingTimeoutRef.current);
     }
-    setState({
+    setState((prev) => ({
       isStreaming: false,
       streamedText: '',
       accumulatedText: '',
       displayText: '',
       error: null,
-      sessionId: null,
+      sessionId: preserveSession ? prev.sessionId : null,
       emotion: null,
       keywords: [],
       isComplete: false,
@@ -408,8 +473,8 @@ export const useStreaming = () => {
       editedText: '',
       regenerationCount: 0,
       uploadedImages: null,
-      regenerationHistory: [],
-    });
+      regenerationHistory: preserveSession ? prev.regenerationHistory : [],
+    }));
   }, []);
 
   return {

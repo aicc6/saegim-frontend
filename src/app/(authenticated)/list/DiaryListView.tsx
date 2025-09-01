@@ -449,11 +449,14 @@ export default function DiaryListView() {
                 'peaceful',
               date: diary.created_at || '',
               keywords: diary.keywords || [],
-              thumbnail: `https://picsum.photos/400/200?random=${diary.id}`,
+              thumbnail:
+                diary.images && diary.images.length > 0
+                  ? diary.images[0].thumbnail_path || diary.images[0].file_path
+                  : `https://picsum.photos/400/200?random=${diary.id}`,
             }}
             onClick={() => handleCardClick(diary.id.toString())}
             onDelete={(_) =>
-              handleDeleteClick(diary.id.toString(), diary.title || '')
+              handleDeleteClick(diary.id.toString(), diary.title || '제목 없음')
             }
           />
         ))}

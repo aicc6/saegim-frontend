@@ -82,7 +82,7 @@ export default function AuthenticatedHeader() {
 
   return (
     <div
-      className={`hidden lg:flex border-b h-18 px-12 w-full items-center ${
+      className={`hidden lg:flex border-b h-18 px-12 w-full items-center sticky top-0 z-50 ${
         isDark ? 'bg-gray-900 border-gray-700' : 'bg-white border-sage-20'
       }`}
     >

@@ -5,14 +5,14 @@ import PageHeader from '@/components/common/PageHeader';
 
 export default function ListPage() {
   return (
-    <div className="flex flex-col">
+    <div className="h-full flex flex-col">
       {/* 페이지 헤더 */}
       <PageHeader
         title="글목록"
         subtitle="작성한 모든 일기를 한눈에 확인하세요"
       />
 
-      <div className="flex flex-1">
+      <div className="flex flex-1 min-h-0">
         <main className="flex-1">
           <div className="container mx-auto px-6 py-8">
             {/* 기능 준비중 메시지

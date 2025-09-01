@@ -11,7 +11,7 @@ export interface ImageInfo {
 
 export interface DiaryEntry {
   id: string;
-  title: string;
+  title: string | null;
   content: string;
   user_emotion: string | null;
   ai_emotion: string | null;
@@ -23,11 +23,19 @@ export interface DiaryEntry {
   created_at: string;
   updated_at: string | null;
   images?: ImageInfo[]; // 이미지 정보 추가
+  uploaded_images?: Array<{
+    file_id: string;
+    original_url: string;
+    thumbnail_url: string;
+    mime_type: string;
+    file_size: number;
+    filename: string;
+  }> | null; // 업로드된 이미지 정보
 }
 
 export interface DiaryListEntry {
   id: string;
-  title: string;
+  title: string | null;
   content: string; // 수정된 본문 내용을 표시하기 위해 content 필드 추가
   ai_generated_text: string | null; // ai_generated_text 필드 추가
   user_emotion: string | null;

@@ -62,7 +62,6 @@ export default function ViewPostPage({
   const [showImageOptionsModal, setShowImageOptionsModal] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [sameDateEntries, setSameDateEntries] = useState<DiaryListEntry[]>([]);
-  const [isImageDeleted, setIsImageDeleted] = useState(false); // 이미지 삭제 상태 추가
   // deletedImageIds는 전역 스토어에서 가져옴
 
   // 삭제 확인 모달 상태
@@ -122,35 +121,16 @@ export default function ViewPostPage({
   }, []);
 
   useEffect(() => {
-    // 현재 엔트리를 diaries에서 찾기 (목록용 데이터)
+    // 페이지 로드 시 항상 해당 다이어리를 API에서 직접 조회
+    if (!entry || entry.id !== entryId) {
+      logger.debug('다이어리 직접 조회 시작:', entryId);
+      fetchDiary(entryId);
+    }
+
+    // 현재 엔트리를 diaries에서 찾기 (캐시된 데이터가 있는 경우)
     const foundEntry = diaries.find((e: DiaryListEntry) => e.id === entryId);
 
     if (foundEntry) {
-      // 상세 데이터는 이미 diaries에 있으므로 fetchDiary 호출하지 않음
-      // 이미지 삭제 상태를 유지하기 위해 자동 로드 방지
-      logger.debug('diaries에서 엔트리 찾음, fetchDiary 호출하지 않음');
-
-      // entry 상태를 diaries에서 직접 설정 (entry가 null일 때만)
-      if (!entry) {
-        // DiaryListEntry를 DiaryEntry로 변환하여 설정
-        // 삭제된 이미지는 제외
-        const filteredImages = (foundEntry.images || []).filter(
-          (img) => !deletedImageIds.has(img.id),
-        );
-
-        const detailedEntry: DiaryEntry = {
-          ...foundEntry,
-          images: filteredImages,
-          ai_emotion_confidence: null, // 기본값 설정
-          user_id: '', // 기본값 설정 (실제로는 필요하지 않음)
-          updated_at: foundEntry.created_at, // created_at을 updated_at으로 사용
-        };
-        setEntry(detailedEntry);
-
-        // editedImages도 동기화
-        setEditedImages(filteredImages);
-      }
-
       // 같은 날짜의 다른 엔트리들 찾기 (목록용 데이터)
       const sameDateEntries = diaries.filter(
         (e: DiaryListEntry) => e.created_at === foundEntry.created_at,
@@ -162,50 +142,42 @@ export default function ViewPostPage({
         (e: DiaryListEntry) => e.id === entryId,
       );
       setCurrentIndex(index);
-    } else {
-      logger.warn('해당 ID의 다이어리를 찾을 수 없습니다:', entryId);
-
-      // diaries에서 찾을 수 없는 경우 API로 직접 조회 시도
-      if (diaries.length === 0) {
-        logger.debug('diaries가 비어있음, API로 직접 조회 시도');
-        fetchDiary(entryId);
-      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [entryId, diaries, deletedImageIds]);
+  }, [entryId]);
 
   // currentDiary가 업데이트되면 entry 상태 업데이트
   useEffect(() => {
-    if (currentDiary) {
-      // 이미지가 삭제된 상태라면 currentDiary로 덮어쓰지 않음
-      if (isImageDeleted) {
-        logger.debug('이미지 삭제 상태이므로 currentDiary 업데이트 스킵');
-        return;
-      }
+    if (currentDiary && currentDiary.id === entryId) {
+      logger.debug('currentDiary 업데이트:', currentDiary.id);
 
-      // entry가 이미 currentDiary와 같은 ID라면 덮어쓰지 않음
-      if (entry && entry.id === currentDiary.id) {
-        logger.debug(
-          'entry가 이미 같은 ID로 설정되어 있으므로 currentDiary 업데이트 스킵',
-        );
-        return;
-      }
+      // 삭제된 이미지는 제외하고 설정
+      const filteredImages = (currentDiary.images || []).filter(
+        (img) => !deletedImageIds.has(img.id),
+      );
 
-      setEntry(currentDiary);
+      const updatedEntry = {
+        ...currentDiary,
+        images: filteredImages,
+      };
+
+      setEntry(updatedEntry);
+      setEditedImages(filteredImages);
+
       // 편집 모드가 아닐 때만 초기값으로 설정
       if (!isEditing) {
-        setEditedTitle(currentDiary.title);
+        setEditedTitle(currentDiary.title || '');
         setEditedContent(currentDiary.content);
         setEditedEmotion(currentDiary.user_emotion || '');
         setEditedKeywords(currentDiary.keywords || []);
       }
     }
-  }, [currentDiary, isEditing, isImageDeleted, entry]);
+  }, [currentDiary, entryId, deletedImageIds, isEditing]);
 
   // 편집 모드 시작 시 초기값 설정
   useEffect(() => {
     if (isEditing && entry) {
-      setEditedTitle(entry.title);
+      setEditedTitle(entry.title || '');
       setEditedContent(entry.content);
       setEditedEmotion(entry.user_emotion || '');
       setEditedKeywords(entry.keywords || []);
@@ -268,7 +240,7 @@ export default function ViewPostPage({
         });
 
         // 편집 완료 후에도 이미지 삭제 상태 유지
-        // setIsImageDeleted(false); // 이 줄 제거
+        // (false); // 이 줄 제거
 
         // 성공 메시지 표시
         alert('다이어리가 성공적으로 수정되었습니다.');
@@ -283,7 +255,7 @@ export default function ViewPostPage({
       // 수정 모드 시작
       setIsEditing(true);
       // 수정 모드 시작 시 현재 상태를 편집 상태로 복사
-      setEditedTitle(entry.title);
+      setEditedTitle(entry.title || '');
       setEditedContent(entry.content);
       setEditedEmotion(entry.user_emotion || '');
       setEditedKeywords(entry.keywords || []);
@@ -333,14 +305,13 @@ export default function ViewPostPage({
 
     // 원래 값으로 복원
     if (entry) {
-      setEditedTitle(entry.title);
+      setEditedTitle(entry.title || '');
       setEditedContent(entry.content);
       setEditedEmotion(entry.user_emotion || '');
       setEditedKeywords(entry.keywords || []);
       setEditedImages(entry.images || []);
 
       // 편집 모드 종료 시 상태 잠금 해제 및 삭제된 이미지 ID 초기화
-      setIsImageDeleted(false);
 
       // 현재 다이어리의 이미지만 deletedImageIds에서 제거 (편집 취소 시 복원)
       if (entry && entry.images) {
@@ -435,7 +406,6 @@ export default function ViewPostPage({
     useDiaryStore.getState().addDeletedImageId(imageId);
 
     // 이미지 삭제 상태 설정 (상태 잠금)
-    setIsImageDeleted(true);
 
     logger.info(
       '이미지 삭제 완료 (로컬 상태만 업데이트, DB는 유지, 상태 잠금 설정)',
@@ -509,7 +479,6 @@ export default function ViewPostPage({
           logger.debug('localStorage에서 삭제된 이미지 ID 제거 완료');
 
           // 이미지 복원 시 상태 잠금 해제
-          setIsImageDeleted(false);
           // clearDeletedImageIds() 호출하지 않음 - 전역 상태 유지
 
           logger.info('기존 이미지 복원 완료 - 캘린더와 동기화됨');
@@ -718,7 +687,7 @@ export default function ViewPostPage({
     emotionLabels[entry.user_emotion as keyof typeof emotionLabels];
 
   return (
-    <div className="min-h-screen bg-background-primary flex flex-col">
+    <div className="h-full bg-background-primary flex flex-col">
       {/* 페이지 헤더 */}
       <PageHeader
         title={entry?.title || '제목 없음'}
@@ -736,7 +705,7 @@ export default function ViewPostPage({
         }
       />
 
-      <div className="flex-1 bg-ivory-cream p-8">
+      <div className="flex-1 bg-ivory-cream p-8 min-h-0 overflow-auto">
         <div className="max-w-4xl mx-auto">
           {/* 메인 콘텐츠 영역 */}
           <div className="bg-white rounded-lg border-2 border-sage-30 p-8 shadow-sm">
@@ -1176,7 +1145,7 @@ export default function ViewPostPage({
         isOpen={deleteModalOpen}
         onClose={handleDeleteModalClose}
         onConfirm={handleDeleteConfirm}
-        diaryTitle={entry?.title}
+        diaryTitle={entry?.title || '제목 없음'}
         isLoading={isLoading}
       />
     </div>

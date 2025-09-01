@@ -81,7 +81,9 @@ export default function CreateChat({ sessionId }: CreateChatProps) {
 
   const { showToast, showToastMessage } = useSimpleToast();
 
-  const { copyToClipboard } = useClipboard(showToastMessage);
+  const { copyToClipboard } = useClipboard(() =>
+    showToastMessage('클립보드에 복사되었습니다!', 'success'),
+  );
 
   const { textareaRef, messagesEndRef, scrollToBottom, adjustTextareaHeight } =
     useChatUi(prompt);

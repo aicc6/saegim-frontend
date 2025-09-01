@@ -83,12 +83,13 @@ export default function CreateAi() {
   const { validateForm, showValidationAlert } = useFormValidation();
   const {
     selectedImages,
+    imageUrls,
     fileInputRef,
     handleImageSelect,
     handleImageRemove,
     handleAddImageClick,
     canAddMore,
-  } = useImageHandler(3);
+  } = useImageHandler(10);
 
   const { styleOptions, lengthOptions } = useFormOptions({
     styles: config.styles,
@@ -119,7 +120,9 @@ export default function CreateAi() {
   } = useStreaming();
 
   const { showToastMessage } = useSimpleToast();
-  const { copyToClipboard } = useClipboard(showToastMessage);
+  const { copyToClipboard } = useClipboard(() =>
+    showToastMessage('클립보드에 복사되었습니다!', 'success'),
+  );
 
   useErrorManagement({ error: error || streamError, clearError });
 
@@ -220,7 +223,7 @@ export default function CreateAi() {
         // 저장 후 해당 다이어리로 이동할지 물어보기
         if (window.confirm('저장된 다이어리를 보시겠습니까?')) {
           router.push(
-            `/viewPost/${result.data.id}?from=${encodeURIComponent('/create')}`,
+            `/viewPost/${(result.data as { id: string }).id}?from=${encodeURIComponent('/create')}`,
           );
         }
       } else {
@@ -457,6 +460,62 @@ export default function CreateAi() {
               </div>
             </div>
 
+            {/* 업로드된 이미지 표시 */}
+            {isComplete && uploadedImages && uploadedImages.length > 0 && (
+              <div className="mt-6">
+                <div className="bg-white rounded-xl border border-sage-20 p-4 shadow-sm">
+                  <h4 className="text-sm font-medium text-gray-700 mb-3 flex items-center">
+                    <svg
+                      className="w-4 h-4 mr-2 text-gray-500"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2z"
+                      />
+                    </svg>
+                    첨부된 이미지
+                  </h4>
+                  <div className="flex flex-wrap gap-3">
+                    {uploadedImages.map((image, index) => (
+                      <div key={index} className="relative group">
+                        {image.original_url ? (
+                          <Image
+                            src={image.original_url}
+                            alt={`업로드된 이미지 ${index + 1}`}
+                            width={120}
+                            height={120}
+                            className="w-24 h-24 sm:w-30 sm:h-30 object-cover rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-shadow"
+                          />
+                        ) : (
+                          <div className="w-24 h-24 sm:w-30 sm:h-30 bg-gray-200 rounded-xl border border-gray-200 flex items-center justify-center">
+                            <svg
+                              className="w-8 h-8 text-gray-400"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2z"
+                              />
+                            </svg>
+                          </div>
+                        )}
+                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 rounded-xl transition-colors"></div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* 모던 카드 스타일 결과 상세 표시 (완료 후) */}
             {isComplete && (
               <div className="mt-6 space-y-5">
@@ -656,7 +715,7 @@ export default function CreateAi() {
                 {selectedImages.map((image, index) => (
                   <div key={index} className="relative group">
                     <Image
-                      src={URL.createObjectURL(image)}
+                      src={imageUrls[index]}
                       alt={`선택된 이미지 ${index + 1}`}
                       width={80}
                       height={80}
@@ -673,7 +732,7 @@ export default function CreateAi() {
                 ))}
               </div>
               <p className="mt-2 text-xs text-text-secondary text-center">
-                {selectedImages.length}/3개 이미지 선택됨
+                {selectedImages.length}/10개 이미지 선택됨
               </p>
             </div>
           )}

@@ -47,20 +47,34 @@ export function isValidDiaryEntry(data: unknown): data is DiaryEntry {
 
   return (
     isString(data.id) &&
-    isString(data.title) &&
+    (data.title === null || isString(data.title)) &&
     isString(data.content) &&
     isBoolean(data.is_public) &&
     isString(data.created_at) &&
-    isString(data.updated_at) &&
-    (data.user_emotion === undefined ||
+    (data.updated_at === null ||
+      data.updated_at === undefined ||
+      isString(data.updated_at)) &&
+    (data.user_emotion === null ||
+      data.user_emotion === undefined ||
       validEmotions.includes(data.user_emotion as string)) &&
-    (data.ai_emotion === undefined ||
+    (data.ai_emotion === null ||
+      data.ai_emotion === undefined ||
       validEmotions.includes(data.ai_emotion as string)) &&
-    (data.ai_emotion_confidence === undefined ||
+    (data.ai_emotion_confidence === null ||
+      data.ai_emotion_confidence === undefined ||
       isNumber(data.ai_emotion_confidence)) &&
-    (data.ai_generated_text === undefined ||
+    (data.ai_generated_text === null ||
+      data.ai_generated_text === undefined ||
       isString(data.ai_generated_text)) &&
-    (data.keywords === undefined || Array.isArray(data.keywords))
+    (data.keywords === null ||
+      data.keywords === undefined ||
+      Array.isArray(data.keywords)) &&
+    (data.images === null ||
+      data.images === undefined ||
+      Array.isArray(data.images)) &&
+    (data.user_id === null ||
+      data.user_id === undefined ||
+      isString(data.user_id))
   );
 }
 
@@ -72,15 +86,25 @@ export function isValidDiaryListEntry(data: unknown): data is DiaryListEntry {
 
   return (
     isString(data.id) &&
-    isString(data.title) &&
+    (data.title === null || isString(data.title)) &&
     isString(data.content) &&
     isBoolean(data.is_public) &&
     isString(data.created_at) &&
-    isString(data.updated_at) &&
-    (data.user_emotion === undefined ||
+    (data.user_emotion === null ||
+      data.user_emotion === undefined ||
       validEmotions.includes(data.user_emotion as string)) &&
-    (data.ai_emotion === undefined ||
-      validEmotions.includes(data.ai_emotion as string))
+    (data.ai_emotion === null ||
+      data.ai_emotion === undefined ||
+      validEmotions.includes(data.ai_emotion as string)) &&
+    (data.ai_generated_text === null ||
+      data.ai_generated_text === undefined ||
+      isString(data.ai_generated_text)) &&
+    (data.keywords === null ||
+      data.keywords === undefined ||
+      Array.isArray(data.keywords)) &&
+    (data.images === null ||
+      data.images === undefined ||
+      Array.isArray(data.images))
   );
 }
 

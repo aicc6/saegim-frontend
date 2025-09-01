@@ -9,8 +9,8 @@ import { getLogger } from './logger';
 
 // HTTPS 강제 - 보안상 HTTP 프로토콜 사용 금지
 const ensureHttps = (url: string): string => {
-  // 개발 환경에서만 localhost HTTP 허용
-  if (process.env.NODE_ENV === 'development' && url.includes('localhost')) {
+  // localhost는 항상 HTTP 허용 (개발환경)
+  if (url.includes('localhost') || url.includes('127.0.0.1')) {
     return url;
   }
   // 프로덕션에서는 HTTP를 HTTPS로 강제 변환
@@ -386,7 +386,7 @@ export const diaryApi = {
         }
       });
     }
-    return apiClient.get<DiaryListEntry[]>('/api/diary/', stringParams);
+    return apiClient.get<DiaryListEntry[]>('/api/diary', stringParams);
   },
 
   // 특정 다이어리 조회
@@ -421,6 +421,14 @@ export const diaryApi = {
     ai_emotion_confidence?: number;
     keywords?: string[];
     is_public?: boolean;
+    uploaded_images?: Array<{
+      file_id: string;
+      original_url: string;
+      thumbnail_url: string;
+      mime_type: string;
+      file_size: number;
+      filename: string;
+    }> | null;
   }) => apiClient.post('/api/diary', data),
 
   // 다이어리 삭제

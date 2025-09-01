@@ -1,19 +1,37 @@
 import { useState, useCallback } from 'react';
 
-export const useSimpleToast = () => {
-  const [showToast, setShowToast] = useState<boolean>(false);
+export interface ToastState {
+  show: boolean;
+  message: string;
+  type: 'success' | 'error' | 'info';
+}
 
-  const showToastMessage = useCallback(() => {
-    setShowToast(true);
-    setTimeout(() => setShowToast(false), 2000);
-  }, []);
+export const useSimpleToast = () => {
+  const [toastState, setToastState] = useState<ToastState>({
+    show: false,
+    message: '',
+    type: 'info',
+  });
+
+  const showToastMessage = useCallback(
+    (message: string, type: 'success' | 'error' | 'info' = 'info') => {
+      setToastState({ show: true, message, type });
+      setTimeout(
+        () => setToastState((prev) => ({ ...prev, show: false })),
+        2000,
+      );
+    },
+    [],
+  );
 
   const hideToast = useCallback(() => {
-    setShowToast(false);
+    setToastState((prev) => ({ ...prev, show: false }));
   }, []);
 
   return {
-    showToast,
+    showToast: toastState.show,
+    toastMessage: toastState.message,
+    toastType: toastState.type,
     showToastMessage,
     hideToast,
   };

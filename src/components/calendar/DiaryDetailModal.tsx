@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { X, ChevronLeft, ChevronRight, Edit, Trash2 } from 'lucide-react';
+import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { formatDate } from '@/lib/utils';
 
@@ -12,6 +13,20 @@ interface DiaryEntry {
   userEmotion: string;
   keywords: string[];
   createdAt: string;
+  images?: Array<{
+    id: string;
+    file_path: string;
+    thumbnail_path: string | null;
+    mime_type: string | null;
+  }>;
+  uploaded_images?: Array<{
+    file_id: string;
+    original_url: string;
+    thumbnail_url: string;
+    mime_type: string;
+    file_size: number;
+    filename: string;
+  }> | null;
 }
 
 interface DiaryDetailModalProps {
@@ -153,6 +168,69 @@ export function DiaryDetailModal({
               </div>
             </div>
           </div>
+
+          {/* 이미지 섹션 */}
+          {(entry.images && entry.images.length > 0) ||
+          (entry.uploaded_images && entry.uploaded_images.length > 0) ? (
+            <div className="bg-background-secondary rounded-lg p-4 border border-border-subtle">
+              <h3 className="text-body font-semibold text-text-primary mb-3 flex items-center">
+                <span className="text-sage-70 mr-2">🖼️</span>
+                이미지
+              </h3>
+              <div className="flex flex-wrap gap-3">
+                {/* Display images from images field */}
+                {entry.images?.map((image, index) => (
+                  <div key={`image-${index}`} className="relative group">
+                    <Image
+                      src={image.thumbnail_path || image.file_path}
+                      alt={`다이어리 이미지 ${index + 1}`}
+                      width={120}
+                      height={120}
+                      className="w-24 h-24 sm:w-30 sm:h-30 object-cover rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-shadow"
+                      onError={(e) => {
+                        console.error('이미지 로드 실패:', image);
+                        (e.target as HTMLImageElement).style.display = 'none';
+                      }}
+                    />
+                  </div>
+                ))}
+                {/* Display images from uploaded_images field */}
+                {entry.uploaded_images?.map((image, index) => (
+                  <div key={`uploaded-${index}`} className="relative group">
+                    {image.thumbnail_url || image.original_url ? (
+                      <Image
+                        src={image.thumbnail_url || image.original_url}
+                        alt={`업로드된 이미지 ${index + 1}`}
+                        width={120}
+                        height={120}
+                        className="w-24 h-24 sm:w-30 sm:h-30 object-cover rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-shadow"
+                        onError={(e) => {
+                          console.error('업로드된 이미지 로드 실패:', image);
+                          (e.target as HTMLImageElement).style.display = 'none';
+                        }}
+                      />
+                    ) : (
+                      <div className="w-24 h-24 sm:w-30 sm:h-30 bg-gray-200 rounded-xl border border-gray-200 flex items-center justify-center">
+                        <svg
+                          className="w-8 h-8 text-gray-400"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2z"
+                          />
+                        </svg>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : null}
 
           {/* 제목 섹션 */}
           <div className="bg-background-secondary rounded-lg p-4 border border-border-subtle">

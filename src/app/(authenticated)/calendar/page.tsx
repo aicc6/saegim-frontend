@@ -462,14 +462,14 @@ export default function CalendarPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background-primary flex flex-col">
+    <div className="h-full bg-background-primary flex flex-col">
       {/* 페이지 헤더 */}
       <PageHeader
         title="캘린더"
         subtitle="월간 감정 기록과 키워드 분석을 확인하세요"
       />
 
-      <div className="flex flex-1">
+      <div className="flex flex-1 min-h-0">
         <div className="container mx-auto px-6 py-8">
           {/* 메인 그리드 - 반응형 레이아웃 */}
           <div className="grid grid-cols-1 2xl:grid-cols-3 gap-6">
