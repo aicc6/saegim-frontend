@@ -280,6 +280,43 @@ class ApiClient {
       throw error;
     }
   }
+
+  // 스트리밍을 위한 특별한 메소드
+  async stream(
+    endpoint: string,
+    data: Record<string, unknown>,
+  ): Promise<Response> {
+    const url = `${this.baseURL}${endpoint}`;
+
+    logger.debug('🌊 ApiClient: 스트리밍 요청 시작', { endpoint });
+
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': CONTENT_TYPES.JSON_UTF8,
+          Accept: ACCEPT_TYPES.JSON_UTF8,
+          'Accept-Charset': 'utf-8',
+        },
+        body: JSON.stringify(data),
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      logger.debug('🌊 ApiClient: 스트리밍 응답 받음', {
+        status: response.status,
+        ok: response.ok,
+      });
+
+      return response;
+    } catch (error) {
+      logger.error('❌ ApiClient: 스트리밍 요청 실패', error);
+      throw error;
+    }
+  }
 }
 
 // API 클라이언트 인스턴스 생성

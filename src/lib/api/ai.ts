@@ -95,17 +95,10 @@ export const aiApi = {
       ...(data.uploaded_images && { uploaded_images: data.uploaded_images }),
     };
 
-    // 스트리밍은 apiClient가 아닌 직접 fetch를 사용
-    const response = await fetch(
-      'http://localhost:8000/api/ai/generate/stream',
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(requestBody),
-        credentials: 'include', // 쿠키 기반 인증
-      },
+    // apiClient의 스트리밍 메소드 사용
+    const response = await apiClient.stream(
+      '/api/ai/generate/stream',
+      requestBody,
     );
 
     return response;
