@@ -667,10 +667,14 @@ export default function ViewPostPage({
       {/* 페이지 헤더 */}
       <PageHeader
         title={entry?.title || '제목 없음'}
-        subtitle={formatDateTime(entry.created_at, {
-          format: 'medium',
-          includeTime: false,
-        })}
+        subtitle={
+          entry?.created_at
+            ? formatDateTime(entry.created_at, {
+                format: 'medium',
+                includeTime: false,
+              })
+            : '날짜 정보 없음'
+        }
         actions={
           <Button
             variant="ghost"

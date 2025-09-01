@@ -179,7 +179,7 @@ export function DiaryDetailModal({
     <UnifiedModal
       open={isOpen}
       onClose={onClose}
-      title={formatDate(entry.createdAt)}
+      title={entry.createdAt ? formatDate(entry.createdAt) : '날짜 정보 없음'}
       size="xl"
       showCloseButton={true}
       footer={modalFooter}

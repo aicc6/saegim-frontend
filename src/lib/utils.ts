@@ -19,14 +19,11 @@ export interface RelativeTimeOptions {
 }
 
 export function formatDate(date: string | Date): string {
-  let d: Date;
+  const d = new Date(date);
 
-  if (typeof date === 'string') {
-    // ISO 날짜 문자열(YYYY-MM-DD)을 로컬 시간대로 파싱
-    const [year, month, day] = date.split('-').map(Number);
-    d = new Date(year, month - 1, day); // month는 0-based
-  } else {
-    d = date;
+  // Invalid Date 체크
+  if (isNaN(d.getTime())) {
+    return '날짜 정보 없음';
   }
 
   return d.toLocaleDateString(LOCALES.KOREAN, {
@@ -38,6 +35,12 @@ export function formatDate(date: string | Date): string {
 
 export function formatTime(date: string | Date): string {
   const d = new Date(date);
+
+  // Invalid Date 체크
+  if (isNaN(d.getTime())) {
+    return '시간 정보 없음';
+  }
+
   return d.toLocaleTimeString(LOCALES.KOREAN, {
     hour: '2-digit',
     minute: '2-digit',
@@ -55,6 +58,11 @@ export function formatRelativeTime(
   const { maxDays = 7 } = options;
   const targetDate = new Date(date);
   const now = baseDate;
+
+  // Invalid Date 체크
+  if (isNaN(targetDate.getTime()) || isNaN(now.getTime())) {
+    return '날짜 정보 없음';
+  }
 
   const diffMs = now.getTime() - targetDate.getTime();
   const diffSeconds = Math.floor(diffMs / 1000);
@@ -110,6 +118,11 @@ export function formatDateTime(
     locale = LOCALES.KOREAN,
   } = options;
   const d = new Date(date);
+
+  // Invalid Date 체크
+  if (isNaN(d.getTime())) {
+    return '날짜 정보 없음';
+  }
 
   let dateOptions: Intl.DateTimeFormatOptions = {};
   let timeOptions: Intl.DateTimeFormatOptions = {};

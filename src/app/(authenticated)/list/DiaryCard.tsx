@@ -122,7 +122,7 @@ const DiaryCard = forwardRef<HTMLDivElement, DiaryCardProps>(
           {/* 날짜 오버레이 */}
           <div className="absolute bottom-3 right-3">
             <span className="text-caption text-white bg-black/50 backdrop-blur-sm px-2 py-1 rounded-lg">
-              {formatDate(diary.date)}
+              {diary.date ? formatDate(diary.date) : '날짜 정보 없음'}
             </span>
           </div>
         </div>
