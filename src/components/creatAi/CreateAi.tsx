@@ -1,11 +1,11 @@
 'use client';
 
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { X, Copy, RotateCcw, Save, Edit3 } from 'lucide-react';
 import { useCreateStore, WritingStyle, LengthOption } from '@/stores/create';
-import { useEmotionStore } from '@/stores/emotion';
+import { EmotionOption, useEmotionStore } from '@/stores/emotion';
 import { getLogger } from '@/lib/logger';
 import { useFormValidation } from '@/hooks/use-form-validation';
 import { useImageHandler } from '@/hooks/use-image-handler';
@@ -15,6 +15,11 @@ import { useStreaming } from '@/hooks/use-streaming';
 import { useClipboard } from '@/hooks/use-clipboard';
 import { diaryApi } from '@/lib/api';
 import { useSimpleToast } from '@/hooks/use-simple-toast';
+import { useTempOptions } from '@/hooks/use-temp-options';
+import { useChatUi } from '@/hooks/use-chat-ui';
+import { ChatInput } from '@/components/chat/ChatInput';
+import { ChatOptions } from '@/components/chat/ChatOptions';
+import { ImagePreview } from '@/components/chat/ImagePreview';
 import Select from '../ui/custom/Select';
 
 const logger = getLogger('CreateAi');
@@ -47,20 +52,36 @@ const normalizeEmotionToEnglish = (
   return emotionMap[emotion] || emotionMap[emotion.toLowerCase()] || undefined;
 };
 
-// 초기 입력 화면 전용 컴포넌트
+// 생성된 글 버전 타입 정의
+interface TextVersion {
+  id: string;
+  text: string;
+  aiEmotion?: string | null;
+  keywords: string[];
+  createdAt: Date;
+  versionNumber: number;
+}
 
-// AS-IS에서 가져온 감정 라벨 설정
-const emotionLabels = {
-  happy: { emoji: '😊', name: '행복', color: 'text-emotion-happy' },
-  sad: { emoji: '😢', name: '슬픔', color: 'text-emotion-sad' },
-  angry: { emoji: '😡', name: '화남', color: 'text-emotion-angry' },
-  peaceful: { emoji: '😌', name: '평온', color: 'text-emotion-peaceful' },
-  unrest: { emoji: '😰', name: '불안', color: 'text-emotion-unrest' },
-};
+// 생성된 글 카드 타입 정의
+interface GeneratedTextCard {
+  id: string;
+  sessionId: string; // 실제 백엔드 sessionId (UUID)
+  prompt: string;
+  style: string;
+  length: string;
+  emotion: string | null;
+  versions: TextVersion[];
+  currentVersionIndex: number;
+  isEditMode: boolean;
+  editedText: string;
+  createdAt: Date;
+}
 
 export default function CreateAi() {
   const router = useRouter();
   const [showResults, setShowResults] = useState(false);
+  const [newPrompt, setNewPrompt] = useState('');
+  const [generatedCards, setGeneratedCards] = useState<GeneratedTextCard[]>([]);
 
   const {
     config,
@@ -91,10 +112,45 @@ export default function CreateAi() {
     canAddMore,
   } = useImageHandler(10);
 
+  // 새 글 생성 폼을 위한 별도의 이미지 핸들러
+  const {
+    selectedImages: newSelectedImages,
+    fileInputRef: newFileInputRef,
+    handleImageSelect: handleNewImageSelect,
+    handleImageRemove: handleNewImageRemove,
+    handleAddImageClick: handleNewAddImageClick,
+    clearImages: clearNewImages,
+  } = useImageHandler(3);
+
   const { styleOptions, lengthOptions } = useFormOptions({
     styles: config.styles,
     lengths: config.lengths,
   });
+
+  // 값을 레이블로 변환하는 헬퍼 함수들
+  const getStyleLabel = useCallback(
+    (value: string) => {
+      const option = styleOptions.find((opt) => opt.value === value);
+      return option ? option.label : value;
+    },
+    [styleOptions],
+  );
+
+  const getLengthLabel = useCallback(
+    (value: string) => {
+      const option = lengthOptions.find((opt) => opt.value === value);
+      return option ? option.label : value;
+    },
+    [lengthOptions],
+  );
+
+  const getEmotionLabel = useCallback(
+    (value: string) => {
+      const emotion = emotionConfigs.find((e) => e.value === value);
+      return emotion ? emotion.label : value;
+    },
+    [emotionConfigs],
+  );
 
   const {
     isStreaming,
@@ -106,17 +162,7 @@ export default function CreateAi() {
     emotion: aiEmotion,
     keywords,
     isComplete,
-    isTyping,
-    isEditMode,
-    editedText,
-    regenerationCount,
-    uploadedImages,
-    regenerationHistory,
     startStreaming,
-    resetState,
-    setEditMode,
-    updateEditedText,
-    selectPreviousResult,
   } = useStreaming();
 
   const { showToastMessage } = useSimpleToast();
@@ -125,6 +171,121 @@ export default function CreateAi() {
   );
 
   useErrorManagement({ error: error || streamError, clearError });
+
+  // ChatUI 관련 훅들 추가
+  const { textareaRef, messagesEndRef, scrollToBottom, adjustTextareaHeight } =
+    useChatUi(newPrompt);
+
+  // Temp 옵션 관리
+  const onApplyOptions = useCallback(
+    (tempStyle: string, tempLength: string, tempEmotion: string) => {
+      setStyle(tempStyle as WritingStyle);
+      setLength(tempLength as LengthOption);
+      setEmotion(tempEmotion as EmotionOption);
+    },
+    [setStyle, setLength, setEmotion],
+  );
+
+  const {
+    tempStyle,
+    tempLength,
+    tempEmotion,
+    setTempStyle,
+    setTempLength,
+    setTempEmotion,
+    handleOptionKeyDown,
+  } = useTempOptions({
+    initialStyle: style,
+    initialLength: length,
+    initialEmotion: emotion,
+    onApply: onApplyOptions,
+  });
+
+  // 스트리밍 완료 시 카드 추가/업데이트
+  useEffect(() => {
+    if (!isComplete || !accumulatedText || isStreaming || !sessionId) {
+      return;
+    }
+
+    // 재생성인지 신규 생성인지 확인하고 카드 업데이트
+    setGeneratedCards((prev) => {
+      const existingCardIndex = prev.findIndex(
+        (card) => card.sessionId === sessionId,
+      );
+
+      if (existingCardIndex !== -1) {
+        // 재생성: 기존 카드에 새 버전 추가
+        return prev.map((card, index) => {
+          if (index === existingCardIndex) {
+            const newVersion: TextVersion = {
+              id: `${sessionId}_v${card.versions.length + 1}`,
+              text: accumulatedText,
+              aiEmotion: aiEmotion || null,
+              keywords: keywords || [],
+              createdAt: new Date(),
+              versionNumber: card.versions.length + 1,
+            };
+            return {
+              ...card,
+              versions: [newVersion, ...card.versions],
+              currentVersionIndex: 0,
+              editedText: accumulatedText,
+            };
+          }
+          return card;
+        });
+      } else {
+        // 신규 생성: 새 카드 생성
+        const cardId = `card_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+        const currentPrompt = newPrompt || prompt;
+        const currentStyle = tempStyle || style;
+        const currentLength = tempLength || length;
+        const currentEmotion = tempEmotion || emotion;
+
+        const initialVersion: TextVersion = {
+          id: `${cardId}_v1`,
+          text: accumulatedText,
+          aiEmotion: aiEmotion || null,
+          keywords: keywords || [],
+          createdAt: new Date(),
+          versionNumber: 1,
+        };
+
+        const newCard: GeneratedTextCard = {
+          id: cardId,
+          sessionId: sessionId,
+          prompt: currentPrompt,
+          style: currentStyle,
+          length: currentLength,
+          emotion: currentEmotion,
+          versions: [initialVersion],
+          currentVersionIndex: 0,
+          isEditMode: false,
+          editedText: accumulatedText,
+          createdAt: new Date(),
+        };
+
+        // 신규 생성인 경우 폼 리셋
+        if (newPrompt) {
+          setTimeout(() => {
+            setNewPrompt('');
+            clearNewImages();
+          }, 100);
+        }
+
+        return [newCard, ...prev];
+      }
+    });
+
+    setShowResults(true);
+  }, [
+    isComplete,
+    accumulatedText,
+    isStreaming,
+    sessionId,
+    aiEmotion,
+    keywords,
+  ]);
 
   const handleGenerateText = useCallback(async () => {
     if (isStreaming) return;
@@ -160,134 +321,458 @@ export default function CreateAi() {
     selectedImages,
   ]);
 
-  const handleNewGeneration = useCallback(() => {
-    resetState();
-    setShowResults(false);
-    setPrompt('');
-  }, [resetState, setPrompt]);
+  // 카드별 액션 핸들러들
+  const handleCardEdit = useCallback(
+    (cardId: string) => {
+      setGeneratedCards((prev) =>
+        prev.map((card) => {
+          if (card.id === cardId) {
+            const currentVersion = card.versions[card.currentVersionIndex];
+            return {
+              ...card,
+              isEditMode: !card.isEditMode,
+              editedText: card.isEditMode
+                ? card.editedText
+                : currentVersion.text,
+            };
+          }
+          return card;
+        }),
+      );
 
-  const handleRegenerate = useCallback(async () => {
-    if (isStreaming || !sessionId) return;
+      if (generatedCards.find((card) => card.id === cardId)?.isEditMode) {
+        showToastMessage('편집이 완료되었습니다.', 'success');
+      }
+    },
+    [generatedCards, showToastMessage],
+  );
 
-    try {
-      await startStreaming({
-        prompt,
-        style,
-        length,
-        emotion: emotion || undefined,
-        sessionId,
-        images: selectedImages.length > 0 ? selectedImages : undefined,
-      });
-    } catch (error) {
-      logger.error('재생성 실패', { error });
-    }
-  }, [
-    isStreaming,
-    sessionId,
-    startStreaming,
-    prompt,
-    style,
-    length,
-    emotion,
-    selectedImages,
-  ]);
+  const handleCardEditTextChange = useCallback(
+    (cardId: string, newText: string) => {
+      setGeneratedCards((prev) =>
+        prev.map((card) =>
+          card.id === cardId ? { ...card, editedText: newText } : card,
+        ),
+      );
+    },
+    [],
+  );
 
-  // 다이어리 저장 기능
-  const handleSaveDiary = useCallback(async () => {
-    if (!isComplete || isStreaming) return;
+  const handleCardSave = useCallback(
+    async (cardId: string) => {
+      const card = generatedCards.find((c) => c.id === cardId);
+      if (!card) return;
 
-    const textToSave = isEditMode
-      ? editedText
-      : accumulatedText || displayText || streamedText;
-    if (!textToSave.trim()) {
-      showToastMessage('저장할 내용이 없습니다.', 'error');
+      const currentVersion = card.versions[card.currentVersionIndex];
+      const textToSave = card.isEditMode
+        ? card.editedText
+        : currentVersion.text;
+      if (!textToSave.trim()) {
+        showToastMessage('저장할 내용이 없습니다.', 'error');
+        return;
+      }
+
+      try {
+        const result = await diaryApi.createDiary({
+          title:
+            textToSave.slice(0, 50) + (textToSave.length > 50 ? '...' : ''),
+          content: card.prompt,
+          user_emotion: normalizeEmotionToEnglish(card.emotion),
+          ai_generated_text: textToSave,
+          ai_emotion: normalizeEmotionToEnglish(
+            currentVersion.aiEmotion || null,
+          ),
+          ai_emotion_confidence: currentVersion.aiEmotion ? 0.8 : undefined,
+          keywords:
+            currentVersion.keywords.length > 0
+              ? currentVersion.keywords
+              : undefined,
+          is_public: false,
+        });
+
+        if (result.success) {
+          showToastMessage('다이어리가 성공적으로 저장되었습니다!', 'success');
+
+          if (window.confirm('저장된 다이어리를 보시겠습니까?')) {
+            router.push(
+              `/viewPost/${(result.data as { id: string }).id}?from=${encodeURIComponent('/create')}`,
+            );
+          }
+        } else {
+          throw new Error(result.message || '다이어리 저장에 실패했습니다.');
+        }
+      } catch (error) {
+        logger.error('다이어리 저장 실패', { error });
+        showToastMessage(
+          '다이어리 저장에 실패했습니다. 다시 시도해주세요.',
+          'error',
+        );
+      }
+    },
+    [generatedCards, showToastMessage, router],
+  );
+
+  const handleCardRegenerate = useCallback(
+    async (cardId: string) => {
+      const card = generatedCards.find((c) => c.id === cardId);
+      if (!card || isStreaming || card.versions.length >= 5) return;
+
+      try {
+        await startStreaming({
+          prompt: card.prompt,
+          style: card.style,
+          length: card.length,
+          emotion: card.emotion || undefined,
+          sessionId: card.sessionId, // 카드에 저장된 실제 sessionId 사용
+        });
+      } catch (error) {
+        logger.error('재생성 실패', { error });
+      }
+    },
+    [generatedCards, isStreaming, startStreaming],
+  );
+
+  const handleCardCopy = useCallback(
+    (text: string) => {
+      copyToClipboard(text);
+    },
+    [copyToClipboard],
+  );
+
+  // 버전 변경 핸들러
+  const handleVersionChange = useCallback(
+    (cardId: string, versionIndex: number) => {
+      setGeneratedCards((prev) =>
+        prev.map((card) =>
+          card.id === cardId
+            ? {
+                ...card,
+                currentVersionIndex: versionIndex,
+                editedText: card.versions[versionIndex].text,
+                isEditMode: false,
+              }
+            : card,
+        ),
+      );
+    },
+    [],
+  );
+
+  // 새 폼에서 글 생성
+  const handleNewFormGenerate = useCallback(async () => {
+    if (isStreaming || !newPrompt.trim()) return;
+
+    const validation = validateForm(newPrompt, tempStyle, tempLength);
+    if (!validation.isValid && validation.errorMessage) {
+      showValidationAlert(validation.errorMessage);
       return;
     }
 
     try {
-      const result = await diaryApi.createDiary({
-        title: textToSave.slice(0, 50) + (textToSave.length > 50 ? '...' : ''), // 제목은 첫 50자
-        content: prompt, // 원본 프롬프트
-        user_emotion: normalizeEmotionToEnglish(emotion),
-        ai_generated_text: textToSave,
-        ai_emotion: normalizeEmotionToEnglish(aiEmotion),
-        ai_emotion_confidence: aiEmotion ? 0.8 : undefined, // 기본 신뢰도
-        keywords: keywords.length > 0 ? keywords : undefined,
-        is_public: false,
-        uploaded_images: uploadedImages || undefined, // 업로드된 이미지 정보 포함
+      await startStreaming({
+        prompt: newPrompt,
+        style: tempStyle,
+        length: tempLength,
+        emotion: tempEmotion || undefined,
+        images: newSelectedImages.length > 0 ? newSelectedImages : undefined,
       });
-
-      if (result.success) {
-        showToastMessage('다이어리가 성공적으로 저장되었습니다!', 'success');
-
-        // 저장 후 해당 다이어리로 이동할지 물어보기
-        if (window.confirm('저장된 다이어리를 보시겠습니까?')) {
-          router.push(
-            `/viewPost/${(result.data as { id: string }).id}?from=${encodeURIComponent('/create')}`,
-          );
-        }
-      } else {
-        throw new Error(result.message || '다이어리 저장에 실패했습니다.');
-      }
+      setTimeout(scrollToBottom, 200);
     } catch (error) {
-      logger.error('다이어리 저장 실패', { error });
-      showToastMessage(
-        '다이어리 저장에 실패했습니다. 다시 시도해주세요.',
-        'error',
-      );
+      logger.error('새 글 생성 실패', { error });
     }
   }, [
-    isComplete,
     isStreaming,
-    isEditMode,
-    editedText,
-    accumulatedText,
-    displayText,
-    streamedText,
-    prompt,
-    emotion,
-    aiEmotion,
-    keywords,
-    uploadedImages,
-    showToastMessage,
-    router,
+    newPrompt,
+    tempStyle,
+    tempLength,
+    tempEmotion,
+    newSelectedImages,
+    validateForm,
+    showValidationAlert,
+    startStreaming,
+    scrollToBottom,
   ]);
 
-  // 결과가 있으면 CreateChat 컴포넌트를 사용하도록 안내
-  // (실제로는 페이지 라우팅으로 처리될 예정)
+  // 키보드 이벤트 핸들러
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent): void => {
+      if (
+        e.key === 'Enter' &&
+        !e.shiftKey &&
+        !isStreaming &&
+        newPrompt.trim()
+      ) {
+        e.preventDefault();
+        handleNewFormGenerate();
+      }
+    },
+    [isStreaming, newPrompt, handleNewFormGenerate],
+  );
 
+  // showResults가 true이거나 스트리밍 중일 때는 CreateChat 스타일 레이아웃 사용
+  if (showResults || isStreaming) {
+    return (
+      <div className="flex min-h-screen flex-col relative">
+        {/* 상단 스크롤 영역 - 단순한 스타일 */}
+        <div className="flex-1 overflow-y-auto p-4 pb-8">
+          <div className="mx-auto max-w-2xl space-y-4">
+            {/* 현재 스트리밍 중인 카드 (임시) */}
+            {isStreaming && (
+              <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-medium text-gray-900">
+                    생성 중...
+                  </h3>
+                </div>
+
+                <div className="prose prose-gray max-w-none">
+                  <div className="text-gray-800 leading-relaxed whitespace-pre-wrap">
+                    {displayText || streamedText}
+                    <span className="inline-block w-px h-5 bg-gray-400 ml-1 animate-pulse"></span>
+                  </div>
+                </div>
+
+                <div className="mt-4 flex items-center gap-3 text-gray-500">
+                  <div className="flex gap-1">
+                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
+                    <div
+                      className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
+                      style={{ animationDelay: '0.1s' }}
+                    ></div>
+                    <div
+                      className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
+                      style={{ animationDelay: '0.2s' }}
+                    ></div>
+                  </div>
+                  <span className="text-sm">
+                    AI가 글을 생성하고 있습니다...
+                  </span>
+                </div>
+              </div>
+            )}
+
+            {/* 생성된 카드들 */}
+            {generatedCards.map((card) => {
+              const currentVersion = card.versions[card.currentVersionIndex];
+              return (
+                <div
+                  key={card.id}
+                  className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm"
+                >
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-3">
+                      <h3 className="text-lg font-medium text-gray-900">
+                        생성된 글
+                      </h3>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      {/* 버전 선택 버튼들 */}
+                      {card.versions.length > 1 && (
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs text-gray-500">버전:</span>
+                          <div className="flex gap-1">
+                            {card.versions.map((_, versionIndex) => (
+                              <button
+                                key={versionIndex}
+                                onClick={() =>
+                                  handleVersionChange(card.id, versionIndex)
+                                }
+                                className={`w-6 h-6 text-xs rounded-full transition-colors ${
+                                  versionIndex === card.currentVersionIndex
+                                    ? 'bg-sage-90 text-white'
+                                    : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
+                                }`}
+                              >
+                                {versionIndex + 1}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* 액션 버튼들 - 아이콘만 표시 */}
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => handleCardEdit(card.id)}
+                          className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-md transition-colors"
+                          title={card.isEditMode ? '편집 완료' : '텍스트 편집'}
+                        >
+                          <Edit3 className="w-4 h-4" />
+                        </button>
+
+                        <button
+                          onClick={() => handleCardSave(card.id)}
+                          className="p-2 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 rounded-md transition-colors"
+                          title="다이어리 저장"
+                        >
+                          <Save className="w-4 h-4" />
+                        </button>
+
+                        <button
+                          onClick={() => handleCardRegenerate(card.id)}
+                          disabled={isStreaming || card.versions.length >= 5}
+                          className="p-2 text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          title={
+                            card.versions.length >= 5
+                              ? '재생성 한도에 도달했습니다'
+                              : `${5 - card.versions.length}회 더 재생성 가능`
+                          }
+                        >
+                          <RotateCcw className="w-4 h-4" />
+                        </button>
+
+                        <button
+                          onClick={() =>
+                            handleCardCopy(
+                              card.isEditMode
+                                ? card.editedText
+                                : currentVersion.text,
+                            )
+                          }
+                          className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-md transition-colors"
+                          title="복사하기"
+                        >
+                          <Copy className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 텍스트 표시 영역 */}
+                  <div className="prose prose-gray max-w-none">
+                    {card.isEditMode ? (
+                      // 편집 모드
+                      <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
+                        <div className="flex items-center gap-2 mb-3">
+                          <Edit3 className="w-4 h-4 text-blue-600" />
+                          <span className="text-sm font-medium text-blue-700">
+                            편집 모드
+                          </span>
+                        </div>
+                        <textarea
+                          value={card.editedText}
+                          onChange={(e) =>
+                            handleCardEditTextChange(card.id, e.target.value)
+                          }
+                          className="w-full h-40 p-3 border border-blue-300 rounded-lg focus:outline-none focus:border-blue-500 bg-white text-gray-800 resize-none"
+                          placeholder="생성된 글을 편집하세요"
+                        />
+                      </div>
+                    ) : (
+                      // 일반 표시 모드
+                      <div className="text-gray-800 leading-relaxed whitespace-pre-wrap">
+                        {currentVersion.text}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* 카드 메타 정보 */}
+                  <div className="mt-4 pt-3 border-t border-gray-100 text-xs text-gray-500 flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                      <span className="max-w-48 truncate" title={card.prompt}>
+                        프롬프트: {card.prompt}
+                      </span>
+                      <span>문체: {getStyleLabel(card.style)}</span>
+                      <span>길이: {getLengthLabel(card.length)}</span>
+                      {card.emotion && (
+                        <span>감정: {getEmotionLabel(card.emotion)}</span>
+                      )}
+                      {card.versions.length > 1 && (
+                        <span>
+                          버전 {card.currentVersionIndex + 1}/
+                          {card.versions.length}
+                        </span>
+                      )}
+                    </div>
+                    <span>
+                      {new Date(currentVersion.createdAt).toLocaleTimeString()}
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+
+            {/* 카드가 없을 때 안내 메시지 */}
+            {!isStreaming && generatedCards.length === 0 && (
+              <div className="text-center py-12 text-gray-500">
+                <div className="text-6xl mb-4">✨</div>
+                <p className="text-lg font-medium mb-2">
+                  아직 생성된 글이 없습니다
+                </p>
+                <p className="text-sm">하단 입력창에서 글을 생성해보세요</p>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* 하단 고정 입력 영역 - CreateChat 스타일 */}
+        <div className="sticky bottom-0 z-50">
+          <div className="mx-auto max-w-2xl">
+            <div className="border-t border-gray-200 rounded-t-4xl bg-white/95 backdrop-blur-sm shadow-lg p-4 space-y-3">
+              {/* 선택된 이미지들 미리보기 */}
+              <ImagePreview
+                selectedImages={newSelectedImages}
+                onRemove={handleNewImageRemove}
+              />
+
+              {/* 메인 입력창 */}
+              <ChatInput
+                textareaRef={textareaRef}
+                prompt={newPrompt}
+                isGenerating={isStreaming}
+                selectedImages={newSelectedImages}
+                onPromptChange={setNewPrompt}
+                onKeyDown={handleKeyDown}
+                onGenerate={handleNewFormGenerate}
+                onAddImageClick={handleNewAddImageClick}
+                adjustTextareaHeight={adjustTextareaHeight}
+              />
+
+              <input
+                ref={newFileInputRef}
+                type="file"
+                accept="image/*"
+                multiple
+                onChange={handleNewImageSelect}
+                className="hidden"
+              />
+
+              {/* 옵션 선택 */}
+              <ChatOptions
+                config={config}
+                emotionConfigs={emotionConfigs}
+                tempStyle={tempStyle}
+                tempLength={tempLength}
+                tempEmotion={tempEmotion}
+                onStyleChange={setTempStyle}
+                onLengthChange={setTempLength}
+                onEmotionChange={setTempEmotion}
+                onKeyDown={handleOptionKeyDown}
+              />
+            </div>
+          </div>
+        </div>
+
+        <div ref={messagesEndRef} />
+      </div>
+    );
+  }
+
+  // 초기 입력 화면
   return (
     <div className="rounded-3xl bg-ivory-cream shadow-card relative p-4 sm:p-6 md:p-8 max-w-4xl mx-auto">
-      {!showResults ? (
-        <>
-          <h1 className="text-2xl sm:text-3xl md:text-4xl font-poetic font-bold text-[#3F764A] text-center">
-            <span className="inline-flex items-center gap-2 whitespace-nowrap">
-              <span className="text-soft-rose text-xl sm:text-2xl md:text-3xl">
-                ✿
-              </span>
-              어떤 글을 만들어드릴까요?
-            </span>
-          </h1>
+      <h1 className="text-2xl sm:text-3xl md:text-4xl font-poetic font-bold text-[#3F764A] text-center">
+        <span className="inline-flex items-center gap-2 whitespace-nowrap">
+          <span className="text-soft-rose text-xl sm:text-2xl md:text-3xl">
+            ✿
+          </span>
+          어떤 글을 만들어드릴까요?
+        </span>
+      </h1>
 
-          <p className="mt-2 text-sm sm:text-base text-body text-text-primary text-center px-2">
-            키워드나 짧은 글을 입력하면 AI가 감정적인 글을 생성해 드립니다
-          </p>
-        </>
-      ) : (
-        <>
-          <div className="flex items-center justify-between mb-6">
-            <h1 className="text-xl sm:text-2xl font-bold text-[#3F764A]">
-              AI가 글을 생성하고 있습니다
-            </h1>
-            <button
-              onClick={handleNewGeneration}
-              className="px-4 py-2 text-sm bg-sage-60 text-white rounded-lg hover:bg-sage-70 transition-colors"
-            >
-              새 글 작성
-            </button>
-          </div>
-        </>
-      )}
+      <p className="mt-2 text-sm sm:text-base text-body text-text-primary text-center px-2">
+        키워드나 짧은 글을 입력하면 AI가 감정적인 글을 생성해 드립니다
+      </p>
 
       {/* 에러 메시지 표시 */}
       {(error || streamError) && (
@@ -332,558 +817,181 @@ export default function CreateAi() {
         </div>
       )}
 
-      {/* 스트리밍 결과 표시 영역 */}
-      {showResults && (
-        <div className="mt-6 space-y-4">
-          {/* 스트리밍 텍스트 표시 */}
-          <div className="bg-white rounded-xl border border-sage-20 p-4 sm:p-6 shadow-sm">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2">
-                <span className="text-sage-70 font-medium">생성된 글</span>
-                {isStreaming && (
-                  <div className="flex items-center gap-1">
-                    <div className="w-1 h-1 bg-sage-60 rounded-full animate-pulse"></div>
-                    <div
-                      className="w-1 h-1 bg-sage-60 rounded-full animate-pulse"
-                      style={{ animationDelay: '0.2s' }}
-                    ></div>
-                    <div
-                      className="w-1 h-1 bg-sage-60 rounded-full animate-pulse"
-                      style={{ animationDelay: '0.4s' }}
-                    ></div>
-                  </div>
-                )}
+      {/* 입력 폼 */}
+      {/* 선택된 이미지들 미리보기 */}
+      {selectedImages.length > 0 && (
+        <div className="mt-4 sm:mt-6 px-2">
+          <div className="flex flex-wrap gap-2 sm:gap-3 justify-center">
+            {selectedImages.map((_, index) => (
+              <div key={index} className="relative group">
+                <Image
+                  src={imageUrls[index]}
+                  alt={`선택된 이미지 ${index + 1}`}
+                  width={80}
+                  height={80}
+                  className="w-16 h-16 sm:w-20 sm:h-20 object-cover rounded-lg border-2 border-sage-30"
+                />
+                <button
+                  type="button"
+                  onClick={() => handleImageRemove(index)}
+                  className="absolute -top-1 -right-1 sm:-top-2 sm:-right-2 w-5 h-5 sm:w-6 sm:h-6 bg-red-500 text-white rounded-full text-xs flex items-center justify-center hover:bg-red-600 transition-colors"
+                >
+                  <X />
+                </button>
               </div>
-
-              {isComplete && (
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => copyToClipboard(accumulatedText)}
-                    className="p-2 text-sage-60 hover:text-sage-80 hover:bg-sage-10 rounded-lg transition-colors"
-                    title="복사하기"
-                  >
-                    <Copy className="w-4 h-4" />
-                  </button>
-                  {regenerationCount > 0 && (
-                    <span className="text-xs text-sage-60 bg-sage-10 px-2 py-1 rounded-full">
-                      {regenerationCount}/5회 재생성
-                    </span>
-                  )}
-                </div>
-              )}
-            </div>
-
-            {/* ChatGPT 스타일 텍스트 메시지 버블 */}
-            <div className="min-h-[120px]">
-              <div className="flex items-start space-x-3">
-                {/* AI 아바타 */}
-                <div className="flex-shrink-0 w-7 h-7 bg-gradient-to-br from-sage-50 to-sage-60 rounded-full flex items-center justify-center shadow-sm ring-1 ring-white/80">
-                  <span className="text-white text-xs font-bold">AI</span>
-                </div>
-
-                {/* 메시지 버블 컨테이너 */}
-                <div className="flex-1 max-w-none">
-                  {isTyping ||
-                  displayText ||
-                  streamedText ||
-                  accumulatedText ? (
-                    isEditMode && isComplete ? (
-                      // 편집 모드 - 개선된 스타일
-                      <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl rounded-tl-sm p-5 border border-blue-200/50 shadow-sm relative">
-                        <div className="absolute -left-2 top-4 w-3 h-3 bg-gradient-to-br from-blue-50 to-indigo-50 transform rotate-45 border-l border-t border-blue-200/50"></div>
-                        <div className="flex items-center gap-2 mb-3">
-                          <Edit3 className="w-4 h-4 text-blue-600" />
-                          <span className="text-xs font-medium text-blue-700">
-                            편집 모드
-                          </span>
-                        </div>
-                        <textarea
-                          value={editedText}
-                          onChange={(e) => updateEditedText(e.target.value)}
-                          className="w-full h-40 p-4 border-2 border-blue-200 rounded-xl focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 bg-white text-gray-800 resize-none text-base leading-relaxed transition-all duration-200"
-                          placeholder="생성된 글을 편집하세요"
-                        />
-                      </div>
-                    ) : (
-                      // 일반 표시 모드 - ChatGPT 스타일 버블
-                      <div className="bg-gradient-to-br from-gray-50 to-white rounded-2xl rounded-tl-sm p-5 border border-gray-200/60 shadow-sm relative backdrop-blur-sm">
-                        <div className="absolute -left-2 top-4 w-3 h-3 bg-gradient-to-br from-gray-50 to-white transform rotate-45 border-l border-t border-gray-200/60"></div>
-                        <div className="relative">
-                          <p className="text-gray-800 leading-relaxed text-base font-normal whitespace-pre-wrap tracking-wide">
-                            {isEditMode && isComplete
-                              ? editedText
-                              : isTyping
-                                ? displayText
-                                : streamedText || accumulatedText}
-                            {(isStreaming || isTyping) && (
-                              <span className="inline-block w-0.5 h-5 bg-gray-600 ml-1 animate-pulse"></span>
-                            )}
-                          </p>
-                        </div>
-                      </div>
-                    )
-                  ) : isStreaming ? (
-                    // 로딩 상태 - 개선된 애니메이션
-                    <div className="bg-gradient-to-br from-gray-50 to-white rounded-2xl rounded-tl-sm p-5 border border-gray-200/60 shadow-sm relative">
-                      <div className="absolute -left-2 top-4 w-3 h-3 bg-gradient-to-br from-gray-50 to-white transform rotate-45 border-l border-t border-gray-200/60"></div>
-                      <div className="flex items-center py-4">
-                        <div className="flex items-center gap-3 text-gray-500">
-                          <div className="flex gap-1">
-                            <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
-                            <div
-                              className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
-                              style={{ animationDelay: '0.1s' }}
-                            ></div>
-                            <div
-                              className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
-                              style={{ animationDelay: '0.2s' }}
-                            ></div>
-                          </div>
-                          <span className="text-sm">
-                            AI가 글을 생성하고 있습니다...
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  ) : (
-                    // 대기 상태
-                    <div className="bg-gradient-to-br from-gray-50 to-white rounded-2xl rounded-tl-sm p-5 border border-gray-200/60 shadow-sm relative opacity-60">
-                      <div className="absolute -left-2 top-4 w-3 h-3 bg-gradient-to-br from-gray-50 to-white transform rotate-45 border-l border-t border-gray-200/60"></div>
-                      <div className="flex items-center justify-center py-6 text-gray-400">
-                        <span className="text-sm">
-                          생성된 글이 여기에 표시됩니다
-                        </span>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* 업로드된 이미지 표시 */}
-            {isComplete && uploadedImages && uploadedImages.length > 0 && (
-              <div className="mt-6">
-                <div className="bg-white rounded-xl border border-sage-20 p-4 shadow-sm">
-                  <h4 className="text-sm font-medium text-gray-700 mb-3 flex items-center">
-                    <svg
-                      className="w-4 h-4 mr-2 text-gray-500"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2z"
-                      />
-                    </svg>
-                    첨부된 이미지
-                  </h4>
-                  <div className="flex flex-wrap gap-3">
-                    {uploadedImages.map((image, index) => (
-                      <div key={index} className="relative group">
-                        {image.original_url ? (
-                          <Image
-                            src={image.original_url}
-                            alt={`업로드된 이미지 ${index + 1}`}
-                            width={120}
-                            height={120}
-                            className="w-24 h-24 sm:w-30 sm:h-30 object-cover rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-shadow"
-                          />
-                        ) : (
-                          <div className="w-24 h-24 sm:w-30 sm:h-30 bg-gray-200 rounded-xl border border-gray-200 flex items-center justify-center">
-                            <svg
-                              className="w-8 h-8 text-gray-400"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2z"
-                              />
-                            </svg>
-                          </div>
-                        )}
-                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 rounded-xl transition-colors"></div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* 모던 카드 스타일 결과 상세 표시 (완료 후) */}
-            {isComplete && (
-              <div className="mt-6 space-y-5">
-                {/* AI 분석 결과 카드들 */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {/* AI 분석 감정 카드 */}
-                  {aiEmotion && (
-                    <div className="group bg-gradient-to-br from-white to-gray-50/50 rounded-2xl p-6 border border-gray-200/60 shadow-lg hover:shadow-xl transition-all duration-300 backdrop-blur-sm relative overflow-hidden">
-                      {/* 장식적 배경 요소 */}
-                      <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-indigo-100/30 to-purple-100/30 rounded-full -translate-y-10 translate-x-10"></div>
-
-                      <div className="relative z-10">
-                        <div className="flex items-center mb-4">
-                          <div className="p-2 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-lg shadow-sm">
-                            <span className="text-white text-sm">💭</span>
-                          </div>
-                          <h4 className="ml-3 text-base font-semibold text-gray-800">
-                            AI 감정 분석
-                          </h4>
-                        </div>
-
-                        <div className="flex items-center space-x-4">
-                          <div className="flex-shrink-0 p-3 bg-gradient-to-br from-gray-100 to-gray-200/50 rounded-2xl shadow-inner">
-                            <span className="text-3xl block">
-                              {emotionLabels[
-                                aiEmotion as keyof typeof emotionLabels
-                              ]?.emoji || '😐'}
-                            </span>
-                          </div>
-                          <div className="flex-1">
-                            <p
-                              className={`text-lg font-semibold mb-1 ${
-                                emotionLabels[
-                                  aiEmotion as keyof typeof emotionLabels
-                                ]?.color || 'text-gray-600'
-                              }`}
-                            >
-                              {emotionLabels[
-                                aiEmotion as keyof typeof emotionLabels
-                              ]?.name || aiEmotion}
-                            </p>
-                            <p className="text-sm text-gray-500 flex items-center">
-                              <span className="w-2 h-2 bg-green-400 rounded-full mr-2 animate-pulse"></span>
-                              AI 분석 완료
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* 키워드 분석 카드 */}
-                  {keywords.length > 0 && (
-                    <div className="group bg-gradient-to-br from-white to-gray-50/50 rounded-2xl p-6 border border-gray-200/60 shadow-lg hover:shadow-xl transition-all duration-300 backdrop-blur-sm relative overflow-hidden">
-                      {/* 장식적 배경 요소 */}
-                      <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-emerald-100/30 to-teal-100/30 rounded-full -translate-y-10 translate-x-10"></div>
-
-                      <div className="relative z-10">
-                        <div className="flex items-center mb-4">
-                          <div className="p-2 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-lg shadow-sm">
-                            <span className="text-white text-sm">🏷️</span>
-                          </div>
-                          <div className="ml-3 flex items-center justify-between w-full">
-                            <h4 className="text-base font-semibold text-gray-800">
-                              추출된 키워드
-                            </h4>
-                            <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
-                              {keywords.length}개
-                            </span>
-                          </div>
-                        </div>
-
-                        <div className="flex flex-wrap gap-2.5">
-                          {keywords.map((keyword, index) => (
-                            <span
-                              key={index}
-                              className="group/tag inline-flex items-center px-3 py-2 bg-gradient-to-r from-gray-100 to-gray-200/80 hover:from-emerald-50 hover:to-teal-50 text-gray-700 hover:text-emerald-700 rounded-xl text-sm font-medium border border-gray-200/60 hover:border-emerald-200 transition-all duration-200 cursor-default shadow-sm hover:shadow-md"
-                            >
-                              <span className="text-emerald-500 mr-1.5 text-xs">
-                                #
-                              </span>
-                              {keyword}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* 모던 스타일 액션 버튼들 */}
-                <div className="space-y-4 pt-6">
-                  {/* 메인 액션 버튼들 */}
-                  <div className="flex justify-center items-center gap-3">
-                    <button
-                      onClick={() => {
-                        if (isEditMode) {
-                          setEditMode(false);
-                          showToastMessage('편집이 완료되었습니다.', 'success');
-                        } else {
-                          setEditMode(
-                            true,
-                            accumulatedText || displayText || streamedText,
-                          );
-                        }
-                      }}
-                      className="group relative px-6 py-3 bg-gradient-to-r from-slate-100 to-slate-200 hover:from-slate-200 hover:to-slate-300 text-slate-700 rounded-xl transition-all duration-300 transform hover:scale-105 hover:shadow-lg shadow-md font-medium text-sm border border-slate-200/60"
-                    >
-                      <span className="relative z-10 flex items-center space-x-2">
-                        <Edit3 className="w-4 h-4" />
-                        <span>{isEditMode ? '편집 완료' : '텍스트 편집'}</span>
-                      </span>
-                    </button>
-
-                    <button
-                      onClick={handleSaveDiary}
-                      disabled={isStreaming || !isComplete}
-                      className="group relative px-6 py-3 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white rounded-xl transition-all duration-300 transform hover:scale-105 hover:shadow-lg shadow-md font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed border border-emerald-400/30"
-                    >
-                      <span className="relative z-10 flex items-center space-x-2">
-                        <Save className="w-4 h-4" />
-                        <span>다이어리 저장</span>
-                      </span>
-                    </button>
-
-                    <button
-                      onClick={handleRegenerate}
-                      disabled={isStreaming || regenerationCount >= 5}
-                      className="group relative px-6 py-3 bg-gradient-to-r from-indigo-100 to-purple-100 hover:from-indigo-200 hover:to-purple-200 text-indigo-700 rounded-xl transition-all duration-300 transform hover:scale-105 hover:shadow-lg shadow-md font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed border border-indigo-200/60"
-                      title={
-                        regenerationCount >= 5
-                          ? '재생성 한도에 도달했습니다'
-                          : `${5 - regenerationCount}회 더 재생성 가능`
-                      }
-                    >
-                      <span className="relative z-10 flex items-center space-x-2">
-                        <RotateCcw className="w-4 h-4" />
-                        <span>다시 생성 ({5 - regenerationCount}회 남음)</span>
-                      </span>
-                    </button>
-                  </div>
-
-                  {/* 이전 결과물 확인 드롭다운 */}
-                  {regenerationHistory.length > 1 && (
-                    <div className="bg-gray-50/50 rounded-xl border border-gray-200/60 p-4">
-                      <h5 className="text-sm font-medium text-gray-700 mb-3 flex items-center">
-                        <svg
-                          className="w-4 h-4 mr-2 text-gray-500"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-                          />
-                        </svg>
-                        이전 결과물 ({regenerationHistory.length}개)
-                      </h5>
-                      <div className="flex flex-wrap gap-2">
-                        {regenerationHistory.map((item, index) => (
-                          <button
-                            key={index}
-                            onClick={() => selectPreviousResult(index)}
-                            className="text-xs px-3 py-2 bg-white hover:bg-gray-100 text-gray-600 hover:text-gray-800 rounded-lg border border-gray-200 transition-all duration-200 shadow-sm hover:shadow-md"
-                          >
-                            결과 #{index + 1}
-                            <span className="ml-1 text-gray-400">
-                              (
-                              {new Date(item.timestamp).toLocaleTimeString(
-                                'ko-KR',
-                                { hour: '2-digit', minute: '2-digit' },
-                              )}
-                              )
-                            </span>
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
+            ))}
           </div>
+          <p className="mt-2 text-xs text-text-secondary text-center">
+            {selectedImages.length}/10개 이미지 선택됨
+          </p>
         </div>
       )}
 
-      {/* 입력 폼 (결과가 표시되지 않을 때만) */}
-      {!showResults && (
-        <>
-          {/* 선택된 이미지들 미리보기 */}
-          {selectedImages.length > 0 && (
-            <div className="mt-4 sm:mt-6 px-2">
-              <div className="flex flex-wrap gap-2 sm:gap-3 justify-center">
-                {selectedImages.map((image, index) => (
-                  <div key={index} className="relative group">
-                    <Image
-                      src={imageUrls[index]}
-                      alt={`선택된 이미지 ${index + 1}`}
-                      width={80}
-                      height={80}
-                      className="w-16 h-16 sm:w-20 sm:h-20 object-cover rounded-lg border-2 border-sage-30"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => handleImageRemove(index)}
-                      className="absolute -top-1 -right-1 sm:-top-2 sm:-right-2 w-5 h-5 sm:w-6 sm:h-6 bg-red-500 text-white rounded-full text-xs flex items-center justify-center hover:bg-red-600 transition-colors"
-                    >
-                      <X />
-                    </button>
-                  </div>
-                ))}
-              </div>
-              <p className="mt-2 text-xs text-text-secondary text-center">
-                {selectedImages.length}/10개 이미지 선택됨
-              </p>
-            </div>
-          )}
+      {/* textarea와 이미지 추가 버튼 */}
+      <div className="relative mt-4 sm:mt-6 px-2">
+        <textarea
+          value={prompt}
+          onChange={(e) => setPrompt(e.target.value)}
+          rows={3}
+          placeholder="예: 바람, 초록빛 오후, 천천히 걷는 길"
+          className="w-full rounded-xl border border-border-subtle bg-white p-3 sm:p-4 pr-12 text-sm sm:text-base text-text-primary placeholder:text-text-placeholder focus:outline-none focus:ring-2 focus:ring-border-focus shadow-card resize-none"
+        />
 
-          {/* textarea와 이미지 추가 버튼 */}
-          <div className="relative mt-4 sm:mt-6 px-2">
-            <textarea
-              value={prompt}
-              onChange={(e) => setPrompt(e.target.value)}
-              rows={3}
-              placeholder="예: 바람, 초록빛 오후, 천천히 걷는 길"
-              className="w-full rounded-xl border border-border-subtle bg-white p-3 sm:p-4 pr-12 text-sm sm:text-base text-text-primary placeholder:text-text-placeholder focus:outline-none focus:ring-2 focus:ring-border-focus shadow-card resize-none"
-            />
-
-            {/* 이미지 추가 버튼 - textarea 내부 오른쪽 위 */}
-            {canAddMore && (
-              <button
-                type="button"
-                onClick={handleAddImageClick}
-                className="absolute top-2 right-2 w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center text-sage-60 hover:text-sage-80 hover:bg-sage-10 rounded-lg transition-colors"
-                title="이미지 추가"
-              >
-                <svg
-                  className="w-4 h-4 sm:w-5 sm:h-5"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 002 2z"
-                  />
-                </svg>
-              </button>
-            )}
-
-            {/* 숨겨진 파일 input */}
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              multiple
-              onChange={handleImageSelect}
-              className="hidden"
-            />
-          </div>
-
-          <div className="mt-4 sm:mt-6 space-y-4 sm:space-y-6 px-2">
-            {/* 문체와 길이 선택 */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-              <div>
-                <div
-                  id="style-label"
-                  className="mb-2 block text-xs sm:text-sm text-text-secondary"
-                >
-                  문체 선택
-                </div>
-                <Select
-                  value={style}
-                  onChange={(v) => setStyle(v as WritingStyle)}
-                  options={styleOptions}
-                  ariaLabel="문체 선택"
-                />
-              </div>
-              <div>
-                <div
-                  id="length-label"
-                  className="mb-2 block text-xs sm:text-sm text-text-secondary"
-                >
-                  길이 선택
-                </div>
-                <Select
-                  value={length}
-                  onChange={(v) => setLength(v as LengthOption)}
-                  options={lengthOptions}
-                  ariaLabel="길이 선택"
-                />
-              </div>
-            </div>
-
-            {/* 감정 선택 */}
-            <div>
-              <div className="mb-3 block text-xs sm:text-sm text-text-secondary text-center">
-                감정을 선택해주세요 😊 (선택 사항)
-              </div>
-              <div
-                className="flex flex-wrap gap-2 sm:gap-3 justify-center"
-                role="group"
-                aria-label="감정 선택"
-              >
-                {emotionConfigs.map(({ value, emoji, label }) => (
-                  <button
-                    key={value}
-                    type="button"
-                    onClick={() => setEmotion(emotion === value ? '' : value)}
-                    className={`flex h-12 w-12 sm:h-16 sm:w-16 items-center justify-center rounded-full border-2 text-lg sm:text-2xl transition-all ${
-                      emotion === value
-                        ? 'border-sage-60 bg-sage-50 shadow-md scale-110'
-                        : 'border-sage-20 bg-white hover:border-sage-40 hover:bg-sage-10 hover:scale-105'
-                    }`}
-                    aria-label={`${label} 선택`}
-                  >
-                    {emoji}
-                  </button>
-                ))}
-              </div>
-              <p className="mt-2 text-center text-xs sm:text-sm text-text-secondary">
-                선택된 감정:{' '}
-                <span className="font-medium text-sage-100">
-                  {emotion
-                    ? emotionConfigs.find((e) => e.value === emotion)?.label ||
-                      emotion
-                    : '감정 선택 안함'}
-                </span>
-              </p>
-            </div>
-          </div>
-
+        {/* 이미지 추가 버튼 - textarea 내부 오른쪽 위 */}
+        {canAddMore && (
           <button
-            onClick={handleGenerateText}
-            disabled={isStreaming || !prompt.trim()}
-            className="mt-6 sm:mt-8 w-full rounded-xl bg-sage-90 px-4 sm:px-6 py-3 sm:py-4 text-sm sm:text-base md:text-lg font-semibold text-text-on-color hover:bg-sage-100 active:bg-sage-80 disabled:opacity-40 transition-colors shadow-card mx-2"
+            type="button"
+            onClick={handleAddImageClick}
+            className="absolute top-2 right-2 w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center text-sage-60 hover:text-sage-80 hover:bg-sage-10 rounded-lg transition-colors"
+            title="이미지 추가"
           >
-            {isStreaming ? (
-              <span className="inline-flex items-center justify-center gap-2">
-                <span className="inline-block h-4 w-4 sm:h-5 sm:w-5 animate-spin rounded-full border-2 border-sage-30 border-t-sage-70" />
-                생성 중...
-              </span>
-            ) : (
-              <span className="inline-flex items-center justify-center gap-2">
-                <svg
-                  className="h-4 w-4 sm:h-5 sm:w-5"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M13 10V3L4 14h7v7l9-11h-7z"
-                  />
-                </svg>
-                글 생성하기
-              </span>
-            )}
+            <svg
+              className="w-4 h-4 sm:w-5 sm:h-5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 002 2z"
+              />
+            </svg>
           </button>
-        </>
-      )}
+        )}
+
+        {/* 숨겨진 파일 input */}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          multiple
+          onChange={handleImageSelect}
+          className="hidden"
+        />
+      </div>
+
+      <div className="mt-4 sm:mt-6 space-y-4 sm:space-y-6 px-2">
+        {/* 문체와 길이 선택 */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+          <div>
+            <div
+              id="style-label"
+              className="mb-2 block text-xs sm:text-sm text-text-secondary"
+            >
+              문체 선택
+            </div>
+            <Select
+              value={style}
+              onChange={(v) => setStyle(v as WritingStyle)}
+              options={styleOptions}
+              ariaLabel="문체 선택"
+            />
+          </div>
+          <div>
+            <div
+              id="length-label"
+              className="mb-2 block text-xs sm:text-sm text-text-secondary"
+            >
+              길이 선택
+            </div>
+            <Select
+              value={length}
+              onChange={(v) => setLength(v as LengthOption)}
+              options={lengthOptions}
+              ariaLabel="길이 선택"
+            />
+          </div>
+        </div>
+
+        {/* 감정 선택 */}
+        <div>
+          <div className="mb-3 block text-xs sm:text-sm text-text-secondary text-center">
+            감정을 선택해주세요 😊 (선택 사항)
+          </div>
+          <div
+            className="flex flex-wrap gap-2 sm:gap-3 justify-center"
+            role="group"
+            aria-label="감정 선택"
+          >
+            {emotionConfigs.map(({ value, emoji, label }) => (
+              <button
+                key={value}
+                type="button"
+                onClick={() => setEmotion(emotion === value ? '' : value)}
+                className={`flex h-12 w-12 sm:h-16 sm:w-16 items-center justify-center rounded-full border-2 text-lg sm:text-2xl transition-all ${
+                  emotion === value
+                    ? 'border-sage-60 bg-sage-50 shadow-md scale-110'
+                    : 'border-sage-20 bg-white hover:border-sage-40 hover:bg-sage-10 hover:scale-105'
+                }`}
+                aria-label={`${label} 선택`}
+              >
+                {emoji}
+              </button>
+            ))}
+          </div>
+          <p className="mt-2 text-center text-xs sm:text-sm text-text-secondary">
+            선택된 감정:{' '}
+            <span className="font-medium text-sage-100">
+              {emotion
+                ? emotionConfigs.find((e) => e.value === emotion)?.label ||
+                  emotion
+                : '감정 선택 안함'}
+            </span>
+          </p>
+        </div>
+      </div>
+
+      <button
+        onClick={handleGenerateText}
+        disabled={isStreaming || !prompt.trim()}
+        className="mt-6 sm:mt-8 w-full rounded-xl bg-sage-90 px-4 sm:px-6 py-3 sm:py-4 text-sm sm:text-base md:text-lg font-semibold text-text-on-color hover:bg-sage-100 active:bg-sage-80 disabled:opacity-40 transition-colors shadow-card mx-2"
+      >
+        {isStreaming ? (
+          <span className="inline-flex items-center justify-center gap-2">
+            <span className="inline-block h-4 w-4 sm:h-5 sm:w-5 animate-spin rounded-full border-2 border-sage-30 border-t-sage-70" />
+            생성 중...
+          </span>
+        ) : (
+          <span className="inline-flex items-center justify-center gap-2">
+            <svg
+              className="h-4 w-4 sm:h-5 sm:w-5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M13 10V3L4 14h7v7l9-11h-7z"
+              />
+            </svg>
+            글 생성하기
+          </span>
+        )}
+      </button>
     </div>
   );
 }

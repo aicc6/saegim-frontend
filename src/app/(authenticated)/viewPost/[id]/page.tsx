@@ -3,7 +3,7 @@
 import { useState, useEffect, use } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, ArrowRight } from 'lucide-react';
 import { getLogger } from '@/lib/logger';
 import { useDiaryStore } from '@/stores/diary';
 import {
@@ -1013,7 +1013,9 @@ export default function ViewPostPage({
                     : 'text-sage-50 cursor-not-allowed opacity-50'
                 }`}
               >
-                <span className="text-lg font-bold">{'<'}</span>
+                <span className="text-lg font-bold">
+                  <ArrowLeft className="w-5 h-5" />
+                </span>
               </button>
 
               {/* 중앙 버튼들 */}
@@ -1125,7 +1127,9 @@ export default function ViewPostPage({
                     : 'text-sage-50 cursor-not-allowed opacity-50'
                 }`}
               >
-                <span className="text-lg font-bold">{'>'}</span>
+                <span className="text-lg font-bold">
+                  <ArrowRight className="w-5 h-5" />
+                </span>
               </button>
             </div>
           </div>

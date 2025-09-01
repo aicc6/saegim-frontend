@@ -70,10 +70,6 @@ export default function AuthenticatedHeader() {
 
   const isDark = resolvedTheme === 'dark';
 
-  const _handleProfileClick = () => {
-    router.push('/profile');
-  };
-
   const handleLogoClick = () => {
     // 로고 클릭 시 로그아웃 처리 후 랜딩페이지로 이동
     clearStorage();
@@ -82,7 +78,7 @@ export default function AuthenticatedHeader() {
 
   return (
     <div
-      className={`hidden lg:flex border-b h-18 px-12 w-full items-center sticky top-0 z-50 ${
+      className={`hidden lg:flex border-b h-18 px-12 w-full items-center top-0 ${
         isDark ? 'bg-gray-900 border-gray-700' : 'bg-white border-sage-20'
       }`}
     >
