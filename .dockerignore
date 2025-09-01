@@ -99,8 +99,8 @@ playwright-report
 # 빌드 도구 및 설정
 # =============================================================================
 .eslintrc*
-.prettierrc*
-.editorconfig
+!.prettierrc*
+!.editorconfig
 .browserslistrc
 .nvmrc
 .yarnrc.yml
