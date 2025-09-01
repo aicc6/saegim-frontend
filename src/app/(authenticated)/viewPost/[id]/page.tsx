@@ -995,7 +995,7 @@ export default function ViewPostPage({
               ) : (
                 <div className="w-full h-96 p-4 border-2 border-sage-30 rounded-lg bg-sage-5 overflow-y-auto">
                   <p className="text-base text-sage-100 leading-relaxed whitespace-pre-wrap">
-                    {entry.content || '[글 본문]'}
+                    {entry.ai_generated_text || '[글 본문]'}
                   </p>
                 </div>
               )}
