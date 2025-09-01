@@ -154,7 +154,6 @@ export default function CreateAi() {
 
   const {
     isStreaming,
-    streamedText,
     accumulatedText,
     displayText,
     error: streamError,
@@ -162,6 +161,7 @@ export default function CreateAi() {
     emotion: aiEmotion,
     keywords,
     isComplete,
+    isTyping,
     startStreaming,
   } = useStreaming();
 
@@ -285,6 +285,15 @@ export default function CreateAi() {
     sessionId,
     aiEmotion,
     keywords,
+    newPrompt,
+    prompt,
+    tempStyle,
+    style,
+    tempLength,
+    length,
+    tempEmotion,
+    emotion,
+    clearNewImages,
   ]);
 
   const handleGenerateText = useCallback(async () => {
@@ -527,7 +536,7 @@ export default function CreateAi() {
 
                 <div className="prose prose-gray max-w-none">
                   <div className="text-gray-800 leading-relaxed whitespace-pre-wrap">
-                    {displayText || streamedText}
+                    {displayText}
                     <span className="inline-block w-px h-5 bg-gray-400 ml-1 animate-pulse"></span>
                   </div>
                 </div>
@@ -661,7 +670,7 @@ export default function CreateAi() {
                     ) : (
                       // 일반 표시 모드
                       <div className="text-gray-800 leading-relaxed whitespace-pre-wrap">
-                        {currentVersion.text}
+                        {isTyping ? displayText : currentVersion.text}
                       </div>
                     )}
                   </div>

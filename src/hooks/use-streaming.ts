@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useCallback, useRef, useEffect } from 'react';
+import { flushSync } from 'react-dom';
 import { getLogger } from '@/lib/logger';
 
 const logger = getLogger('useStreaming');
@@ -126,44 +127,36 @@ export const useStreaming = () => {
     }
   }, [state.sessionId, state.regenerationHistory, saveRegenerationHistory]);
 
-  // 실시간 스트리밍 타이핑 애니메이션 함수
-  const startStreamingTypingAnimation = useCallback(
-    (newContent: string) => {
-      const currentDisplayLength = state.displayText.length;
-      const targetText = state.streamedText + newContent;
-
-      let currentIndex = currentDisplayLength;
-      const typeNextChar = () => {
-        if (currentIndex < targetText.length) {
-          setState((prev) => ({
-            ...prev,
-            displayText: targetText.slice(0, currentIndex + 1),
-          }));
-          currentIndex++;
-          streamingTypingTimeoutRef.current = setTimeout(typeNextChar, 20); // 20ms 간격으로 더 빠른 타이핑
-        }
-      };
-
-      typeNextChar();
-    },
-    [state.displayText.length, state.streamedText],
-  );
-
-  // 완료 후 타이핑 애니메이션 함수
+  // ChatGPT 스타일 타이핑 애니메이션 함수
   const startTypingAnimation = useCallback((fullText: string) => {
+    console.log('🎯 타이핑 애니메이션 시작:', fullText);
+
+    // 기존 타이핑 애니메이션 중단
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+    }
+
+    // displayText를 빈 문자열로 초기화하고 타이핑 시작
     setState((prev) => ({ ...prev, isTyping: true, displayText: '' }));
 
     let currentIndex = 0;
     const typeNextChar = () => {
       if (currentIndex < fullText.length) {
-        setState((prev) => ({
-          ...prev,
-          displayText: fullText.slice(0, currentIndex + 1),
-        }));
+        const currentText = fullText.slice(0, currentIndex + 1);
+        console.log('⌨️ 타이핑 중:', currentText);
+        flushSync(() => {
+          setState((prev) => ({
+            ...prev,
+            displayText: currentText,
+          }));
+        });
         currentIndex++;
-        typingTimeoutRef.current = setTimeout(typeNextChar, 30); // 30ms 간격으로 타이핑
+        typingTimeoutRef.current = setTimeout(typeNextChar, 100); // 100ms 간격 (더 잘 보이는 타이핑 속도)
       } else {
-        setState((prev) => ({ ...prev, isTyping: false }));
+        console.log('✅ 타이핑 애니메이션 완료');
+        flushSync(() => {
+          setState((prev) => ({ ...prev, isTyping: false }));
+        });
       }
     };
 
@@ -317,21 +310,24 @@ export const useStreaming = () => {
                       break;
 
                     case 'content':
-                      setState((prev) => ({
-                        ...prev,
-                        streamedText:
-                          prev.streamedText + (parsedData.content || ''),
-                        accumulatedText:
-                          parsedData.accumulated || prev.accumulatedText,
-                      }));
-                      // 새로운 콘텐츠로 스트리밍 타이핑 애니메이션 시작
-                      startStreamingTypingAnimation(parsedData.content || '');
+                      setState((prev) => {
+                        const newContent = parsedData.content || '';
+                        const updatedStreamedText =
+                          prev.streamedText + newContent;
+                        return {
+                          ...prev,
+                          streamedText: updatedStreamedText,
+                          accumulatedText:
+                            parsedData.accumulated || prev.accumulatedText,
+                        };
+                      });
                       break;
 
-                    case 'complete':
+                    case 'complete': {
+                      const finalText =
+                        parsedData.generated_text || state.accumulatedText;
+
                       setState((prev) => {
-                        const finalText =
-                          parsedData.generated_text || prev.accumulatedText;
                         const newRegenerationCount =
                           parsedData.regeneration_count || 0;
 
@@ -342,9 +338,6 @@ export const useStreaming = () => {
                           keywords: parsedData.keywords || [],
                           timestamp: Date.now(),
                         };
-
-                        // 즉시 타이핑 애니메이션 시작 (ChatGPT 스타일)
-                        startTypingAnimation(finalText);
 
                         return {
                           ...prev,
@@ -361,11 +354,17 @@ export const useStreaming = () => {
                         };
                       });
 
+                      // ChatGPT 스타일 타이핑 애니메이션 시작
+                      setTimeout(() => {
+                        startTypingAnimation(finalText);
+                      }, 100); // 상태 업데이트 후 실행
+
                       logger.info('스트리밍 완료', {
                         emotion: parsedData.emotion,
                         tokensUsed: parsedData.tokens_used,
                       });
                       break;
+                    }
 
                     case 'error':
                       setState((prev) => ({
@@ -398,7 +397,7 @@ export const useStreaming = () => {
         }));
       }
     },
-    [startStreamingTypingAnimation, startTypingAnimation],
+    [startTypingAnimation, state.accumulatedText],
   );
 
   const stopStreaming = useCallback(() => {
