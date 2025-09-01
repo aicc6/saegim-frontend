@@ -118,7 +118,8 @@ export default function FCMTestPanel() {
   // 테스트 알림 전송
   const testNotificationSend = async () => {
     if (!token) {
-      alert('토큰이 등록되지 않았습니다. 먼저 토큰을 등록해주세요.');
+      const { showAlert } = await import('@/hooks/use-modal');
+      showAlert('토큰이 등록되지 않았습니다. 먼저 토큰을 등록해주세요.');
       return false;
     }
 

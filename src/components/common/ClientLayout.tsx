@@ -1,6 +1,7 @@
 'use client';
 
 import { type ReactNode, useEffect, useState } from 'react';
+import { ModalProvider } from '@/components/providers/modal-provider';
 
 export default function ClientLayout({ children }: { children: ReactNode }) {
   const [mounted, setMounted] = useState(false);
@@ -14,5 +15,10 @@ export default function ClientLayout({ children }: { children: ReactNode }) {
     return null;
   }
 
-  return children;
+  return (
+    <>
+      {children}
+      <ModalProvider />
+    </>
+  );
 }

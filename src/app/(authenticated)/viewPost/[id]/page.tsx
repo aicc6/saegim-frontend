@@ -244,13 +244,15 @@ export default function ViewPostPage({
         // (false); // 이 줄 제거
 
         // 성공 메시지 표시
-        alert('다이어리가 성공적으로 수정되었습니다.');
+        const { showSuccess } = await import('@/hooks/use-modal');
+        showSuccess('다이어리가 성공적으로 수정되었습니다.');
 
         // 페이지 새로고침 없이 상태만 업데이트
         // window.location.reload();
       } catch (error) {
         logger.error('다이어리 수정 실패:', error);
-        alert('다이어리 수정에 실패했습니다. 다시 시도해주세요.');
+        const { showError } = await import('@/hooks/use-modal');
+        showError('다이어리 수정에 실패했습니다. 다시 시도해주세요.');
       }
     } else if (!isEditing && entry) {
       // 수정 모드 시작
@@ -1144,9 +1146,9 @@ const ImageOptionsModal = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg p-6 w-80 max-w-md">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">
+    <div className="fixed inset-0 bg-gray-500/20 dark:bg-gray-900/40 backdrop-blur-sm flex items-center justify-center z-50 animate-in fade-in-0 duration-300">
+      <div className="bg-background border border-border rounded-2xl shadow-2xl p-6 w-80 max-w-md animate-in zoom-in-95 duration-300">
+        <h3 className="text-lg font-semibold text-foreground mb-4">
           이미지 불러오기 옵션
         </h3>
         <div className="space-y-3">

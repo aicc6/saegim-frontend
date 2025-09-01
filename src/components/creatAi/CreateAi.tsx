@@ -444,7 +444,13 @@ function CreateAi() {
         if (result.success) {
           showToastMessage('다이어리가 성공적으로 저장되었습니다!', 'success');
 
-          if (window.confirm('저장된 다이어리를 보시겠습니까?')) {
+          const { showConfirm } = await import('@/hooks/use-modal');
+          const viewDiary = await showConfirm(
+            '저장된 다이어리를 보시겠습니까?',
+            '다이어리 저장 완료',
+          );
+
+          if (viewDiary) {
             router.push(
               `/viewPost/${(result.data as { id: string }).id}?from=${encodeURIComponent('/create')}`,
             );

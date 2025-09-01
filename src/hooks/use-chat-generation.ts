@@ -79,7 +79,8 @@ export const useChatGeneration = (
       if (isGenerating) return;
 
       if (message && message.versions.length >= 5) {
-        alert('재생성 횟수가 5회에 도달했습니다.');
+        const { showWarning } = await import('@/hooks/use-modal');
+        showWarning('재생성 횟수가 5회에 도달했습니다.');
         return;
       }
 
@@ -129,7 +130,8 @@ export const useChatGeneration = (
     ): Promise<void> => {
       try {
         if (!originalPrompt.trim()) {
-          alert('사용자 입력이 없어 다이어리를 저장할 수 없습니다.');
+          const { showWarning } = await import('@/hooks/use-modal');
+          showWarning('사용자 입력이 없어 다이어리를 저장할 수 없습니다.');
           return;
         }
 
@@ -146,7 +148,8 @@ export const useChatGeneration = (
         router.push(`/viewPost/${response.data.id}`);
       } catch (error) {
         logger.error('다이어리 저장 실패:', error);
-        alert('다이어리 저장 중 오류가 발생했습니다. 다시 시도해주세요.');
+        const { showError } = await import('@/hooks/use-modal');
+        showError('다이어리 저장 중 오류가 발생했습니다. 다시 시도해주세요.');
       }
     },
     [originalPrompt, emotion, router],

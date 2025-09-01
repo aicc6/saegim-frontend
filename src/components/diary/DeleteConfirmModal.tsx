@@ -1,7 +1,7 @@
 'use client';
 
 import { Trash2 } from 'lucide-react';
-import ConfirmModal from '@/components/ui/custom/ConfirmModal';
+import { ConfirmModal } from '@/components/ui/modal';
 
 interface DeleteConfirmModalProps {
   isOpen: boolean;
@@ -20,7 +20,7 @@ export default function DeleteConfirmModal({
 }: DeleteConfirmModalProps) {
   const message = (
     <div className="space-y-3">
-      <p className="text-body text-text-secondary">
+      <p className="text-sm text-text-secondary">
         {diaryTitle ? (
           <>
             <span className="font-medium text-text-primary">
@@ -32,10 +32,10 @@ export default function DeleteConfirmModal({
           '이 다이어리를 정말 삭제하시겠습니까?'
         )}
       </p>
-      <div className="bg-red-50 border border-red-200 rounded-2xl p-3">
+      <div className="bg-emotion-angry-bg border border-red-200 rounded-xl p-3">
         <div className="flex items-start gap-2">
-          <Trash2 className="w-4 h-4 text-red-500 mt-0.5 flex-shrink-0" />
-          <div className="text-sm text-red-700">
+          <Trash2 className="w-4 h-4 text-error mt-0.5 flex-shrink-0" />
+          <div className="text-sm text-text-primary">
             <p className="font-medium mb-1">주의사항:</p>
             <ul className="list-disc list-inside space-y-1">
               <li>삭제된 다이어리는 복구할 수 없습니다</li>
@@ -49,14 +49,15 @@ export default function DeleteConfirmModal({
 
   return (
     <ConfirmModal
-      isOpen={isOpen}
+      open={isOpen}
+      onOpenChange={onClose}
       title="다이어리 삭제 확인"
       message={message}
       confirmText="삭제"
       cancelText="취소"
       onConfirm={onConfirm}
       onCancel={onClose}
-      variant="danger"
+      type="danger"
       isLoading={isLoading}
     />
   );

@@ -699,7 +699,7 @@ ${
 
       {/* 비밀번호 입력 모달 (이메일 계정용) */}
       {isPasswordModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-gray-500/20 dark:bg-gray-900/40 backdrop-blur-sm flex items-center justify-center z-50">
           <div className="bg-background-primary dark:bg-background-dark-secondary rounded-2xl shadow-2xl p-8 border border-border-subtle dark:border-border-dark max-w-md w-full mx-4">
             <div className="text-center mb-6">
               <h2 className="text-2xl font-bold text-text-primary dark:text-text-dark mb-2">
@@ -758,7 +758,7 @@ ${
 
       {/* 이메일 변경 모달 */}
       {isEmailChangeModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-gray-500/20 dark:bg-gray-900/40 backdrop-blur-sm flex items-center justify-center z-50">
           <div className="bg-background-primary dark:bg-background-dark-secondary rounded-2xl shadow-2xl p-8 border border-border-subtle dark:border-border-dark max-w-md w-full mx-4">
             <div className="text-center mb-6">
               <h2 className="text-2xl font-bold text-text-primary dark:text-text-dark mb-2">
@@ -831,7 +831,7 @@ ${
 
       {/* 닉네임 중복 확인 모달 */}
       {isNicknameCheckModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-gray-500/20 dark:bg-gray-900/40 backdrop-blur-sm flex items-center justify-center z-50">
           <div className="bg-background-primary dark:bg-background-dark-secondary rounded-2xl shadow-2xl p-8 border border-border-subtle dark:border-border-dark max-w-md w-full mx-4">
             <div className="text-center mb-6">
               <h2 className="text-2xl font-bold text-text-primary dark:text-text-dark mb-2">

@@ -170,7 +170,8 @@ export default function UnifiedFCMPanel() {
   // 테스트 알림 전송 (API 테스트)
   const testNotificationSend = async () => {
     if (!token) {
-      alert('토큰이 등록되지 않았습니다. 먼저 토큰을 등록해주세요.');
+      const { showAlert } = await import('@/hooks/use-modal');
+      showAlert('토큰이 등록되지 않았습니다. 먼저 토큰을 등록해주세요.');
       return false;
     }
 
@@ -191,7 +192,8 @@ export default function UnifiedFCMPanel() {
   // 브라우저 테스트 알림 (로컬 테스트)
   const sendLocalTestNotification = async () => {
     if (!token) {
-      alert('먼저 알림 권한을 허용하고 토큰을 등록해주세요.');
+      const { showAlert } = await import('@/hooks/use-modal');
+      showAlert('먼저 알림 권한을 허용하고 토큰을 등록해주세요.');
       return;
     }
 
@@ -207,7 +209,8 @@ export default function UnifiedFCMPanel() {
       }
     } catch (error) {
       logger.error('테스트 알림 전송 실패', { error });
-      alert('테스트 알림 전송에 실패했습니다.');
+      const { showAlert } = await import('@/hooks/use-modal');
+      showAlert('테스트 알림 전송에 실패했습니다.');
     }
   };
 

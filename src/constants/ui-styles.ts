@@ -44,7 +44,8 @@ export const BUTTON_STYLES = {
 
 // 공통 모달 스타일
 export const MODAL_STYLES = {
-  overlay: 'fixed inset-0 bg-black/50 backdrop-blur-sm z-50',
+  overlay:
+    'fixed inset-0 bg-gray-500/20 dark:bg-gray-900/40 backdrop-blur-sm z-50',
   content:
     'fixed left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 p-6 w-full max-w-md',
   header: 'text-lg font-semibold mb-4 text-gray-900 dark:text-gray-100',

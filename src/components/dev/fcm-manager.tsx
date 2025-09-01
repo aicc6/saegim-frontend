@@ -80,7 +80,8 @@ export default function FCMManager() {
   // 테스트 알림 전송
   const sendTestNotification = async () => {
     if (!token) {
-      alert('먼저 알림 권한을 허용하고 토큰을 등록해주세요.');
+      const { showAlert } = await import('@/hooks/use-modal');
+      showAlert('먼저 알림 권한을 허용하고 토큰을 등록해주세요.');
       return;
     }
 
@@ -97,7 +98,8 @@ export default function FCMManager() {
       }
     } catch (error) {
       logger.error('테스트 알림 전송 실패', { error });
-      alert('테스트 알림 전송에 실패했습니다.');
+      const { showAlert } = await import('@/hooks/use-modal');
+      showAlert('테스트 알림 전송에 실패했습니다.');
     }
   };
 
