@@ -17,6 +17,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useDiaryStore } from '@/stores/diary';
 import { logger } from '@/lib';
 import { type DiaryFilters } from '@/types/diary';
+import { addDays, addMonths, toDateString } from '@/lib/utils';
 import DiaryCard from './DiaryCard';
 
 export default function DiaryListView() {
@@ -81,21 +82,19 @@ export default function DiaryListView() {
 
         switch (dateFilter) {
           case 'today': {
-            const todayStr = today.toISOString().split('T')[0];
+            const todayStr = toDateString(today);
             filters.start_date = todayStr;
             filters.end_date = todayStr;
             break;
           }
           case 'week': {
-            const weekAgo = new Date(today);
-            weekAgo.setDate(today.getDate() - 7);
-            filters.start_date = weekAgo.toISOString().split('T')[0];
+            const weekAgo = addDays(today, -7);
+            filters.start_date = toDateString(weekAgo);
             break;
           }
           case 'month': {
-            const monthAgo = new Date(today);
-            monthAgo.setMonth(today.getMonth() - 1);
-            filters.start_date = monthAgo.toISOString().split('T')[0];
+            const monthAgo = addMonths(today, -1);
+            filters.start_date = toDateString(monthAgo);
             break;
           }
         }

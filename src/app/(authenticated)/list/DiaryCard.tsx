@@ -2,6 +2,7 @@
 
 import { forwardRef } from 'react';
 import Image from 'next/image';
+import { formatDate } from '@/lib/utils';
 
 const emotionConfig = {
   happy: {
@@ -56,15 +57,6 @@ const DiaryCard = forwardRef<HTMLDivElement, DiaryCardProps>(
       const config = emotionConfig[emotion as keyof typeof emotionConfig];
       if (!config) return '😊';
       return config.emoji;
-    };
-
-    const formatDate = (dateString: string) => {
-      const date = new Date(dateString);
-      return date.toLocaleDateString('ko-KR', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-      });
     };
 
     return (

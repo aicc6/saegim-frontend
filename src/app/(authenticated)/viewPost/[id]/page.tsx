@@ -17,6 +17,7 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import DeleteConfirmModal from '@/components/diary/DeleteConfirmModal';
 import { imageApi } from '@/lib/api/image';
+import { formatDateTime } from '@/lib/utils';
 
 const emotionLabels = {
   happy: { emoji: '😊', name: '행복', color: 'text-emotion-happy' },
@@ -666,7 +667,10 @@ export default function ViewPostPage({
       {/* 페이지 헤더 */}
       <PageHeader
         title={entry?.title || '제목 없음'}
-        subtitle={`${new Date(entry.created_at).getMonth() + 1}월 ${new Date(entry.created_at).getDate()}일`}
+        subtitle={formatDateTime(entry.created_at, {
+          format: 'medium',
+          includeTime: false,
+        })}
         actions={
           <Button
             variant="ghost"
