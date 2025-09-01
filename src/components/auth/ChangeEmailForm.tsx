@@ -35,8 +35,8 @@ export default function ChangeEmailForm() {
     if (!currentPassword) return;
 
     try {
-      // 현재 비밀번호 확인 API 호출
-      await apiClient.post('/api/auth/verify-password/', {
+      // 비밀번호 확인 API 호출
+      await apiClient.post('/api/auth/verify-password', {
         current_password: currentPassword,
       });
 
@@ -54,7 +54,7 @@ export default function ChangeEmailForm() {
   const onSubmit = async (data: ChangeEmailFormData) => {
     try {
       // 프로필 업데이트 API 호출
-      await apiClient.put('/api/user/profile/', {
+      await apiClient.put('/api/auth/profile', {
         nickname: data.nickname,
         email: data.newEmail,
       });

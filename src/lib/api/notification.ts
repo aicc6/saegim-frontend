@@ -133,7 +133,7 @@ export const notificationApi = {
   // AI 콘텐츠 준비 완료 알림 전송
   sendAiContentReady: (diaryId: string) => {
     return apiClient.post<NotificationSendResponse>(
-      `/api/notifications/send/ai-content-ready/${diaryId}`,
+      `/api/notifications/ai-content-ready/${diaryId}`,
       {},
     );
   },

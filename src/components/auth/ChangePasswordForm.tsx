@@ -42,7 +42,7 @@ export default function ChangePasswordForm() {
         new_password: data.newPassword,
       };
 
-      await apiClient.post('/api/auth/change-password/', requestData);
+      await apiClient.post('/api/auth/change-password', requestData);
 
       // 성공 처리
       showSuccess(

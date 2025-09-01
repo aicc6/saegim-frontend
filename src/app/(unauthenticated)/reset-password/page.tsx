@@ -81,7 +81,7 @@ function ResetPasswordForm() {
 
     try {
       // 비밀번호 재설정 API 호출
-      const response = await apiClient.post('/auth/forgot-password/reset', {
+      const response = await apiClient.post('/api/auth/forgot-password/reset', {
         email: email,
         verification_code: token,
         new_password: newPassword,

@@ -2,6 +2,12 @@
  * 인증 관련 API
  */
 
+import type {
+  NicknameCheckResponse,
+  UserProfileResponse,
+  EmailTokenVerificationResponse,
+  EmailChangeResponse,
+} from '@/types/api';
 import { apiClient, API_BASE_URL } from './client';
 
 export interface LoginResponse {
@@ -58,7 +64,9 @@ export const authApi = {
 
   // 닉네임 중복 확인
   checkNickname: async (nickname: string) => {
-    return apiClient.get(`/api/auth/check-nickname/${nickname}`);
+    return apiClient.get<NicknameCheckResponse>(
+      `/api/auth/check-nickname/${nickname}`,
+    );
   },
 
   // 이메일 로그인
@@ -84,7 +92,50 @@ export const authApi = {
 
   // 현재 사용자 정보 조회
   getCurrentUser: async () => {
-    return apiClient.get('/api/auth/me');
+    return apiClient.get<UserProfileResponse>('/api/auth/me');
+  },
+
+  // 프로필 업데이트
+  updateProfile: async (data: { nickname: string }) => {
+    return apiClient.put('/api/auth/profile', data);
+  },
+
+  // 이메일 변경 인증 발송
+  sendEmailChangeVerification: async (data: { new_email: string }) => {
+    return apiClient.post('/api/auth/change-email/send-verification', data);
+  },
+
+  // 이메일 변경 토큰 검증
+  verifyEmailToken: async (token: string) => {
+    return apiClient.get<EmailTokenVerificationResponse>(
+      `/api/auth/change-email/verify-token?token=${token}`,
+    );
+  },
+
+  // 이메일 변경 비밀번호 검증
+  verifyEmailChangePassword: async (data: {
+    new_email: string;
+    password: string;
+    token: string;
+  }) => {
+    return apiClient.post<EmailChangeResponse>(
+      '/api/auth/change-email/verify-password',
+      data,
+    );
+  },
+
+  // 계정 탈퇴
+  withdraw: async (data: {
+    password: string;
+    reason?: string;
+    detailed_reason?: string;
+  }) => {
+    const requestData = {
+      password: data.password,
+      reason: data.reason || '기타',
+      ...(data.detailed_reason && { detailed_reason: data.detailed_reason }),
+    };
+    return apiClient.post('/api/auth/withdraw', requestData);
   },
 
   // 비밀번호 재설정 이메일 발송

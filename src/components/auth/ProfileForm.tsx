@@ -5,15 +5,9 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import ConfirmModal from '@/components/ui/custom/ConfirmModal';
 import { FormInput } from '@/components/ui/form-input';
-import { apiClient } from '@/lib/api/client';
+import { authApi } from '@/lib/api/auth';
 import { useToast } from '@/hooks/use-toast';
 import { getLogger } from '@/lib/logger';
-import {
-  UserProfileResponse,
-  EmailTokenVerificationResponse,
-  EmailChangeResponse,
-  NicknameCheckResponse,
-} from '@/types/api';
 
 const logger = getLogger('ProfileForm');
 
@@ -51,10 +45,8 @@ export default function ProfileForm() {
   const verifyTokenAndGetEmail = useCallback(
     async (token: string) => {
       try {
-        const response = await apiClient.get(
-          `/api/auth/change-email/verify-token?token=${token}`,
-        );
-        const data = response.data as EmailTokenVerificationResponse;
+        const response = await authApi.verifyEmailToken(token);
+        const data = response.data;
 
         if (data.valid === 'true') {
           setEmailChangeData({
@@ -85,8 +77,8 @@ export default function ProfileForm() {
   const loadProfile = useCallback(async () => {
     try {
       setIsLoading(true);
-      const response = await apiClient.get('/api/auth/me');
-      const profile = response.data as UserProfileResponse;
+      const response = await authApi.getCurrentUser();
+      const profile = response.data;
 
       setProfileData({
         nickname: profile.nickname,
@@ -143,7 +135,7 @@ export default function ProfileForm() {
 
     try {
       setIsUpdating(true);
-      await apiClient.put('/api/auth/profile', {
+      await authApi.updateProfile({
         nickname: profileData.nickname,
       });
 
@@ -186,7 +178,7 @@ export default function ProfileForm() {
       setIsUpdating(true);
 
       // 이메일 변경 인증 URL 발송
-      await apiClient.post('/api/auth/change-email/send-verification', {
+      await authApi.sendEmailChangeVerification({
         new_email: newEmail,
       });
 
@@ -229,16 +221,13 @@ export default function ProfileForm() {
       setIsUpdating(true);
 
       // 비밀번호 확인 후 이메일 변경
-      const response = await apiClient.post(
-        '/api/auth/change-email/verify-password',
-        {
-          new_email: emailChangeData.email,
-          password: emailChangeData.password,
-          token: emailChangeData.token,
-        },
-      );
+      const response = await authApi.verifyEmailChangePassword({
+        new_email: emailChangeData.email,
+        password: emailChangeData.password,
+        token: emailChangeData.token,
+      });
 
-      const responseData = response.data as EmailChangeResponse;
+      const responseData = response.data;
 
       if (responseData.requires_logout === 'true') {
         // 성공 메시지 표시
@@ -302,10 +291,8 @@ export default function ProfileForm() {
     }
 
     try {
-      const response = await apiClient.get(
-        `/api/auth/profile/check-nickname/${profileData.nickname}`,
-      );
-      const result = response.data as NicknameCheckResponse;
+      const response = await authApi.checkNickname(profileData.nickname);
+      const result = response.data;
 
       // 모달로 결과 표시
       setNicknameCheckResult({
@@ -346,7 +333,7 @@ export default function ProfileForm() {
           : { password: '' };
 
       // 탈퇴 API 호출
-      const response = await apiClient.post('/api/auth/withdraw', requestData);
+      const response = await authApi.withdraw(requestData);
 
       // API 응답이 성공인지 확인
       if (response && response.success) {
