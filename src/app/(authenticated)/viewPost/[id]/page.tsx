@@ -833,7 +833,7 @@ export default function ViewPostPage({
                             type="text"
                             value={newKeyword}
                             onChange={(e) => setNewKeyword(e.target.value)}
-                            onKeyPress={(e) => {
+                            onKeyDown={(e) => {
                               if (e.key === 'Enter') {
                                 handleAddKeyword();
                               }
