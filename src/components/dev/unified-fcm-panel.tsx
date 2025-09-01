@@ -23,7 +23,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useFCMStore, initializeFCM } from '@/stores/fcm';
-import { notificationApi } from '@/lib/notification-api';
+import { notificationApi } from '@/lib/api/notification';
 import { getLogger } from '@/lib/logger';
 
 const logger = getLogger('UnifiedFCMPanel');

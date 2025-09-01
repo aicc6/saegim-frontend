@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import ConfirmModal from '@/components/ui/custom/ConfirmModal';
 import { FormInput } from '@/components/ui/form-input';
-import { apiClient } from '@/lib/api';
+import { apiClient } from '@/lib/api/client';
 import { useToast } from '@/hooks/use-toast';
 import { getLogger } from '@/lib/logger';
 import {

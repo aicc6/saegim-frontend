@@ -5,12 +5,12 @@ import { immer } from 'zustand/middleware/immer';
 
 import { toast } from '@/hooks/use-toast';
 import { VALIDATION } from '@/constants/timeouts';
-import { requestFCMToken, onMessageListener } from '../lib/firebase';
 import {
   notificationApi,
   type FCMTokenRegisterRequest,
   type NotificationSettingsUpdate,
-} from '../lib/notification-api';
+} from '@/lib/api/notification';
+import { requestFCMToken, onMessageListener } from '../lib/firebase';
 import { getLogger } from '../lib/logger';
 import type {
   FCMState,

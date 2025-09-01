@@ -3,7 +3,7 @@
 import { useForm } from 'react-hook-form';
 import { useRouter } from 'next/navigation';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { authApi } from '@/lib/api';
+import { authApi } from '@/lib/api/auth';
 import { useApiError } from '@/hooks/use-api-error';
 import { FormInput } from '@/components/ui/form-input';
 import {

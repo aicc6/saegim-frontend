@@ -18,6 +18,8 @@ import {
   KeywordData,
 } from '@/types/diary';
 import { cn } from '@/lib/utils';
+import { calendarApi } from '@/lib/api/calendar';
+import { authApi } from '@/lib/api/auth';
 
 const logger = getLogger('calendar');
 
@@ -83,45 +85,32 @@ export default function CalendarPage() {
       useDiaryStore.setState({ isLoading: true, error: null });
 
       // 쿠키 기반 API 호출
-      const apiBaseUrl =
-        process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000';
-
-      const params = new URLSearchParams({
-        start_date: dateRange.startDate,
-        end_date: dateRange.endDate,
-      });
-
-      const response = await fetch(
-        `${apiBaseUrl}/api/diary/calendar?${params.toString()}`,
-        {
-          credentials: 'include', // 쿠키 기반 인증
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        },
+      const response = await calendarApi.fetchCalendarData(
+        dateRange.startDate,
+        dateRange.endDate,
       );
 
-      if (response.ok) {
-        const result = await response.json();
+      if (response.success && response.data) {
+        const result = response.data;
         logger.debug('쿠키 기반 API 호출 결과', result);
 
         // 스토어 상태 업데이트
-        if (result.data && Array.isArray(result.data)) {
+        if (Array.isArray(result)) {
           // 현재 상태와 비교하여 변경사항이 있을 때만 업데이트
           const currentData = useDiaryStore.getState().diaries;
           const hasChanged =
-            JSON.stringify(currentData) !== JSON.stringify(result.data);
+            JSON.stringify(currentData) !== JSON.stringify(result);
 
           if (hasChanged) {
             // 삭제된 이미지를 제외하고 필터링하지 않고 원본 데이터 그대로 저장
             useDiaryStore.setState({
-              diaries: result.data,
+              diaries: result,
               isLoading: false,
               error: null,
             });
 
             logger.info('데이터 로딩 완료', {
-              diariesCount: result.data.length,
+              diariesCount: result.length,
             });
           } else {
             // 데이터가 변경되지 않았으면 로딩 상태만 해제
@@ -132,7 +121,7 @@ export default function CalendarPage() {
             logger.debug('데이터 변경사항 없음 (로딩 상태만 해제)');
           }
         }
-      } else if (response.status === 401) {
+      } else if (response.message && response.message.includes('401')) {
         logger.warn('인증 실패, 로그인 페이지로 리다이렉트');
         // 인증 실패 시 로그인 페이지로 리다이렉트
         router.push('/login');
@@ -295,42 +284,44 @@ export default function CalendarPage() {
         try {
           logger.debug('서버 인증 확인 중...');
 
-          const apiBaseUrl =
-            process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000';
+          const response = await authApi.getCurrentUser();
 
-          const response = await fetch(`${apiBaseUrl}/api/auth/me`, {
-            method: 'GET',
-            credentials: 'include',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-          });
-
-          if (response.ok) {
-            const userData = await response.json();
+          if (response.success && response.data) {
+            const userData = response.data as unknown;
+            const userInfo = userData as {
+              email?: string;
+              user_id?: string;
+              nickname?: string;
+              provider?: string;
+              created_at?: string;
+            };
             logger.info(
               '서버 인증 성공:',
-              userData.data.email
-                ? `${userData.data.email.substring(0, 3)}***@${userData.data.email.split('@')[1]}`
+              userInfo.email
+                ? `${userInfo.email.substring(0, 3)}***@${
+                    userInfo.email.split('@')[1]
+                  }`
                 : '사용자',
             );
 
             // Zustand 스토어에 로그인 정보 저장
             const { login } = useAuthStore.getState();
             login({
-              id: userData.data.user_id,
-              email: userData.data.email,
-              name: userData.data.nickname,
+              id: userInfo.user_id || '',
+              email: userInfo.email || '',
+              name: userInfo.nickname || '',
               profileImage: '',
-              provider: userData.data.provider || 'email',
-              createdAt: userData.data.created_at || new Date().toISOString(),
+              provider:
+                (userInfo.provider as 'email' | 'google' | 'kakao' | 'naver') ||
+                'email',
+              createdAt: userInfo.created_at || new Date().toISOString(),
             });
 
             // 로딩 완료
             setIsLoading(false);
             setHasChecked(true);
           } else {
-            logger.warn('서버 인증 실패:', response.status);
+            logger.warn('서버 인증 실패:', response.message);
             // 서버 인증 실패 시 로그인 페이지로 이동
             setHasChecked(true);
             setIsLoading(false);

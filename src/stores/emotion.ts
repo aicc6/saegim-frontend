@@ -2,7 +2,6 @@
 
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { EmotionService } from '@/services/emotion-service';
 
 // ===== 타입 정의 =====
 export type EmotionOption =
@@ -157,11 +156,52 @@ export const useEmotionStore = create<EmotionState>()(
       },
 
       detectTextEmotion: (text) => {
-        return EmotionService.detectEmotion(text);
+        // 간단한 감정 감지 로직 (키워드 기반)
+        const lowerText = text.toLowerCase();
+        if (
+          lowerText.includes('행복') ||
+          lowerText.includes('기쁨') ||
+          lowerText.includes('즐거')
+        )
+          return 'happy';
+        if (
+          lowerText.includes('슬프') ||
+          lowerText.includes('우울') ||
+          lowerText.includes('눈물')
+        )
+          return 'sad';
+        if (
+          lowerText.includes('화') ||
+          lowerText.includes('분노') ||
+          lowerText.includes('짜증')
+        )
+          return 'angry';
+        if (
+          lowerText.includes('평온') ||
+          lowerText.includes('고요') ||
+          lowerText.includes('안정')
+        )
+          return 'peaceful';
+        if (
+          lowerText.includes('불안') ||
+          lowerText.includes('걱정') ||
+          lowerText.includes('초조')
+        )
+          return 'unrest';
+        return 'peaceful'; // 기본값
       },
 
       getEmotionTone: (emotion) => {
-        return EmotionService.getEmotionTone(emotion);
+        // 감정별 톤 반환
+        const tones: Record<EmotionOption, string> = {
+          '': '중립적인',
+          happy: '밝고 긍정적인',
+          sad: '차분하고 감성적인',
+          angry: '강렬하고 직설적인',
+          peaceful: '평온하고 안정적인',
+          unrest: '불안하고 조심스러운',
+        };
+        return tones[emotion] || '중립적인';
       },
     }),
     {

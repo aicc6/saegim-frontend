@@ -13,7 +13,7 @@ import { useErrorManagement } from '@/hooks/use-error-management';
 import { useFormOptions } from '@/hooks/use-form-options';
 import { useStreaming } from '@/hooks/use-streaming';
 import { useClipboard } from '@/hooks/use-clipboard';
-import { diaryApi } from '@/lib/api';
+import { diaryApi } from '@/lib/api/diary';
 import { useSimpleToast } from '@/hooks/use-simple-toast';
 import { useTempOptions } from '@/hooks/use-temp-options';
 import { useChatUi } from '@/hooks/use-chat-ui';

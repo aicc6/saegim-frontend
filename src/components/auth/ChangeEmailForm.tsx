@@ -6,7 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { Button } from '@/components/ui/button';
 import { FormInput } from '@/components/ui/form-input';
 import { useApiError } from '@/hooks/use-api-error';
-import { apiClient } from '@/lib/api';
+import { apiClient } from '@/lib/api/client';
 import { changeEmailSchema, type ChangeEmailFormData } from '@/schemas/auth';
 import { TEXT_STYLES } from '@/constants';
 

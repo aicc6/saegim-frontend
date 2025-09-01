@@ -92,7 +92,7 @@ export function NotificationPage() {
         setIsRetrying(retryCount > 0);
 
         // Notification API를 직접 호출하여 알림 이력 조회
-        const { notificationApi } = await import('@/lib/notification-api');
+        const { notificationApi } = await import('@/lib/api/notification');
         const response = await notificationApi.getNotificationHistory(100, 0);
 
         // 응답 데이터 검증

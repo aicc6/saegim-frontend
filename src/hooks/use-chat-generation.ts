@@ -3,7 +3,9 @@ import { useRouter } from 'next/navigation';
 import { useCreateStore, WritingStyle, LengthOption } from '@/stores/create';
 import { EmotionOption, useEmotionStore } from '@/stores/emotion';
 import { MessageVersion, RegenerateResponse } from '@/types/chat';
-import { diaryApi, aiApi, ApiResponse } from '@/lib/api';
+import { diaryApi } from '@/lib/api/diary';
+import { aiApi } from '@/lib/api/ai';
+import { ApiResponse } from '@/lib/api/client';
 import { DiaryEntry } from '@/types/diary';
 import { getLogger } from '@/lib/logger';
 

@@ -3,6 +3,8 @@
 import { useState, useCallback, useRef, useEffect, useTransition } from 'react';
 import { flushSync } from 'react-dom';
 import { getLogger } from '@/lib/logger';
+import { imageApi } from '@/lib/api/image';
+import { aiApi } from '@/lib/api/ai';
 
 const logger = getLogger('useStreaming');
 
@@ -273,23 +275,12 @@ export const useStreaming = () => {
         }> | null = null;
         if (data.images && data.images.length > 0) {
           try {
-            const formData = new FormData();
-            data.images.forEach((image) => {
-              formData.append(`images`, image);
-            });
-
-            const imageUploadResponse = await fetch(
-              'http://localhost:8000/api/diary/images/upload',
-              {
-                method: 'POST',
-                body: formData,
-                credentials: 'include',
-              },
+            const imageUploadResponse = await imageApi.uploadDiaryImages(
+              data.images,
             );
 
-            if (imageUploadResponse.ok) {
-              const imageResult = await imageUploadResponse.json();
-              uploadedImages = imageResult.data;
+            if (imageUploadResponse.success) {
+              uploadedImages = imageUploadResponse.data;
 
               // 업로드된 이미지를 상태에 저장
               setState((prev) => ({
@@ -308,28 +299,15 @@ export const useStreaming = () => {
           }
         }
 
-        // JSON 형식 요청 데이터 생성
-        const requestData = {
+        // 스트리밍 요청 시작
+        const response = await aiApi.generateTextStream({
           prompt: data.prompt,
           style: data.style,
           length: data.length,
           emotion: data.emotion || '',
-          ...(data.sessionId && { session_id: data.sessionId }), // sessionId가 있을 때만 포함
+          sessionId: data.sessionId,
           uploaded_images: uploadedImages,
-        };
-
-        // 스트리밍 요청 시작
-        const response = await fetch(
-          'http://localhost:8000/api/ai/generate/stream',
-          {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(requestData),
-            credentials: 'include',
-          },
-        );
+        });
 
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
