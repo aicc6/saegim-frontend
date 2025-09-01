@@ -53,8 +53,7 @@ export interface StreamChunk {
   chunk_index?: number; // 청크 순서
 }
 
-// 최대 큐 크기 제한 (메모리 최적화)
-const MAX_QUEUE_SIZE = 100;
+// ✅ Best Practice: 복잡한 큐 시스템 제거로 상수 불필요
 
 export const useStreaming = () => {
   const [state, setState] = useState<StreamingState>({
@@ -121,15 +120,11 @@ export const useStreaming = () => {
     [getStorageKey],
   );
 
+  // ✅ Best Practice: 필요한 ref만 유지
   const eventSourceRef = useRef<EventSource | null>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const streamingTypingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const chunkQueueRef = useRef<Array<{ content: string; timestamp: number }>>(
-    [],
-  );
-  const isProcessingQueueRef = useRef<boolean>(false);
-  const lastRenderTimeRef = useRef<number>(0);
-  const streamStartTimeRef = useRef<number>(0);
+  // 복잡한 큐 시스템 관련 ref들 제거됨
 
   // sessionId가 변경될 때 저장된 regenerationHistory 로드
   useEffect(() => {
@@ -151,39 +146,17 @@ export const useStreaming = () => {
     }
   }, [state.sessionId, state.regenerationHistory, saveRegenerationHistory]);
 
-  // 단순화된 청크 처리 함수 (인덱스 기반 지연 사용)
-  const processChunkQueue = useCallback(() => {
-    if (isProcessingQueueRef.current || chunkQueueRef.current.length === 0) {
-      return;
-    }
+  // ✅ Best Practice: 단순화된 직접 텍스트 업데이트
+  const appendStreamText = useCallback((content: string) => {
+    if (!content) return;
 
-    isProcessingQueueRef.current = true;
-    const chunk = chunkQueueRef.current.shift()!;
+    logger.debug('청크 렌더링', { content });
 
-    // 메모리 최적화: 큐 크기 제한
-    if (chunkQueueRef.current.length > MAX_QUEUE_SIZE) {
-      chunkQueueRef.current.splice(
-        0,
-        chunkQueueRef.current.length - MAX_QUEUE_SIZE,
-      );
-    }
-
-    logger.debug('청크 렌더링 시작', {
-      content: chunk.content,
-      remainingQueue: chunkQueueRef.current.length,
-    });
-
-    // 즉시 상태 업데이트 (인위적 지연은 큐 추가할 때 이미 처리됨)
+    // 🔥 핵심 개선: 복잡한 큐 없이 즉시 상태 업데이트
     setState((prev) => ({
       ...prev,
-      streamedText: prev.streamedText + chunk.content,
+      streamedText: prev.streamedText + content,
     }));
-
-    logger.debug('청크 렌더링 완료', {
-      content: chunk.content,
-    });
-
-    isProcessingQueueRef.current = false;
   }, []);
 
   // ChatGPT 스타일 타이핑 애니메이션 함수 (완료 후에만 사용)
@@ -241,11 +214,8 @@ export const useStreaming = () => {
           clearTimeout(streamingTypingTimeoutRef.current);
         }
 
-        // 청크 큐 초기화
-        chunkQueueRef.current = [];
-        isProcessingQueueRef.current = false;
-        lastRenderTimeRef.current = 0; // 첫 번째 청크 즉시 렌더링을 위해 0으로 설정
-        streamStartTimeRef.current = Date.now();
+        // ✅ Best Practice: 단순한 초기화
+        // 복잡한 큐 시스템 변수들 제거됨
 
         // 초기 상태 설정
         setState((prev) => ({
@@ -349,50 +319,13 @@ export const useStreaming = () => {
                     case 'content': {
                       const newContent = parsedData.content || '';
 
-                      // 서버 타임스탬프가 있으면 사용, 없으면 상대적 시간 계산
-                      let chunkTimestamp;
-                      if (parsedData.timestamp) {
-                        chunkTimestamp = parsedData.timestamp;
-                      } else {
-                        // 서버 타임스탬프가 없다면 청크 순서에 따라 상대적 시간 할당
-                        const elapsedTime =
-                          Date.now() - streamStartTimeRef.current;
-                        chunkTimestamp =
-                          streamStartTimeRef.current + elapsedTime;
-                      }
-
-                      // 청크를 큐에 직접 추가 (서버에서 이미 잘게 분할되어 옴)
+                      // 🔥 핵심 개선: 인위적 지연과 복잡한 큐 시스템 제거
                       if (newContent) {
-                        const chunkIndex = chunkQueueRef.current.length;
-                        logger.debug('청크 큐에 추가', {
-                          content: newContent,
-                          timestamp: chunkTimestamp,
-                          chunkIndex,
-                          queueLength: chunkIndex + 1,
-                        });
-                        chunkQueueRef.current.push({
-                          content: newContent,
-                          timestamp: chunkTimestamp,
-                        });
-
-                        // 첫 번째 청크만 즉시 처리, 나머지는 인덱스 기반 지연
-                        if (chunkIndex === 0) {
-                          processChunkQueue();
-                        } else {
-                          // 인덱스 기반 인위적 지연 (50ms씩 증가)
-                          const artificialDelay = chunkIndex * 50;
-                          setTimeout(() => {
-                            if (
-                              !isProcessingQueueRef.current &&
-                              chunkQueueRef.current.length > 0
-                            ) {
-                              processChunkQueue();
-                            }
-                          }, artificialDelay);
-                        }
+                        // 즉시 텍스트 추가 (업계 표준 방식)
+                        appendStreamText(newContent);
                       }
 
-                      // accumulatedText만 즉시 업데이트 (streamedText는 큐에서 처리)
+                      // accumulatedText 즉시 업데이트
                       setState((prev) => ({
                         ...prev,
                         accumulatedText:
@@ -432,21 +365,11 @@ export const useStreaming = () => {
                         };
                       });
 
-                      // 남은 큐 처리 완료 후 타이핑 애니메이션 시작
-                      const finishQueueAndStartTyping = () => {
-                        if (
-                          chunkQueueRef.current.length === 0 &&
-                          !isProcessingQueueRef.current
-                        ) {
-                          setTimeout(() => {
-                            startTypingAnimation(finalText);
-                          }, 100);
-                        } else {
-                          // 아직 처리 중인 큐가 있으면 잠시 후 다시 확인
-                          setTimeout(finishQueueAndStartTyping, 100);
-                        }
-                      };
-                      finishQueueAndStartTyping();
+                      // ✅ Best Practice: 단순한 완료 처리
+                      // 스트리밍 완료 후 바로 타이핑 애니메이션 시작
+                      setTimeout(() => {
+                        startTypingAnimation(finalText);
+                      }, 100);
 
                       logger.info('스트리밍 완료', {
                         emotion: parsedData.emotion,
@@ -486,7 +409,7 @@ export const useStreaming = () => {
         }));
       }
     },
-    [startTypingAnimation, processChunkQueue, state.accumulatedText],
+    [startTypingAnimation, appendStreamText, state.accumulatedText],
   );
 
   // 최적화된 스트리밍 중단 함수
@@ -507,9 +430,8 @@ export const useStreaming = () => {
       streamingTypingTimeoutRef.current = null;
     }
 
-    // 청크 처리 중단 및 큐 정리
-    isProcessingQueueRef.current = false;
-    chunkQueueRef.current = [];
+    // ✅ Best Practice: 단순한 정리
+    // 복잡한 큐 시스템 제거로 정리할 것이 줄어듦
 
     // useTransition을 활용한 논블로킹 상태 업데이트
     updateStateOptimized((prev) => ({
@@ -565,9 +487,8 @@ export const useStreaming = () => {
       clearTimeout(streamingTypingTimeoutRef.current);
     }
 
-    // 청크 큐 정리
-    chunkQueueRef.current = [];
-    isProcessingQueueRef.current = false;
+    // ✅ Best Practice: 단순한 상태 정리
+    // 큐 시스템 제거로 정리 로직 단순화
 
     setState((prev) => ({
       isStreaming: false,
@@ -604,9 +525,8 @@ export const useStreaming = () => {
         clearTimeout(streamingTypingTimeoutRef.current);
       }
 
-      // 큐 및 처리 상태 정리
-      chunkQueueRef.current = [];
-      isProcessingQueueRef.current = false;
+      // ✅ Best Practice: 리소스 정리
+      // 단순화된 정리 로직
     };
   }, []);
 

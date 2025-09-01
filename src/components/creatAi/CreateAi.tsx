@@ -197,6 +197,37 @@ function CreateAi() {
 
   useErrorManagement({ error: error || streamError, clearError });
 
+  // ✅ 스트리밍 완료 시 카드 업데이트 로직
+  useEffect(() => {
+    if (isComplete && sessionId && accumulatedText) {
+      setGeneratedCards((prev) => {
+        const cardToUpdate = prev.find(
+          (card) => card.sessionId === '' && card.versions[0].text === '',
+        );
+        if (cardToUpdate) {
+          return prev.map((card) => {
+            if (card.id === cardToUpdate.id) {
+              return {
+                ...card,
+                sessionId,
+                versions: [
+                  {
+                    ...card.versions[0],
+                    text: accumulatedText,
+                    aiEmotion: aiEmotion || '',
+                    keywords: keywords || [],
+                  },
+                ],
+              };
+            }
+            return card;
+          });
+        }
+        return prev;
+      });
+    }
+  }, [isComplete, sessionId, accumulatedText, aiEmotion, keywords]);
+
   // 컴포넌트 언마운트 시 재생성 상태 정리
   useEffect(() => {
     return () => {
@@ -239,6 +270,7 @@ function CreateAi() {
       return;
     }
 
+    // ✅ Best Practice: 단순한 상태 업데이트로 롤백
     setGeneratedCards((prev) => {
       // 재생성 중인 카드가 있으면 해당 카드만 업데이트
       if (regeneratingCardId) {
@@ -341,15 +373,41 @@ function CreateAi() {
   const handleGenerateText = useCallback(async () => {
     if (isStreaming) return;
 
-    const validation = validateForm(prompt, style, length);
-    if (!validation.isValid && validation.errorMessage) {
-      showValidationAlert(validation.errorMessage);
-      return;
-    }
-
     try {
-      // 스트리밍 시작
+      const validation = validateForm(prompt, style, length);
+      if (!validation.isValid && validation.errorMessage) {
+        showValidationAlert(validation.errorMessage);
+        return;
+      }
+
+      // ✅ 핵심 수정: 스트리밍 시작과 동시에 빈 카드 즉시 생성
+      const newCardId = `card-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
+      const newCard: GeneratedTextCard = {
+        id: newCardId,
+        prompt,
+        style,
+        length,
+        emotion: emotion || null,
+        sessionId: '', // startStreaming에서 업데이트됨
+        versions: [
+          {
+            id: `version-${Date.now()}`,
+            text: '', // 빈 텍스트로 시작
+            aiEmotion: '',
+            keywords: [],
+            createdAt: new Date(),
+            versionNumber: 1,
+          },
+        ],
+        currentVersionIndex: 0,
+        isEditMode: false,
+        editedText: '',
+        createdAt: new Date(),
+      };
+
       setShowResults(true);
+      setGeneratedCards((prev) => [newCard, ...prev]); // 즉시 카드 추가
+
       await startStreaming({
         prompt,
         style,
@@ -359,6 +417,9 @@ function CreateAi() {
       });
     } catch (error) {
       logger.error('스트리밍 글 생성 실패', { error });
+      // 오류 시 결과 화면 숨기기 및 실패한 카드 제거
+      setShowResults(false);
+      setGeneratedCards((prev) => prev.slice(1)); // 첫 번째 카드 제거
     }
   }, [
     prompt,
@@ -375,6 +436,7 @@ function CreateAi() {
   // 카드별 액션 핸들러들
   const handleCardEdit = useCallback(
     (cardId: string) => {
+      // ✅ 사용자 상호작용: 즉시 반응해야 하므로 transition 사용 안함
       setGeneratedCards((prev) =>
         prev.map((card) => {
           if (card.id === cardId) {
@@ -552,7 +614,6 @@ function CreateAi() {
     newSelectedImages,
     validateForm,
     showValidationAlert,
-    resetState,
     startStreaming,
     scrollToBottom,
   ]);
@@ -707,13 +768,35 @@ function CreateAi() {
                         />
                       </div>
                     ) : (
-                      // 일반 표시 모드
+                      // ✅ Best Practice: 스트리밍 콘텐츠 즉시 표시
                       <div className="text-gray-800 leading-relaxed whitespace-pre-wrap">
-                        {isStreaming && sessionId === card.sessionId
-                          ? streamedText || '생성 중...'
-                          : currentVersion.text}
-                        {isStreaming && sessionId === card.sessionId && (
-                          <span className="inline-block w-px h-5 bg-gray-400 ml-1 animate-pulse"></span>
+                        {/* ✅ 간소화된 스트리밍 조건 */}
+                        {isStreaming &&
+                        (card.sessionId === '' ||
+                          card.sessionId === sessionId) ? (
+                          <div className="min-h-[1.5em]">
+                            {streamedText ? (
+                              <>
+                                {streamedText}
+                                <span className="inline-block w-px h-5 bg-gray-400 ml-1 animate-pulse"></span>
+                              </>
+                            ) : accumulatedText ? (
+                              <>
+                                {accumulatedText}
+                                <span className="inline-block w-px h-5 bg-gray-400 ml-1 animate-pulse"></span>
+                              </>
+                            ) : (
+                              <span className="text-gray-500 italic">
+                                AI 응답을 기다리는 중...
+                              </span>
+                            )}
+                          </div>
+                        ) : (
+                          currentVersion.text || (
+                            <span className="text-gray-400 italic">
+                              텍스트가 없습니다
+                            </span>
+                          )
                         )}
                       </div>
                     )}
@@ -792,33 +875,7 @@ function CreateAi() {
                 onRemove={handleNewImageRemove}
               />
 
-              {/* 신규 글 생성 중 로딩 표시 */}
-              {isStreaming && !regeneratingCardId && (
-                <div className="bg-sage-20 border border-sage-30 rounded-lg p-3">
-                  <div className="flex items-center gap-3">
-                    <div className="flex gap-1">
-                      <div className="w-2 h-2 bg-sage-60 rounded-full animate-bounce"></div>
-                      <div
-                        className="w-2 h-2 bg-sage-60 rounded-full animate-bounce"
-                        style={{ animationDelay: '0.1s' }}
-                      ></div>
-                      <div
-                        className="w-2 h-2 bg-sage-60 rounded-full animate-bounce"
-                        style={{ animationDelay: '0.2s' }}
-                      ></div>
-                    </div>
-                    <span className="text-sm font-medium text-sage-100">
-                      AI가 글을 생성하고 있어요...
-                    </span>
-                  </div>
-                  {streamedText && (
-                    <div className="mt-2 text-sm text-sage-80 bg-white rounded p-2">
-                      {streamedText}
-                      <span className="inline-block w-px h-4 bg-sage-60 ml-1 animate-pulse"></span>
-                    </div>
-                  )}
-                </div>
-              )}
+              {/* ✅ 로딩 블록 제거: 실제 카드에서 실시간 스트리밍 표시 */}
 
               {/* 메인 입력창 */}
               <MemoizedChatInput
