@@ -413,6 +413,217 @@ export const useStreaming = () => {
   );
 
   // 최적화된 스트리밍 중단 함수
+  // 스트리밍 재생성 함수 (폴백 로직 포함)
+  const startRegeneration = useCallback(
+    async (sessionId: string) => {
+      try {
+        // 기존 연결 정리
+        if (eventSourceRef.current) {
+          eventSourceRef.current.close();
+        }
+
+        // 기존 타이핑 애니메이션 정리
+        if (typingTimeoutRef.current) {
+          clearTimeout(typingTimeoutRef.current);
+        }
+        if (streamingTypingTimeoutRef.current) {
+          clearTimeout(streamingTypingTimeoutRef.current);
+        }
+
+        // 재생성 상태로 설정 (기존 메타데이터 유지)
+        setState((prev) => ({
+          ...prev,
+          isStreaming: true,
+          streamedText: '',
+          accumulatedText: '',
+          displayText: '',
+          error: null,
+          isComplete: false,
+          isTyping: false,
+        }));
+
+        let response: Response;
+        let isUsingFallback = false;
+
+        try {
+          // 1차 시도: 전용 재생성 스트리밍 엔드포인트
+          response = await aiApi.regenerateStream(sessionId);
+
+          if (!response.ok) {
+            // 404 또는 501 에러인 경우 폴백 로직 사용
+            if (response.status === 404 || response.status === 501) {
+              logger.warn(
+                '⚠️ 재생성 스트리밍 엔드포인트 미구현, 폴백 모드 사용',
+              );
+              isUsingFallback = true;
+
+              // 2차 시도: 원본 입력으로 신규 생성 스트리밍
+              const originalResponse =
+                await aiApi.getOriginalUserInput(sessionId);
+              if (!originalResponse.success) {
+                throw new Error('원본 입력을 찾을 수 없습니다.');
+              }
+
+              const originalPrompt = originalResponse.data.original_input;
+
+              // 기본 설정으로 새로운 스트리밍 생성 (재생성과 동일한 효과)
+              const fallbackData = {
+                prompt: originalPrompt,
+                style: 'short_story', // 기본값
+                length: 'medium', // 기본값
+                sessionId: sessionId, // 동일한 세션 ID 사용
+              };
+
+              response = await aiApi.generateTextStream(fallbackData);
+
+              if (!response.ok) {
+                throw new Error(`폴백 스트리밍 실패: HTTP ${response.status}`);
+              }
+
+              logger.info('✅ 폴백 모드로 재생성 스트리밍 시작');
+            } else {
+              throw new Error(`HTTP error! status: ${response.status}`);
+            }
+          }
+        } catch (error) {
+          logger.error('재생성 시도 실패', error);
+          throw error;
+        }
+
+        if (!response.body) {
+          throw new Error('응답 본문이 없습니다.');
+        }
+
+        // ReadableStream 처리 (기존과 동일한 로직)
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+
+        logger.info(
+          `🎬 ${isUsingFallback ? '폴백' : '재생성'} 스트리밍 처리 시작`,
+        );
+
+        while (true) {
+          const { value, done } = await reader.read();
+          if (done) break;
+
+          const chunk = decoder.decode(value, { stream: true });
+          const lines = chunk.split('\n');
+
+          for (const line of lines) {
+            if (line.startsWith('data: ')) {
+              try {
+                const jsonData = line.slice(6);
+                if (jsonData.trim()) {
+                  const parsedData: StreamChunk = JSON.parse(jsonData);
+
+                  switch (parsedData.type) {
+                    case 'start':
+                      logger.info(
+                        `${isUsingFallback ? '폴백' : '재생성'} 스트리밍 시작`,
+                        {
+                          sessionId: parsedData.session_id,
+                          fallbackMode: isUsingFallback,
+                        },
+                      );
+                      break;
+
+                    case 'content': {
+                      const newContent = parsedData.content || '';
+                      if (newContent) {
+                        appendStreamText(newContent);
+                      }
+
+                      setState((prev) => ({
+                        ...prev,
+                        accumulatedText:
+                          parsedData.accumulated || prev.accumulatedText,
+                      }));
+                      break;
+                    }
+
+                    case 'complete': {
+                      const finalText =
+                        parsedData.generated_text || state.accumulatedText;
+
+                      setState((prev) => {
+                        const newRegenerationCount =
+                          parsedData.regeneration_count ||
+                          prev.regenerationCount + 1;
+
+                        // 재생성 이력에 현재 결과 추가
+                        const newHistoryEntry = {
+                          text: finalText,
+                          emotion: parsedData.emotion || null,
+                          keywords: parsedData.keywords || [],
+                          timestamp: Date.now(),
+                        };
+
+                        return {
+                          ...prev,
+                          isStreaming: false,
+                          isComplete: true,
+                          emotion: parsedData.emotion || null,
+                          keywords: parsedData.keywords || [],
+                          accumulatedText: finalText,
+                          regenerationCount: newRegenerationCount,
+                          regenerationHistory: [
+                            ...(prev.regenerationHistory || []),
+                            newHistoryEntry,
+                          ],
+                        };
+                      });
+
+                      // 스트리밍 완료 후 바로 타이핑 애니메이션 시작
+                      setTimeout(() => {
+                        startTypingAnimation(finalText);
+                      }, 100);
+
+                      logger.info(
+                        `${isUsingFallback ? '폴백' : '재생성'} 스트리밍 완료`,
+                        {
+                          emotion: parsedData.emotion,
+                          tokensUsed: parsedData.tokens_used,
+                          fallbackMode: isUsingFallback,
+                        },
+                      );
+                      break;
+                    }
+
+                    case 'error':
+                      setState((prev) => ({
+                        ...prev,
+                        isStreaming: false,
+                        error:
+                          parsedData.error || '재생성 중 오류가 발생했습니다.',
+                      }));
+                      logger.error('재생성 스트리밍 오류', {
+                        error: parsedData.error,
+                        fallbackMode: isUsingFallback,
+                      });
+                      break;
+                  }
+                }
+              } catch (parseError) {
+                logger.error('재생성 JSON 파싱 오류', { parseError, line });
+              }
+            }
+          }
+        }
+      } catch (error) {
+        logger.error('재생성 스트리밍 시작 실패', { error });
+        setState((prev) => ({
+          ...prev,
+          isStreaming: false,
+          error:
+            error instanceof Error
+              ? error.message
+              : '재생성 중 오류가 발생했습니다.',
+        }));
+      }
+    },
+    [startTypingAnimation, appendStreamText, state.accumulatedText],
+  );
+
   const stopStreaming = useCallback(() => {
     // EventSource 정리
     if (eventSourceRef.current) {
@@ -535,6 +746,7 @@ export const useStreaming = () => {
     ...state,
     isPending, // useTransition의 pending 상태 추가
     startStreaming,
+    startRegeneration, // 재생성 스트리밍 함수 추가
     stopStreaming,
     resetState,
     setEditMode,

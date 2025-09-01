@@ -24,6 +24,17 @@ export const aiApi = {
     return apiClient.post(`/api/ai/regenerate/${sessionId}`, {});
   },
 
+  // AI 텍스트 스트리밍 재생성 (session_id 기반)
+  regenerateStream: async (sessionId: string): Promise<Response> => {
+    // apiClient의 스트리밍 메소드 사용
+    const response = await apiClient.stream(
+      `/api/ai/regenerate/${sessionId}/stream`,
+      {},
+    );
+
+    return response;
+  },
+
   // 원본 사용자 입력 조회
   getOriginalUserInput: async (sessionId: string) => {
     return apiClient.get<OriginalUserInputResponse>(

@@ -176,6 +176,7 @@ function CreateAi() {
     isComplete,
     isPending, // 새로 추가된 pending 상태
     startStreaming,
+    startRegeneration, // 재생성 스트리밍 함수 추가
     resetState,
   } = useStreaming();
 
@@ -537,20 +538,16 @@ function CreateAi() {
       if (!card || isStreaming || card.versions.length >= 5) return;
 
       setRegeneratingCardId(cardId);
+
       try {
-        await startStreaming({
-          prompt: card.prompt,
-          style: card.style,
-          length: card.length,
-          emotion: card.emotion || undefined,
-          sessionId: card.sessionId, // 카드에 저장된 실제 sessionId 사용
-        });
+        // 스트리밍 재생성 시작 (sessionId 기반)
+        await startRegeneration(card.sessionId);
       } catch (error) {
         setRegeneratingCardId(null);
         logger.error('재생성 실패', { error });
       }
     },
-    [generatedCards, isStreaming, startStreaming],
+    [generatedCards, isStreaming, startRegeneration],
   );
 
   const handleCardCopy = useCallback(
@@ -791,6 +788,38 @@ function CreateAi() {
                               </span>
                             )}
                           </div>
+                        ) : regeneratingCardId === card.id ? (
+                          // 재생성 중 스트리밍 상태 표시
+                          <div className="relative">
+                            {streamedText ? (
+                              <>
+                                {streamedText}
+                                <span className="inline-block w-px h-5 bg-indigo-400 ml-1 animate-pulse"></span>
+                              </>
+                            ) : accumulatedText ? (
+                              <>
+                                {accumulatedText}
+                                <span className="inline-block w-px h-5 bg-indigo-400 ml-1 animate-pulse"></span>
+                              </>
+                            ) : (
+                              <div className="flex items-center gap-2">
+                                <div className="flex gap-1">
+                                  <div className="w-1.5 h-1.5 bg-indigo-400 rounded-full animate-bounce"></div>
+                                  <div
+                                    className="w-1.5 h-1.5 bg-indigo-400 rounded-full animate-bounce"
+                                    style={{ animationDelay: '0.1s' }}
+                                  ></div>
+                                  <div
+                                    className="w-1.5 h-1.5 bg-indigo-400 rounded-full animate-bounce"
+                                    style={{ animationDelay: '0.2s' }}
+                                  ></div>
+                                </div>
+                                <span className="text-indigo-600 text-sm">
+                                  새 버전 생성 중...
+                                </span>
+                              </div>
+                            )}
+                          </div>
                         ) : (
                           currentVersion.text || (
                             <span className="text-gray-400 italic">
@@ -826,28 +855,6 @@ function CreateAi() {
                       {new Date(currentVersion.createdAt).toLocaleTimeString()}
                     </span>
                   </div>
-
-                  {/* 재생성 중일 때 로딩 오버레이 */}
-                  {isRegenerating && (
-                    <div className="absolute inset-0 bg-white/80 backdrop-blur-sm rounded-lg flex items-center justify-center">
-                      <div className="flex flex-col items-center gap-3">
-                        <div className="flex gap-1">
-                          <div className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce"></div>
-                          <div
-                            className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce"
-                            style={{ animationDelay: '0.1s' }}
-                          ></div>
-                          <div
-                            className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce"
-                            style={{ animationDelay: '0.2s' }}
-                          ></div>
-                        </div>
-                        <span className="text-sm font-medium text-indigo-600">
-                          새 버전 생성 중...
-                        </span>
-                      </div>
-                    </div>
-                  )}
                 </div>
               );
             })}
