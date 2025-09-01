@@ -82,6 +82,9 @@ export default function CreateAi() {
   const [showResults, setShowResults] = useState(false);
   const [newPrompt, setNewPrompt] = useState('');
   const [generatedCards, setGeneratedCards] = useState<GeneratedTextCard[]>([]);
+  const [regeneratingCardId, setRegeneratingCardId] = useState<string | null>(
+    null,
+  );
 
   const {
     config,
@@ -171,6 +174,13 @@ export default function CreateAi() {
   );
 
   useErrorManagement({ error: error || streamError, clearError });
+
+  // 컴포넌트 언마운트 시 재생성 상태 정리
+  useEffect(() => {
+    return () => {
+      setRegeneratingCardId(null);
+    };
+  }, []);
 
   // ChatUI 관련 훅들 추가
   const { textareaRef, messagesEndRef, scrollToBottom, adjustTextareaHeight } =
@@ -278,6 +288,8 @@ export default function CreateAi() {
     });
 
     setShowResults(true);
+    // 스트리밍 완료 시 regeneratingCardId 초기화
+    setRegeneratingCardId(null);
   }, [
     isComplete,
     accumulatedText,
@@ -426,6 +438,7 @@ export default function CreateAi() {
       const card = generatedCards.find((c) => c.id === cardId);
       if (!card || isStreaming || card.versions.length >= 5) return;
 
+      setRegeneratingCardId(cardId);
       try {
         await startStreaming({
           prompt: card.prompt,
@@ -435,6 +448,7 @@ export default function CreateAi() {
           sessionId: card.sessionId, // 카드에 저장된 실제 sessionId 사용
         });
       } catch (error) {
+        setRegeneratingCardId(null);
         logger.error('재생성 실패', { error });
       }
     },
@@ -525,8 +539,8 @@ export default function CreateAi() {
         {/* 상단 스크롤 영역 - 단순한 스타일 */}
         <div className="flex-1 overflow-y-auto p-4 pb-8">
           <div className="mx-auto max-w-2xl space-y-4">
-            {/* 현재 스트리밍 중인 카드 (임시) */}
-            {isStreaming && (
+            {/* 현재 스트리밍 중인 카드 (임시) - 신규 생성 시에만 */}
+            {isStreaming && !regeneratingCardId && (
               <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-lg font-medium text-gray-900">
@@ -563,10 +577,12 @@ export default function CreateAi() {
             {/* 생성된 카드들 */}
             {generatedCards.map((card) => {
               const currentVersion = card.versions[card.currentVersionIndex];
+              const isRegenerating =
+                card.id === regeneratingCardId && isStreaming;
               return (
                 <div
                   key={card.id}
-                  className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm"
+                  className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm relative"
                 >
                   <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center gap-3">
@@ -603,7 +619,8 @@ export default function CreateAi() {
                       <div className="flex items-center gap-1">
                         <button
                           onClick={() => handleCardEdit(card.id)}
-                          className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-md transition-colors"
+                          disabled={isRegenerating}
+                          className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                           title={card.isEditMode ? '편집 완료' : '텍스트 편집'}
                         >
                           <Edit3 className="w-4 h-4" />
@@ -611,7 +628,8 @@ export default function CreateAi() {
 
                         <button
                           onClick={() => handleCardSave(card.id)}
-                          className="p-2 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 rounded-md transition-colors"
+                          disabled={isRegenerating}
+                          className="p-2 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                           title="다이어리 저장"
                         >
                           <Save className="w-4 h-4" />
@@ -622,12 +640,16 @@ export default function CreateAi() {
                           disabled={isStreaming || card.versions.length >= 5}
                           className="p-2 text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                           title={
-                            card.versions.length >= 5
-                              ? '재생성 한도에 도달했습니다'
-                              : `${5 - card.versions.length}회 더 재생성 가능`
+                            isRegenerating
+                              ? '새 버전 생성 중...'
+                              : card.versions.length >= 5
+                                ? '재생성 한도에 도달했습니다'
+                                : `${5 - card.versions.length}회 더 재생성 가능`
                           }
                         >
-                          <RotateCcw className="w-4 h-4" />
+                          <RotateCcw
+                            className={`w-4 h-4 ${isRegenerating ? 'animate-spin' : ''}`}
+                          />
                         </button>
 
                         <button
@@ -638,7 +660,8 @@ export default function CreateAi() {
                                 : currentVersion.text,
                             )
                           }
-                          className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-md transition-colors"
+                          disabled={isRegenerating}
+                          className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                           title="복사하기"
                         >
                           <Copy className="w-4 h-4" />
@@ -697,6 +720,28 @@ export default function CreateAi() {
                       {new Date(currentVersion.createdAt).toLocaleTimeString()}
                     </span>
                   </div>
+
+                  {/* 재생성 중일 때 로딩 오버레이 */}
+                  {isRegenerating && (
+                    <div className="absolute inset-0 bg-white/80 backdrop-blur-sm rounded-lg flex items-center justify-center">
+                      <div className="flex flex-col items-center gap-3">
+                        <div className="flex gap-1">
+                          <div className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce"></div>
+                          <div
+                            className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce"
+                            style={{ animationDelay: '0.1s' }}
+                          ></div>
+                          <div
+                            className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce"
+                            style={{ animationDelay: '0.2s' }}
+                          ></div>
+                        </div>
+                        <span className="text-sm font-medium text-indigo-600">
+                          새 버전 생성 중...
+                        </span>
+                      </div>
+                    </div>
+                  )}
                 </div>
               );
             })}
