@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useCallback, useRef, useEffect, useTransition } from 'react';
-import { flushSync } from 'react-dom';
 import { getLogger } from '@/lib/logger';
 import { imageApi } from '@/lib/api/image';
 import { aiApi } from '@/lib/api/ai';
@@ -159,37 +158,7 @@ export const useStreaming = () => {
     }));
   }, []);
 
-  // ChatGPT 스타일 타이핑 애니메이션 함수 (완료 후에만 사용)
-  const startTypingAnimation = useCallback((fullText: string) => {
-    // 기존 타이핑 애니메이션 중단
-    if (typingTimeoutRef.current) {
-      clearTimeout(typingTimeoutRef.current);
-    }
-
-    // displayText를 빈 문자열로 초기화하고 타이핑 시작
-    setState((prev) => ({ ...prev, isTyping: true, displayText: '' }));
-
-    let currentIndex = 0;
-    const typeNextChar = () => {
-      if (currentIndex < fullText.length) {
-        const currentText = fullText.slice(0, currentIndex + 1);
-        flushSync(() => {
-          setState((prev) => ({
-            ...prev,
-            displayText: currentText,
-          }));
-        });
-        currentIndex++;
-        typingTimeoutRef.current = setTimeout(typeNextChar, 100); // 100ms 간격 (더 잘 보이는 타이핑 속도)
-      } else {
-        flushSync(() => {
-          setState((prev) => ({ ...prev, isTyping: false }));
-        });
-      }
-    };
-
-    typeNextChar();
-  }, []);
+  // 타이핑 애니메이션 제거됨 - 순수 스트리밍 경험 제공
 
   const startStreaming = useCallback(
     async (data: {
@@ -287,15 +256,35 @@ export const useStreaming = () => {
           throw new Error('응답 본문이 없습니다.');
         }
 
-        // ReadableStream 처리
+        // ReadableStream 처리 + 디버깅 로깅
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
 
+        let chunkCount = 0;
+        let totalData = '';
+        logger.debug('🎬 ReadableStream 처리 시작');
+
         while (true) {
           const { value, done } = await reader.read();
-          if (done) break;
+          if (done) {
+            logger.debug('📋 스트리밍 완료 요약', {
+              totalChunks: chunkCount,
+              totalDataLength: totalData.length,
+              isRealStreaming: chunkCount > 1,
+            });
+            break;
+          }
 
+          chunkCount++;
           const chunk = decoder.decode(value, { stream: true });
+          totalData += chunk;
+
+          logger.debug(`📦 청크 #${chunkCount} 수신`, {
+            chunkSize: chunk.length,
+            chunkPreview: chunk.substring(0, 100),
+            timestamp: Date.now(),
+          });
+
           const lines = chunk.split('\n');
 
           for (const line of lines) {
@@ -305,19 +294,33 @@ export const useStreaming = () => {
                 if (jsonData.trim()) {
                   const parsedData: StreamChunk = JSON.parse(jsonData);
 
+                  logger.debug('🎯 스트리밍 이벤트 수신', {
+                    type: parsedData.type,
+                    contentLength: parsedData.content?.length || 0,
+                    contentPreview:
+                      parsedData.content?.substring(0, 50) || null,
+                    timestamp: parsedData.timestamp || Date.now(),
+                  });
+
                   switch (parsedData.type) {
                     case 'start':
                       setState((prev) => ({
                         ...prev,
                         sessionId: parsedData.session_id || null,
                       }));
-                      logger.info('스트리밍 시작', {
+                      logger.info('✅ 스트리밍 시작', {
                         sessionId: parsedData.session_id,
                       });
                       break;
 
                     case 'content': {
                       const newContent = parsedData.content || '';
+
+                      logger.debug('📝 콘텐츠 청크 처리', {
+                        contentLength: newContent.length,
+                        content: newContent,
+                        accumulated: parsedData.accumulated?.length || 0,
+                      });
 
                       // 🔥 핵심 개선: 인위적 지연과 복잡한 큐 시스템 제거
                       if (newContent) {
@@ -366,10 +369,12 @@ export const useStreaming = () => {
                       });
 
                       // ✅ Best Practice: 단순한 완료 처리
-                      // 스트리밍 완료 후 바로 타이핑 애니메이션 시작
-                      setTimeout(() => {
-                        startTypingAnimation(finalText);
-                      }, 100);
+                      // 스트리밍 완료 시 displayText를 streamedText와 동일하게 설정
+                      setState((prev) => ({
+                        ...prev,
+                        displayText: finalText,
+                        isTyping: false,
+                      }));
 
                       logger.info('스트리밍 완료', {
                         emotion: parsedData.emotion,
@@ -409,7 +414,7 @@ export const useStreaming = () => {
         }));
       }
     },
-    [startTypingAnimation, appendStreamText, state.accumulatedText],
+    [appendStreamText, state.accumulatedText],
   );
 
   // 최적화된 스트리밍 중단 함수
@@ -573,10 +578,12 @@ export const useStreaming = () => {
                         };
                       });
 
-                      // 스트리밍 완료 후 바로 타이핑 애니메이션 시작
-                      setTimeout(() => {
-                        startTypingAnimation(finalText);
-                      }, 100);
+                      // 스트리밍 완료 시 displayText를 streamedText와 동일하게 설정
+                      setState((prev) => ({
+                        ...prev,
+                        displayText: finalText,
+                        isTyping: false,
+                      }));
 
                       logger.info(
                         `${isUsingFallback ? '폴백' : '재생성'} 스트리밍 완료`,
@@ -621,7 +628,7 @@ export const useStreaming = () => {
         }));
       }
     },
-    [startTypingAnimation, appendStreamText, state.accumulatedText],
+    [appendStreamText, state.accumulatedText],
   );
 
   const stopStreaming = useCallback(() => {

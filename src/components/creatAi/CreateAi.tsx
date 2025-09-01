@@ -765,9 +765,9 @@ function CreateAi() {
                         />
                       </div>
                     ) : (
-                      // ✅ Best Practice: 스트리밍 콘텐츠 즉시 표시
+                      // ✅ Best Practice: 스트리밍 콘텐츠 즉시 표시 + 완료 후 연속성 보장
                       <div className="text-gray-800 leading-relaxed whitespace-pre-wrap">
-                        {/* ✅ 간소화된 스트리밍 조건 */}
+                        {/* ✅ 스트리밍 중이거나 완료 직후 streamedText/accumulatedText 우선 표시 */}
                         {isStreaming &&
                         (card.sessionId === '' ||
                           card.sessionId === sessionId) ? (
@@ -788,7 +788,7 @@ function CreateAi() {
                               </span>
                             )}
                           </div>
-                        ) : regeneratingCardId === card.id ? (
+                        ) : regeneratingCardId === card.id && isStreaming ? (
                           // 재생성 중 스트리밍 상태 표시
                           <div className="relative">
                             {streamedText ? (
@@ -821,7 +821,11 @@ function CreateAi() {
                             )}
                           </div>
                         ) : (
-                          currentVersion.text || (
+                          // ✅ 핵심 수정: 스트리밍 완료 후 연속성 보장
+                          // currentVersion.text가 없으면 streamedText나 accumulatedText 우선 사용
+                          currentVersion.text ||
+                          streamedText ||
+                          accumulatedText || (
                             <span className="text-gray-400 italic">
                               텍스트가 없습니다
                             </span>
