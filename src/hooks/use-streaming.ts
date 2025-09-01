@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback, useRef, useEffect, useTransition } from 'react';
 import { flushSync } from 'react-dom';
 import { getLogger } from '@/lib/logger';
 
@@ -51,6 +51,9 @@ export interface StreamChunk {
   chunk_index?: number; // 청크 순서
 }
 
+// 최대 큐 크기 제한 (메모리 최적화)
+const MAX_QUEUE_SIZE = 100;
+
 export const useStreaming = () => {
   const [state, setState] = useState<StreamingState>({
     isStreaming: false,
@@ -69,6 +72,17 @@ export const useStreaming = () => {
     uploadedImages: null,
     regenerationHistory: [],
   });
+  const [isPending, startTransition] = useTransition();
+
+  // 메모리 최적화된 상태 업데이트
+  const updateStateOptimized = useCallback(
+    (updater: (prev: StreamingState) => StreamingState) => {
+      startTransition(() => {
+        setState(updater);
+      });
+    },
+    [],
+  );
 
   // 로컬 스토리지 키 생성
   const getStorageKey = useCallback((sessionId: string) => {
@@ -113,6 +127,7 @@ export const useStreaming = () => {
   );
   const isProcessingQueueRef = useRef<boolean>(false);
   const lastRenderTimeRef = useRef<number>(0);
+  const streamStartTimeRef = useRef<number>(0);
 
   // sessionId가 변경될 때 저장된 regenerationHistory 로드
   useEffect(() => {
@@ -134,39 +149,39 @@ export const useStreaming = () => {
     }
   }, [state.sessionId, state.regenerationHistory, saveRegenerationHistory]);
 
-  // 타임스탬프 기반 청크 처리 함수
+  // 단순화된 청크 처리 함수 (인덱스 기반 지연 사용)
   const processChunkQueue = useCallback(() => {
     if (isProcessingQueueRef.current || chunkQueueRef.current.length === 0) {
       return;
     }
 
     isProcessingQueueRef.current = true;
+    const chunk = chunkQueueRef.current.shift()!;
 
-    const processNextChunk = () => {
-      const queue = chunkQueueRef.current;
-      if (queue.length === 0) {
-        isProcessingQueueRef.current = false;
-        return;
-      }
+    // 메모리 최적화: 큐 크기 제한
+    if (chunkQueueRef.current.length > MAX_QUEUE_SIZE) {
+      chunkQueueRef.current.splice(
+        0,
+        chunkQueueRef.current.length - MAX_QUEUE_SIZE,
+      );
+    }
 
-      const chunk = queue.shift()!;
-      const timeDiff = chunk.timestamp - lastRenderTimeRef.current;
-      const minDelay = 50; // 최소 50ms 간격
-      const maxDelay = 1500; // 최대 1.5초로 제한
-      const naturalDelay = Math.max(minDelay, Math.min(timeDiff, maxDelay));
+    logger.debug('청크 렌더링 시작', {
+      content: chunk.content,
+      remainingQueue: chunkQueueRef.current.length,
+    });
 
-      setTimeout(() => {
-        setState((prev) => ({
-          ...prev,
-          streamedText: prev.streamedText + chunk.content,
-        }));
+    // 즉시 상태 업데이트 (인위적 지연은 큐 추가할 때 이미 처리됨)
+    setState((prev) => ({
+      ...prev,
+      streamedText: prev.streamedText + chunk.content,
+    }));
 
-        lastRenderTimeRef.current = chunk.timestamp;
-        processNextChunk(); // 다음 청크 처리
-      }, naturalDelay);
-    };
+    logger.debug('청크 렌더링 완료', {
+      content: chunk.content,
+    });
 
-    processNextChunk();
+    isProcessingQueueRef.current = false;
   }, []);
 
   // ChatGPT 스타일 타이핑 애니메이션 함수 (완료 후에만 사용)
@@ -227,7 +242,8 @@ export const useStreaming = () => {
         // 청크 큐 초기화
         chunkQueueRef.current = [];
         isProcessingQueueRef.current = false;
-        lastRenderTimeRef.current = Date.now();
+        lastRenderTimeRef.current = 0; // 첫 번째 청크 즉시 렌더링을 위해 0으로 설정
+        streamStartTimeRef.current = Date.now();
 
         // 초기 상태 설정
         setState((prev) => ({
@@ -237,7 +253,7 @@ export const useStreaming = () => {
           accumulatedText: '',
           displayText: '',
           error: null,
-          sessionId: prev.sessionId || null,
+          sessionId: data.sessionId || null, // 새 글 생성 시 sessionId 초기화
           emotion: null,
           keywords: [],
           isComplete: false,
@@ -298,7 +314,7 @@ export const useStreaming = () => {
           style: data.style,
           length: data.length,
           emotion: data.emotion || '',
-          session_id: data.sessionId || undefined,
+          ...(data.sessionId && { session_id: data.sessionId }), // sessionId가 있을 때만 포함
           uploaded_images: uploadedImages,
         };
 
@@ -354,17 +370,48 @@ export const useStreaming = () => {
 
                     case 'content': {
                       const newContent = parsedData.content || '';
-                      const chunkTimestamp = parsedData.timestamp || Date.now();
 
-                      // 청크를 큐에 추가
+                      // 서버 타임스탬프가 있으면 사용, 없으면 상대적 시간 계산
+                      let chunkTimestamp;
+                      if (parsedData.timestamp) {
+                        chunkTimestamp = parsedData.timestamp;
+                      } else {
+                        // 서버 타임스탬프가 없다면 청크 순서에 따라 상대적 시간 할당
+                        const elapsedTime =
+                          Date.now() - streamStartTimeRef.current;
+                        chunkTimestamp =
+                          streamStartTimeRef.current + elapsedTime;
+                      }
+
+                      // 청크를 큐에 직접 추가 (서버에서 이미 잘게 분할되어 옴)
                       if (newContent) {
+                        const chunkIndex = chunkQueueRef.current.length;
+                        logger.debug('청크 큐에 추가', {
+                          content: newContent,
+                          timestamp: chunkTimestamp,
+                          chunkIndex,
+                          queueLength: chunkIndex + 1,
+                        });
                         chunkQueueRef.current.push({
                           content: newContent,
                           timestamp: chunkTimestamp,
                         });
 
-                        // 큐 처리 시작 (이미 진행 중이면 무시됨)
-                        processChunkQueue();
+                        // 첫 번째 청크만 즉시 처리, 나머지는 인덱스 기반 지연
+                        if (chunkIndex === 0) {
+                          processChunkQueue();
+                        } else {
+                          // 인덱스 기반 인위적 지연 (50ms씩 증가)
+                          const artificialDelay = chunkIndex * 50;
+                          setTimeout(() => {
+                            if (
+                              !isProcessingQueueRef.current &&
+                              chunkQueueRef.current.length > 0
+                            ) {
+                              processChunkQueue();
+                            }
+                          }, artificialDelay);
+                        }
                       }
 
                       // accumulatedText만 즉시 업데이트 (streamedText는 큐에서 처리)
@@ -464,16 +511,34 @@ export const useStreaming = () => {
     [startTypingAnimation, processChunkQueue, state.accumulatedText],
   );
 
+  // 최적화된 스트리밍 중단 함수
   const stopStreaming = useCallback(() => {
+    // EventSource 정리
     if (eventSourceRef.current) {
       eventSourceRef.current.close();
       eventSourceRef.current = null;
     }
-    setState((prev) => ({
+
+    // 타이머 정리
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+      typingTimeoutRef.current = null;
+    }
+    if (streamingTypingTimeoutRef.current) {
+      clearTimeout(streamingTypingTimeoutRef.current);
+      streamingTypingTimeoutRef.current = null;
+    }
+
+    // 청크 처리 중단 및 큐 정리
+    isProcessingQueueRef.current = false;
+    chunkQueueRef.current = [];
+
+    // useTransition을 활용한 논블로킹 상태 업데이트
+    updateStateOptimized((prev) => ({
       ...prev,
       isStreaming: false,
     }));
-  }, []);
+  }, [updateStateOptimized]);
 
   const setEditMode = useCallback((isEditMode: boolean, text?: string) => {
     setState((prev) => ({
@@ -545,8 +610,32 @@ export const useStreaming = () => {
     }));
   }, []);
 
+  // 컴포넌트 언마운트 시 리소스 정리
+  useEffect(() => {
+    return () => {
+      // EventSource 연결 해제
+      if (eventSourceRef.current) {
+        eventSourceRef.current.close();
+      }
+
+      // 모든 타이머 정리
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
+      if (streamingTypingTimeoutRef.current) {
+        clearTimeout(streamingTypingTimeoutRef.current);
+      }
+
+      // 큐 및 처리 상태 정리
+      chunkQueueRef.current = [];
+      isProcessingQueueRef.current = false;
+    };
+  }, []);
+
+  // isPending 상태를 포함한 확장된 반환값
   return {
     ...state,
+    isPending, // useTransition의 pending 상태 추가
     startStreaming,
     stopStreaming,
     resetState,
