@@ -47,6 +47,8 @@ export interface StreamChunk {
   generated_text?: string;
   tokens_used?: number;
   error?: string;
+  timestamp?: number; // 서버 타임스탬프
+  chunk_index?: number; // 청크 순서
 }
 
 export const useStreaming = () => {
@@ -106,6 +108,11 @@ export const useStreaming = () => {
   const eventSourceRef = useRef<EventSource | null>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const streamingTypingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const chunkQueueRef = useRef<Array<{ content: string; timestamp: number }>>(
+    [],
+  );
+  const isProcessingQueueRef = useRef<boolean>(false);
+  const lastRenderTimeRef = useRef<number>(0);
 
   // sessionId가 변경될 때 저장된 regenerationHistory 로드
   useEffect(() => {
@@ -127,10 +134,43 @@ export const useStreaming = () => {
     }
   }, [state.sessionId, state.regenerationHistory, saveRegenerationHistory]);
 
-  // ChatGPT 스타일 타이핑 애니메이션 함수
-  const startTypingAnimation = useCallback((fullText: string) => {
-    console.log('🎯 타이핑 애니메이션 시작:', fullText);
+  // 타임스탬프 기반 청크 처리 함수
+  const processChunkQueue = useCallback(() => {
+    if (isProcessingQueueRef.current || chunkQueueRef.current.length === 0) {
+      return;
+    }
 
+    isProcessingQueueRef.current = true;
+
+    const processNextChunk = () => {
+      const queue = chunkQueueRef.current;
+      if (queue.length === 0) {
+        isProcessingQueueRef.current = false;
+        return;
+      }
+
+      const chunk = queue.shift()!;
+      const timeDiff = chunk.timestamp - lastRenderTimeRef.current;
+      const minDelay = 50; // 최소 50ms 간격
+      const maxDelay = 1500; // 최대 1.5초로 제한
+      const naturalDelay = Math.max(minDelay, Math.min(timeDiff, maxDelay));
+
+      setTimeout(() => {
+        setState((prev) => ({
+          ...prev,
+          streamedText: prev.streamedText + chunk.content,
+        }));
+
+        lastRenderTimeRef.current = chunk.timestamp;
+        processNextChunk(); // 다음 청크 처리
+      }, naturalDelay);
+    };
+
+    processNextChunk();
+  }, []);
+
+  // ChatGPT 스타일 타이핑 애니메이션 함수 (완료 후에만 사용)
+  const startTypingAnimation = useCallback((fullText: string) => {
     // 기존 타이핑 애니메이션 중단
     if (typingTimeoutRef.current) {
       clearTimeout(typingTimeoutRef.current);
@@ -143,7 +183,6 @@ export const useStreaming = () => {
     const typeNextChar = () => {
       if (currentIndex < fullText.length) {
         const currentText = fullText.slice(0, currentIndex + 1);
-        console.log('⌨️ 타이핑 중:', currentText);
         flushSync(() => {
           setState((prev) => ({
             ...prev,
@@ -153,7 +192,6 @@ export const useStreaming = () => {
         currentIndex++;
         typingTimeoutRef.current = setTimeout(typeNextChar, 100); // 100ms 간격 (더 잘 보이는 타이핑 속도)
       } else {
-        console.log('✅ 타이핑 애니메이션 완료');
         flushSync(() => {
           setState((prev) => ({ ...prev, isTyping: false }));
         });
@@ -185,6 +223,11 @@ export const useStreaming = () => {
         if (streamingTypingTimeoutRef.current) {
           clearTimeout(streamingTypingTimeoutRef.current);
         }
+
+        // 청크 큐 초기화
+        chunkQueueRef.current = [];
+        isProcessingQueueRef.current = false;
+        lastRenderTimeRef.current = Date.now();
 
         // 초기 상태 설정
         setState((prev) => ({
@@ -309,19 +352,29 @@ export const useStreaming = () => {
                       });
                       break;
 
-                    case 'content':
-                      setState((prev) => {
-                        const newContent = parsedData.content || '';
-                        const updatedStreamedText =
-                          prev.streamedText + newContent;
-                        return {
-                          ...prev,
-                          streamedText: updatedStreamedText,
-                          accumulatedText:
-                            parsedData.accumulated || prev.accumulatedText,
-                        };
-                      });
+                    case 'content': {
+                      const newContent = parsedData.content || '';
+                      const chunkTimestamp = parsedData.timestamp || Date.now();
+
+                      // 청크를 큐에 추가
+                      if (newContent) {
+                        chunkQueueRef.current.push({
+                          content: newContent,
+                          timestamp: chunkTimestamp,
+                        });
+
+                        // 큐 처리 시작 (이미 진행 중이면 무시됨)
+                        processChunkQueue();
+                      }
+
+                      // accumulatedText만 즉시 업데이트 (streamedText는 큐에서 처리)
+                      setState((prev) => ({
+                        ...prev,
+                        accumulatedText:
+                          parsedData.accumulated || prev.accumulatedText,
+                      }));
                       break;
+                    }
 
                     case 'complete': {
                       const finalText =
@@ -354,10 +407,21 @@ export const useStreaming = () => {
                         };
                       });
 
-                      // ChatGPT 스타일 타이핑 애니메이션 시작
-                      setTimeout(() => {
-                        startTypingAnimation(finalText);
-                      }, 100); // 상태 업데이트 후 실행
+                      // 남은 큐 처리 완료 후 타이핑 애니메이션 시작
+                      const finishQueueAndStartTyping = () => {
+                        if (
+                          chunkQueueRef.current.length === 0 &&
+                          !isProcessingQueueRef.current
+                        ) {
+                          setTimeout(() => {
+                            startTypingAnimation(finalText);
+                          }, 100);
+                        } else {
+                          // 아직 처리 중인 큐가 있으면 잠시 후 다시 확인
+                          setTimeout(finishQueueAndStartTyping, 100);
+                        }
+                      };
+                      finishQueueAndStartTyping();
 
                       logger.info('스트리밍 완료', {
                         emotion: parsedData.emotion,
@@ -397,7 +461,7 @@ export const useStreaming = () => {
         }));
       }
     },
-    [startTypingAnimation, state.accumulatedText],
+    [startTypingAnimation, processChunkQueue, state.accumulatedText],
   );
 
   const stopStreaming = useCallback(() => {
@@ -457,6 +521,11 @@ export const useStreaming = () => {
     if (streamingTypingTimeoutRef.current) {
       clearTimeout(streamingTypingTimeoutRef.current);
     }
+
+    // 청크 큐 정리
+    chunkQueueRef.current = [];
+    isProcessingQueueRef.current = false;
+
     setState((prev) => ({
       isStreaming: false,
       streamedText: '',

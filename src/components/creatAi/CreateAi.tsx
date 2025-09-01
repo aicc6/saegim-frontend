@@ -158,13 +158,12 @@ export default function CreateAi() {
   const {
     isStreaming,
     accumulatedText,
-    displayText,
+    streamedText,
     error: streamError,
     sessionId,
     emotion: aiEmotion,
     keywords,
     isComplete,
-    isTyping,
     startStreaming,
   } = useStreaming();
 
@@ -245,7 +244,7 @@ export default function CreateAi() {
           return card;
         });
       } else {
-        // 신규 생성: 새 카드 생성
+        // 신규 생성: 새 카드 생성 (타이핑 애니메이션 완료 후)
         const cardId = `card_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
         const currentPrompt = newPrompt || prompt;
         const currentStyle = tempStyle || style;
@@ -550,7 +549,7 @@ export default function CreateAi() {
 
                 <div className="prose prose-gray max-w-none">
                   <div className="text-gray-800 leading-relaxed whitespace-pre-wrap">
-                    {displayText}
+                    {streamedText || '생성 중...'}
                     <span className="inline-block w-px h-5 bg-gray-400 ml-1 animate-pulse"></span>
                   </div>
                 </div>
@@ -596,21 +595,31 @@ export default function CreateAi() {
                         <div className="flex items-center gap-2">
                           <span className="text-xs text-gray-500">버전:</span>
                           <div className="flex gap-1">
-                            {card.versions.map((_, versionIndex) => (
-                              <button
-                                key={versionIndex}
-                                onClick={() =>
-                                  handleVersionChange(card.id, versionIndex)
-                                }
-                                className={`w-6 h-6 text-xs rounded-full transition-colors ${
-                                  versionIndex === card.currentVersionIndex
-                                    ? 'bg-sage-90 text-white'
-                                    : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
-                                }`}
-                              >
-                                {versionIndex + 1}
-                              </button>
-                            ))}
+                            {[...card.versions]
+                              .sort((a, b) => a.versionNumber - b.versionNumber)
+                              .map((version) => {
+                                const originalIndex = card.versions.findIndex(
+                                  (v) => v.id === version.id,
+                                );
+                                return (
+                                  <button
+                                    key={version.id}
+                                    onClick={() =>
+                                      handleVersionChange(
+                                        card.id,
+                                        originalIndex,
+                                      )
+                                    }
+                                    className={`w-6 h-6 text-xs rounded-full transition-colors ${
+                                      originalIndex === card.currentVersionIndex
+                                        ? 'bg-sage-90 text-white'
+                                        : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
+                                    }`}
+                                  >
+                                    {version.versionNumber}
+                                  </button>
+                                );
+                              })}
                           </div>
                         </div>
                       )}
@@ -693,7 +702,12 @@ export default function CreateAi() {
                     ) : (
                       // 일반 표시 모드
                       <div className="text-gray-800 leading-relaxed whitespace-pre-wrap">
-                        {isTyping ? displayText : currentVersion.text}
+                        {isStreaming && sessionId === card.sessionId
+                          ? streamedText || '생성 중...'
+                          : currentVersion.text}
+                        {isStreaming && sessionId === card.sessionId && (
+                          <span className="inline-block w-px h-5 bg-gray-400 ml-1 animate-pulse"></span>
+                        )}
                       </div>
                     )}
                   </div>
@@ -706,12 +720,14 @@ export default function CreateAi() {
                       </span>
                       <span>문체: {getStyleLabel(card.style)}</span>
                       <span>길이: {getLengthLabel(card.length)}</span>
-                      {card.emotion && (
-                        <span>감정: {getEmotionLabel(card.emotion)}</span>
+                      {currentVersion.aiEmotion && (
+                        <span>
+                          감정: {getEmotionLabel(currentVersion.aiEmotion)}
+                        </span>
                       )}
                       {card.versions.length > 1 && (
                         <span>
-                          버전 {card.currentVersionIndex + 1}/
+                          버전 {currentVersion.versionNumber}/
                           {card.versions.length}
                         </span>
                       )}
