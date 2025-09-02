@@ -1,218 +1,175 @@
 pipeline {
   agent any
 
+  options {
+    disableConcurrentBuilds()
+    timestamps()
+    ansiColor('xterm')
+  }
+
   parameters {
     choice(
       name: 'BRANCH_TO_BUILD',
-      choices: ['main', 'develop', 'release/latest'],
-      description: '빌드할 브랜치 선택 (Webhook 시 자동)'
+      choices: ['develop', 'main', 'release/latest'],
+      description: '빌드할 브랜치를 선택하세요'
     )
-    booleanParam(
-      name: 'RUN_TESTS',
-      defaultValue: true,
-      description: 'npm test --if-present 실행 여부'
-    )
+    booleanParam(name: 'RUN_TESTS', defaultValue: true, description: 'lint / test 실행 여부')
+    booleanParam(name: 'PUSH_IMAGE', defaultValue: false, description: '도커 레지스트리에 이미지 푸시할까요?')
+    booleanParam(name: 'DEPLOY', defaultValue: true, description: '컨테이너를 서버에 배포할까요?')
   }
-
-  triggers { githubPush() }
 
   environment {
-    // 깃 저장소
+    // === 프로젝트 / 네트워크 명 ===
+    APP_NAME        = 'saegim-frontend'      // 컨테이너 이름 및 이미지 repo 기본값으로 사용
+    DOCKER_NETWORK  = 'aicc-net'             // (관리자 제공) 외부 네트워크 - 존재하지 않으면 실패
+
+    // === 레지스트리 (옵션) ===
+    // 예: 'nexus.local:5000' 또는 'ghcr.io/your-org'
+    DOCKER_REGISTRY = "${env.CUSTOM_DOCKER_REGISTRY}"
+
+    // === Git ===
     GIT_REPOSITORY_URL = 'https://github.com/aicc6/saegim-frontend.git'
-
-    // 레지스트리/크리덴셜은 전역 환경변수(CUSTOM_*)에서 읽음
-    DOCKER_REGISTRY    = "${env.CUSTOM_DOCKER_REGISTRY}"      // ex) nexus.aicc-project.com:5080
-    DOCKER_CREDENTIALS = "${env.CUSTOM_DOCKER_CREDENTIALS}"   // ex) jd (Credentials ID)
-    DOCKER_IMAGE       = 'aicc/saegim-frontend'
-
-    // 내부 네트워크명(외부 포트 바인딩 금지, NPM 라우팅)
-    DOCKER_NETWORK = 'aicc-net'
-    BASE_CONTAINER = 'saegim-frontend'
-
-    // 앱 런타임
-    NODE_ENV = 'production'
-    APP_PORT = '3000'
   }
 
-  options {
-    buildDiscarder(logRotator(numToKeepStr: '10', daysToKeepStr: '30'))
-    timeout(time: 45, unit: 'MINUTES')
-    disableConcurrentBuilds()
-    timestamps()
+  triggers {
+    // GitHub Webhook이 설정되어 있으면 자동 트리거
+    githubPush()
   }
 
   stages {
 
-    stage('🔄 Clone & Prepare env') {
+    stage('🛎️ Checkout') {
       steps {
+        checkout([$class: 'GitSCM',
+          branches: [[name: "*/${params.BRANCH_TO_BUILD}"]],
+          userRemoteConfigs: [[url: env.GIT_REPOSITORY_URL]]
+        ])
         script {
-          env.TARGET_BRANCH = (params.BRANCH_TO_BUILD ?: env.BRANCH_NAME ?: 'develop')
-            .replace('refs/heads/','').replace('origin/','')
-          echo "🔍 branch: ${env.TARGET_BRANCH}"
+          // 이미지 풀네임 구성 (레지스트리 유무에 따라)
+          env.FULL_IMAGE = (env.DOCKER_REGISTRY?.trim())
+            ? "${env.DOCKER_REGISTRY}/${env.APP_NAME}"
+            : "${env.APP_NAME}"
+          echo "FULL_IMAGE = ${env.FULL_IMAGE}"
         }
+      }
+    }
 
-        git branch: "${env.TARGET_BRANCH}", url: "${env.GIT_REPOSITORY_URL}"
-
-        script {
-          env.GIT_COMMIT_SHORT = sh(script: "git rev-parse --short HEAD", returnStdout: true).trim()
-          echo "🔖 commit: ${env.GIT_COMMIT_SHORT}"
-        }
-
-        // .env.local 주입 (Secret file: ID = saegim-frontend)
-        withCredentials([file(credentialsId: 'saegim-frontend', variable: 'ENV_FILE')]) {
+    stage('🔐 Inject .env.local') {
+      steps {
+        // Jenkins Credentials에 file 타입으로 저장된 .env.local 사용 권장 (ID: FRONTEND_ENV_LOCAL)
+        withCredentials([file(credentialsId: 'FRONTEND_ENV_LOCAL', variable: 'ENV_FILE')]) {
           sh '''
             set -e
-            echo "📄 inject .env.local"
-            cp "$ENV_FILE" ./.env.local
-            chmod 600 ./.env.local || true
-            ls -al | sed -n '1,80p'
+            cp "$ENV_FILE" .env.local
+            echo "✅ .env.local injected"
           '''
         }
       }
     }
 
-    stage('✅ Optional Tests') {
+    stage('🧪 Lint & Test (inside Node container)') {
       when { expression { return params.RUN_TESTS } }
       steps {
-        script {
-          docker.image('node:20-alpine').inside {
-            sh '''
-              set -e
-              npm ci
-              npm run lint --if-present
-              npm test --if-present
-            '''
-          }
-        }
+        sh '''
+          set -e
+          docker run --rm -v "$PWD":/app -w /app node:20-alpine sh -lc '
+            apk add --no-cache libc6-compat git
+            npm ci
+            npm run lint --if-present
+            npm test --if-present
+          '
+        '''
       }
     }
 
-    stage('🐳 Build Docker Image') {
+    stage('🐳 Docker Build') {
       steps {
-        script {
-          // 레지스트리 접두어 포함한 풀네임 구성
-          env.FULL_IMAGE = (env.DOCKER_REGISTRY ? "${env.DOCKER_REGISTRY}/" : "") + "${env.DOCKER_IMAGE}"
-          echo "🐳 build: ${env.FULL_IMAGE}:${BUILD_NUMBER}"
+        sh '''
+          set -e
+          test -f .env.local || { echo "❌ .env.local not found in workspace"; exit 1; }
 
-          // Dockerfile 루트 기준, 빌드 인자 전달
-          docker.build(
-            "${env.FULL_IMAGE}:${BUILD_NUMBER}",
-            "--build-arg NODE_ENV=${NODE_ENV} --build-arg APP_PORT=${APP_PORT} ."
-          )
-          env.DOCKER_BUILD_SUCCESS = 'true'
-        }
+          echo "🔎 .dockerignore에 .env.local이 포함되어 있지 않은지 확인하세요."
+          echo "🏗️  Building image: ${FULL_IMAGE}:${BUILD_NUMBER}  and  ${FULL_IMAGE}:${BRANCH_TO_BUILD}"
+
+          docker build --pull \
+            -t ${FULL_IMAGE}:${BUILD_NUMBER} \
+            -t ${FULL_IMAGE}:${BRANCH_TO_BUILD} \
+            .
+        '''
       }
     }
 
     stage('📤 Push Docker Image') {
-      when { environment name: 'DOCKER_BUILD_SUCCESS', value: 'true' }
+      when { expression { return params.PUSH_IMAGE && (env.DOCKER_REGISTRY?.trim()) } }
       steps {
-        script {
-          if (env.DOCKER_REGISTRY && env.DOCKER_REGISTRY != 'localhost' && env.DOCKER_REGISTRY != 'local') {
-            // 5080 같은 포트면 HTTP, 443이면 HTTPS로 자동판단
-            def proto = (env.DOCKER_REGISTRY ==~ /.*:443$/) ? "https" : "http"
-            docker.withRegistry("${proto}://${DOCKER_REGISTRY}", "${DOCKER_CREDENTIALS}") {
-              def img = docker.image("${env.FULL_IMAGE}:${BUILD_NUMBER}")
-              img.push("${BUILD_NUMBER}")
-
-              // main이면 latest도 푸시
-              if (env.TARGET_BRANCH == 'main') {
-                sh "docker tag ${env.FULL_IMAGE}:${BUILD_NUMBER} ${env.FULL_IMAGE}:latest"
-                img.push("latest")
-                echo "✅ pushed latest"
-              }
-            }
-            echo "✅ pushed: ${env.FULL_IMAGE}:${BUILD_NUMBER}"
-          } else {
-            echo "ℹ️ no remote registry; push skipped"
-          }
-          env.DOCKER_PUSH_SUCCESS = 'true'
+        withCredentials([usernamePassword(credentialsId: 'DOCKER_REGISTRY_CREDENTIALS', usernameVariable: 'REG_USER', passwordVariable: 'REG_PASS')]) {
+          sh '''
+            set -e
+            echo "$REG_PASS" | docker login ${DOCKER_REGISTRY} -u "$REG_USER" --password-stdin
+            docker push ${FULL_IMAGE}:${BUILD_NUMBER}
+            docker push ${FULL_IMAGE}:${BRANCH_TO_BUILD}
+            docker logout ${DOCKER_REGISTRY} || true
+          '''
         }
       }
     }
 
-    stage('🚀 Deploy') {
-      when { environment name: 'DOCKER_PUSH_SUCCESS', value: 'true' }
+    stage('🚀 Deploy (no host port binding)') {
+      when { expression { return params.DEPLOY } }
       steps {
-        script {
-          def deployEnv     = (env.TARGET_BRANCH == 'main') ? 'production' : 'development'
-          def containerName = "${env.BASE_CONTAINER}-${deployEnv}"
-          def imageRef      = "${env.FULL_IMAGE}:${BUILD_NUMBER}"
+        sh '''
+          set -e
 
-          echo """
-          ▶ Deploy
-             - branch   : ${env.TARGET_BRANCH}
-             - env      : ${deployEnv}
-             - network  : ${env.DOCKER_NETWORK}
-             - container: ${containerName}
-             - image    : ${imageRef}
-          """
+          # 1) 필수 네트워크 존재 확인 (공유 서버 안전성)
+          if ! docker network inspect ${DOCKER_NETWORK} > /dev/null 2>&1; then
+            echo "❌ Required docker network '${DOCKER_NETWORK}' not found."
+            echo "   관리자에게 해당 네트워크 연결 요청 후 다시 실행하세요."
+            exit 1
+          fi
 
-          sh """
-            set -e
+          # 2) 기존 컨테이너 종료/삭제 (graceful)
+          if docker ps -a --format '{{.Names}}' | grep -xq '${APP_NAME}'; then
+            echo "🧹 Stopping old container '${APP_NAME}' ..."
+            docker stop -t 20 ${APP_NAME} || true
+            docker rm ${APP_NAME} || true
+          fi
 
-            # 내부 네트워크 준비
-            if ! docker network ls | grep -q ${DOCKER_NETWORK}; then
-              docker network create ${DOCKER_NETWORK} || true
+          # 3) 새 컨테이너 실행 (포트 바인딩 금지, NPM 라우팅 전제)
+          echo "🏁 Running container '${APP_NAME}' from image '${FULL_IMAGE}:${BRANCH_TO_BUILD}'"
+          docker run -d \
+            --name ${APP_NAME} \
+            --restart unless-stopped \
+            --network ${DOCKER_NETWORK} \
+            --expose 3000 \
+            --label app=${APP_NAME} \
+            --label branch=${BRANCH_TO_BUILD} \
+            ${FULL_IMAGE}:${BRANCH_TO_BUILD}
+
+          # 4) 헬스체크 대기 (Dockerfile의 HEALTHCHECK 전제)
+          echo "⏳ Waiting for container to be healthy ..."
+          for i in $(seq 1 20); do
+            STATUS=$(docker inspect --format='{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}' ${APP_NAME})
+            echo "  - health: $STATUS"
+            if [ "$STATUS" = "healthy" ]; then
+              echo "✅ Container is healthy."
+              exit 0
             fi
+            sleep 5
+          done
 
-            # 원격 레지스트리 사용 시 이미지 pull (로컬 빌드만 쓰면 생략 가능)
-            if [ -n "${DOCKER_REGISTRY}" ] && [ "${DOCKER_REGISTRY}" != "localhost" ] && [ "${DOCKER_REGISTRY}" != "local" ]; then
-              docker pull ${imageRef} || true
-            fi
-
-            # 기존 컨테이너 제거
-            docker rm -f ${containerName} 2>/dev/null || true
-
-            # 안전 옵션(공유 서버) + 외부 포트 바인딩 금지
-            docker run -d \\
-              --name ${containerName} \\
-              --network ${DOCKER_NETWORK} \\
-              --restart unless-stopped \\
-              --label "app=saegim-frontend" \\
-              -e NODE_ENV=${NODE_ENV} \\
-              -e PORT=${APP_PORT} \\
-              --cpus="1" \\
-              --memory="512m" \\
-              --pids-limit=256 \\
-              --read-only \\
-              --tmpfs /tmp:rw,size=64m \\
-              --security-opt no-new-privileges \\
-              --cap-drop ALL \\
-              --health-cmd="curl -fsS http://localhost:${APP_PORT}/ || exit 1" \\
-              --health-interval=30s \\
-              --health-timeout=10s \\
-              --health-retries=3 \\
-              ${imageRef}
-
-            docker image prune -f || true
-          """
-        }
+          echo "⚠️  Healthcheck not healthy within timeout. Check logs:"
+          docker logs --since=2m ${APP_NAME} || true
+          # 배포 실패로 간주 (원하면 exit 0 으로 완화 가능)
+          exit 1
+        '''
       }
     }
   }
 
   post {
     always {
-      echo "🧹 cleanup"
-      sh 'docker system prune -f || true'
+      echo '🧹 Cleanup workspace only (no system prune)'
       cleanWs()
-    }
-    success {
-      script {
-        def envName = (env.TARGET_BRANCH == 'main') ? 'production' : 'development'
-        echo "✅ done: ${envName}"
-        echo "📦 ${env.FULL_IMAGE}:${env.BUILD_NUMBER}"
-        echo "🔖 ${env.GIT_COMMIT_SHORT}"
-      }
-    }
-    failure {
-      echo '❌ pipeline failed'
-      sh '''
-        echo "🔍 snapshot"
-        docker ps -a | grep saegim-frontend || true
-        docker images | grep saegim-frontend || true
-      '''
     }
   }
 }
