@@ -1,11 +1,8 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, memo } from 'react';
 import { EmotionType, EMOTION_EMOJIS } from '@/types/diary';
 import { cn } from '@/lib/utils';
-import { getLogger } from '@/lib/logger';
-
-const logger = getLogger('EmotionPieChart');
 
 interface EmotionPieChartProps {
   data: Record<EmotionType, number>;
@@ -29,7 +26,10 @@ const emotionLabels = {
   unrest: '불안', // worried와 excited를 unrest로 통일
 };
 
-export function EmotionPieChart({ data, className }: EmotionPieChartProps) {
+export const EmotionPieChart = memo(function EmotionPieChart({
+  data,
+  className,
+}: EmotionPieChartProps) {
   const chartData = useMemo(() => {
     const total = Object.values(data).reduce((sum, count) => sum + count, 0);
 
@@ -88,14 +88,6 @@ export function EmotionPieChart({ data, className }: EmotionPieChartProps) {
     [data],
   );
 
-  // 디버깅을 위한 로그 추가
-  logger.debug('EmotionPieChart 렌더링', {
-    data,
-    total,
-    hasEmotionData,
-    chartDataLength: chartData.length,
-  });
-
   if (!hasEmotionData) {
     return (
       <div className={cn('flex items-center justify-center p-8', className)}>
@@ -125,22 +117,6 @@ export function EmotionPieChart({ data, className }: EmotionPieChartProps) {
               const isFullCircle =
                 item.startAngle === 0 && item.endAngle >= 359;
               const rotation = item.startAngle;
-              const circumference = 2 * Math.PI * 80; // 반지름 80
-              const strokeDasharray = isFullCircle
-                ? `${circumference} ${circumference}`
-                : `${(item.percentage / 100) * circumference} ${circumference}`;
-
-              logger.debug('CSS 차트 렌더링', {
-                emotion: item.emotion,
-                startAngle: item.startAngle,
-                endAngle: item.endAngle,
-                percentage: item.percentage,
-                isFullCircle,
-                rotation,
-                strokeDasharray,
-                color: item.color,
-              });
-
               return (
                 <div
                   key={item.emotion}
@@ -216,4 +192,4 @@ export function EmotionPieChart({ data, className }: EmotionPieChartProps) {
       </div>
     </div>
   );
-}
+});
