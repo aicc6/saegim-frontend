@@ -19,9 +19,32 @@ export const useCalendarDays = (
 
     while (current <= endDate) {
       const dateStr = DateUtils.formatDateString(current);
-      const dayEntries = diaries.filter((entry) =>
-        entry.created_at.startsWith(dateStr),
-      );
+      const dayEntries = diaries.filter((entry) => {
+        // diary_date가 있으면 해당 날짜 사용, 없으면 created_at 사용
+        let entryDateStr: string;
+
+        if (entry.diary_date) {
+          // diary_date가 있으면 해당 날짜 사용 (YYYY-MM-DD 형식)
+          entryDateStr = entry.diary_date;
+          console.log(
+            `[DEBUG] 캘린더 그리드 - diary_date 사용: ${entry.id} -> ${entryDateStr} (${dateStr})`,
+          );
+        } else {
+          // diary_date가 없으면 created_at에서 날짜 부분만 추출
+          entryDateStr = entry.created_at.split('T')[0];
+          console.log(
+            `[DEBUG] 캘린더 그리드 - created_at 사용: ${entry.id} -> ${entryDateStr} (${dateStr})`,
+          );
+        }
+
+        const matches = entryDateStr === dateStr;
+        if (matches) {
+          console.log(
+            `[DEBUG] 캘린더 그리드 - 날짜 매칭: ${entry.id} (${entryDateStr}) === ${dateStr}`,
+          );
+        }
+        return matches;
+      });
 
       // Calculate dominant emotion
       let dominantEmotion: EmotionType | null = null;

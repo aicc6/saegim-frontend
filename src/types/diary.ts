@@ -20,6 +20,7 @@ export interface DiaryEntry {
   ai_generated_text: string | null;
   is_public: boolean;
   keywords: string[] | null; // keywords를 리스트 타입으로 수정
+  diary_date: string | null; // 다이어리 작성 날짜 (사용자가 선택한 날짜)
   created_at: string;
   updated_at: string | null;
   images?: ImageInfo[]; // 이미지 정보 추가
@@ -40,6 +41,7 @@ export interface DiaryListEntry {
   ai_generated_text: string | null; // ai_generated_text 필드 추가
   user_emotion: string | null;
   ai_emotion: string | null;
+  diary_date: string | null; // 다이어리 작성 날짜 (사용자가 선택한 날짜)
   created_at: string;
   is_public: boolean;
   keywords: string[] | null; // keywords를 리스트 타입으로 수정

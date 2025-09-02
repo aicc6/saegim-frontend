@@ -7,6 +7,38 @@ import { aiApi } from '@/lib/api/ai';
 
 const logger = getLogger('useStreaming');
 
+// 사용자 친화적인 오류 메시지 변환 함수
+function getFriendlyErrorMessage(error: string): string {
+  if (!error) return '알 수 없는 오류가 발생했습니다.';
+
+  const errorLower = error.toLowerCase();
+
+  if (
+    errorLower.includes('server had an error') ||
+    errorLower.includes('processing your request')
+  ) {
+    return 'AI 서버에 일시적인 문제가 발생했습니다. 잠시 후 다시 시도해주세요.';
+  }
+
+  if (errorLower.includes('rate limit') || errorLower.includes('quota')) {
+    return 'AI 서비스 사용량이 초과되었습니다. 잠시 후 다시 시도해주세요.';
+  }
+
+  if (
+    errorLower.includes('timeout') ||
+    errorLower.includes('service unavailable')
+  ) {
+    return 'AI 서비스가 일시적으로 사용할 수 없습니다. 잠시 후 다시 시도해주세요.';
+  }
+
+  if (errorLower.includes('token') && errorLower.includes('limit')) {
+    return '입력 내용이 너무 깁니다. 더 짧은 내용으로 다시 시도해주세요.';
+  }
+
+  // 기본 오류 메시지
+  return 'AI 텍스트 생성 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.';
+}
+
 export interface StreamingState {
   isStreaming: boolean;
   streamedText: string;
@@ -383,17 +415,18 @@ export const useStreaming = () => {
                       break;
                     }
 
-                    case 'error':
+                    case 'error': {
+                      // 사용자 친화적인 오류 메시지로 변환
                       setState((prev) => ({
                         ...prev,
                         isStreaming: false,
-                        error:
-                          parsedData.error || '알 수 없는 오류가 발생했습니다.',
+                        error: getFriendlyErrorMessage(parsedData.error),
                       }));
                       logger.error('스트리밍 오류', {
                         error: parsedData.error,
                       });
                       break;
+                    }
                   }
                 }
               } catch (parseError) {
@@ -596,7 +629,7 @@ export const useStreaming = () => {
                       break;
                     }
 
-                    case 'error':
+                    case 'error': {
                       setState((prev) => ({
                         ...prev,
                         isStreaming: false,
@@ -608,6 +641,7 @@ export const useStreaming = () => {
                         fallbackMode: isUsingFallback,
                       });
                       break;
+                    }
                   }
                 }
               } catch (parseError) {
