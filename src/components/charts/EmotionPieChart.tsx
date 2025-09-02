@@ -3,6 +3,9 @@
 import { useMemo } from 'react';
 import { EmotionType, EMOTION_EMOJIS } from '@/types/diary';
 import { cn } from '@/lib/utils';
+import { getLogger } from '@/lib/logger';
+
+const logger = getLogger('EmotionPieChart');
 
 interface EmotionPieChartProps {
   data: Record<EmotionType, number>;
@@ -34,26 +37,44 @@ export function EmotionPieChart({ data, className }: EmotionPieChartProps) {
       return [];
     }
 
-    let cumulativePercentage = 0;
+    const validEmotions = Object.entries(data).filter(
+      ([_, count]) => count > 0,
+    );
 
-    return Object.entries(data)
-      .filter(([_, count]) => count > 0)
-      .map(([emotion, count]) => {
-        const percentage = (count / total) * 100;
-        const startAngle = cumulativePercentage * 3.6; // 360도를 100으로 나눈 값
-        const endAngle = (cumulativePercentage + percentage) * 3.6;
-
-        cumulativePercentage += percentage;
-
-        return {
+    // 한 개의 감정만 있을 때는 전체 원(360도)을 그리기
+    if (validEmotions.length === 1) {
+      const [emotion, count] = validEmotions[0];
+      return [
+        {
           emotion: emotion as EmotionType,
           count,
-          percentage,
-          startAngle,
-          endAngle,
+          percentage: 100,
+          startAngle: 0,
+          endAngle: 359.99, // 360도는 SVG에서 문제가 될 수 있으므로 359.99로 설정
           color: EMOTION_CHART_COLORS[emotion as EmotionType],
-        };
-      });
+        },
+      ];
+    }
+
+    // 여러 감정이 있을 때는 비례적으로 분할
+    let cumulativePercentage = 0;
+
+    return validEmotions.map(([emotion, count]) => {
+      const percentage = (count / total) * 100;
+      const startAngle = cumulativePercentage * 3.6; // 360도를 100으로 나눈 값
+      const endAngle = (cumulativePercentage + percentage) * 3.6;
+
+      cumulativePercentage += percentage;
+
+      return {
+        emotion: emotion as EmotionType,
+        count,
+        percentage,
+        startAngle,
+        endAngle,
+        color: EMOTION_CHART_COLORS[emotion as EmotionType],
+      };
+    });
   }, [data]);
 
   const total = useMemo(
@@ -61,51 +82,21 @@ export function EmotionPieChart({ data, className }: EmotionPieChartProps) {
     [data],
   );
 
-  // SVG 경로 생성 함수
-  const createArcPath = (
-    centerX: number,
-    centerY: number,
-    radius: number,
-    startAngle: number,
-    endAngle: number,
-  ) => {
-    const start = polarToCartesian(centerX, centerY, radius, endAngle);
-    const end = polarToCartesian(centerX, centerY, radius, startAngle);
-    const largeArcFlag = endAngle - startAngle <= 180 ? '0' : '1';
+  // 감정 데이터가 있는지 확인 (0이 아닌 감정이 있는지)
+  const hasEmotionData = useMemo(
+    () => Object.values(data).some((count) => count > 0),
+    [data],
+  );
 
-    return [
-      'M',
-      centerX,
-      centerY,
-      'L',
-      start.x,
-      start.y,
-      'A',
-      radius,
-      radius,
-      0,
-      largeArcFlag,
-      0,
-      end.x,
-      end.y,
-      'Z',
-    ].join(' ');
-  };
+  // 디버깅을 위한 로그 추가
+  logger.debug('EmotionPieChart 렌더링', {
+    data,
+    total,
+    hasEmotionData,
+    chartDataLength: chartData.length,
+  });
 
-  const polarToCartesian = (
-    centerX: number,
-    centerY: number,
-    radius: number,
-    angleInDegrees: number,
-  ) => {
-    const angleInRadians = ((angleInDegrees - 90) * Math.PI) / 180.0;
-    return {
-      x: centerX + radius * Math.cos(angleInRadians),
-      y: centerY + radius * Math.sin(angleInRadians),
-    };
-  };
-
-  if (total === 0) {
+  if (!hasEmotionData) {
     return (
       <div className={cn('flex items-center justify-center p-8', className)}>
         <div className="text-center">
@@ -128,72 +119,62 @@ export function EmotionPieChart({ data, className }: EmotionPieChartProps) {
       <div className="flex items-center justify-between">
         {/* 차트 */}
         <div className="relative flex-1 flex justify-center">
-          <svg width="200" height="200" className="transform -rotate-90">
-            {chartData.map((item) => (
-              <path
-                key={item.emotion}
-                d={createArcPath(100, 100, 100, item.startAngle, item.endAngle)}
-                fill={item.color}
-                stroke="white"
-                strokeWidth="2"
-                className="hover:opacity-80 transition-opacity cursor-pointer"
-                style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.1))' }}
-              />
-            ))}
-
-            {/* 중앙 원 */}
-            <circle
-              cx="100"
-              cy="100"
-              r="40"
-              fill="var(--background-primary)"
-              stroke="var(--border-subtle)"
-              strokeWidth="2"
-            />
-
-            {/* 차트 안 감정 라벨 (작은 화면에서만) */}
+          {/* CSS 기반 원형 차트 */}
+          <div className="relative w-[200px] h-[200px]">
             {chartData.map((item) => {
-              const midAngle = (item.startAngle + item.endAngle) / 2;
-              const labelRadius = 70; // 중심원(40)과 외곽(100) 사이의 중간
-              const labelPos = polarToCartesian(
-                100,
-                100,
-                labelRadius,
-                midAngle,
-              );
+              const isFullCircle =
+                item.startAngle === 0 && item.endAngle >= 359;
+              const rotation = item.startAngle;
+              const circumference = 2 * Math.PI * 80; // 반지름 80
+              const strokeDasharray = isFullCircle
+                ? `${circumference} ${circumference}`
+                : `${(item.percentage / 100) * circumference} ${circumference}`;
+
+              logger.debug('CSS 차트 렌더링', {
+                emotion: item.emotion,
+                startAngle: item.startAngle,
+                endAngle: item.endAngle,
+                percentage: item.percentage,
+                isFullCircle,
+                rotation,
+                strokeDasharray,
+                color: item.color,
+              });
 
               return (
-                <text
-                  key={`label-${item.emotion}`}
-                  x={labelPos.x}
-                  y={labelPos.y}
-                  textAnchor="middle"
-                  dominantBaseline="central"
-                  className="block md:hidden fill-current text-text-primary"
+                <div
+                  key={item.emotion}
+                  className="absolute inset-0 rounded-full"
                   style={{
-                    fontSize: '16px',
-                    fontWeight: 'bold',
-                    transform: `rotate(90deg)`,
-                    transformOrigin: `${labelPos.x}px ${labelPos.y}px`,
+                    background: isFullCircle
+                      ? `conic-gradient(from ${rotation}deg, ${item.color} 0deg, ${item.color} 360deg)`
+                      : `conic-gradient(from ${rotation}deg, ${item.color} 0deg, ${item.color} ${item.percentage * 3.6}deg, transparent ${item.percentage * 3.6}deg)`,
+                    mask: 'radial-gradient(circle, transparent 40px, black 40px)',
+                    WebkitMask:
+                      'radial-gradient(circle, transparent 40px, black 40px)',
                   }}
-                >
-                  {EMOTION_EMOJIS[item.emotion]}
-                </text>
+                />
               );
             })}
-          </svg>
 
-          {/* 중앙 텍스트 */}
-          <div className="absolute inset-0 flex items-center justify-center">
-            <div className="text-center">
-              <div className="text-h3 font-bold text-text-primary">{total}</div>
-              <div className="text-caption text-text-secondary">총 기록</div>
+            {/* 중앙 원 */}
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="w-20 h-20 bg-background-primary rounded-full border-2 border-border-subtle flex items-center justify-center">
+                <div className="text-center">
+                  <div className="text-h3 font-bold text-text-primary">
+                    {total}
+                  </div>
+                  <div className="text-caption text-text-secondary">
+                    총 기록
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
 
         {/* 범례 */}
-        <div className="space-y-3 ml-6 hidden md:block 2xl:space-y-3 2xl:ml-6 space-y-2 ml-4">
+        <div className="space-y-2 ml-4 hidden md:block 2xl:space-y-3 2xl:ml-6">
           {Object.entries(emotionLabels).map(([emotion, label]) => {
             const count = data[emotion as EmotionType] || 0;
             const percentage = total > 0 ? (count / total) * 100 : 0;
@@ -202,14 +183,14 @@ export function EmotionPieChart({ data, className }: EmotionPieChartProps) {
             return (
               <div
                 key={emotion}
-                className="flex items-center space-x-3 2xl:space-x-3 space-x-2"
+                className="flex items-center space-x-2 2xl:space-x-3"
               >
-                <div className="flex items-center space-x-2 2xl:space-x-2 space-x-1">
+                <div className="flex items-center space-x-1 2xl:space-x-2">
                   <div
-                    className="w-4 h-4 2xl:w-4 2xl:h-4 w-3 h-3 rounded-full border border-white shadow-sm"
+                    className="w-3 h-3 2xl:w-4 2xl:h-4 rounded-full border border-white shadow-sm"
                     style={{ backgroundColor: color }}
                   />
-                  <span className="text-xl 2xl:text-xl text-base">
+                  <span className="text-base 2xl:text-xl">
                     {EMOTION_EMOJIS[emotion as EmotionType]}
                   </span>
                 </div>
