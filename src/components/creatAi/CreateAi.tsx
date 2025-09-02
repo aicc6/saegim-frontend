@@ -904,9 +904,23 @@ function CreateAi() {
                         </span>
                       )}
                     </div>
-                    <span>
-                      {new Date(currentVersion.createdAt).toLocaleTimeString()}
-                    </span>
+                    <div className="flex items-center gap-4">
+                      {/* 선택된 날짜 표시 */}
+                      <span className="text-sage-600 font-medium">
+                        선택된날짜:{' '}
+                        {selectedDate
+                          ? new Date(selectedDate).toLocaleDateString('ko-KR', {
+                              month: 'long',
+                              day: 'numeric',
+                            })
+                          : '오늘 날짜로 저장'}
+                      </span>
+                      <span>
+                        {new Date(
+                          currentVersion.createdAt,
+                        ).toLocaleTimeString()}
+                      </span>
+                    </div>
                   </div>
                 </div>
               );
@@ -1186,9 +1200,6 @@ function CreateAi() {
 
         {/* 날짜 선택 */}
         <div>
-          <div className="mb-3 block text-xs sm:text-sm text-text-secondary text-center">
-            다이어리 작성 날짜를 선택해주세요 📅 (선택 사항)
-          </div>
           <div className="flex justify-center">
             <input
               type="date"
