@@ -116,7 +116,7 @@ pipeline {
     stage('Docker Build & Push') {
       steps {
         script {
-          def imageBase = "${env.DOCKER_REGISTRY}/${env.DOCKER_IMAGE}"
+          def imageBase = "${env.DO‌​CKER_REGISTRY}/${env.DOCKER_IMAGE}"
           def tagBuild = "${imageBase}:${env.BUILD_NUMBER}"
           def tagLatest = "${imageBase}:latest"
 
@@ -125,7 +125,17 @@ pipeline {
             docker pull ${tagLatest} || true
             set -e
 
-            docker build -t ${tagBuild} -t ${tagLatest} .
+            docker build \
+              --build-arg NEXT_PUBLIC_API_BASE_URL=${NEXT_PUBLIC_API_BASE_URL} \
+              --build-arg GOOGLE_REDIRECT_URI=${GOOGLE_REDIRECT_URI} \
+              --build-arg NEXT_PUBLIC_FIREBASE_API_KEY=${NEXT_PUBLIC_FIREBASE_API_KEY} \
+              --build-arg NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=${NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN} \
+              --build-arg NEXT_PUBLIC_FIREBASE_PROJECT_ID=${NEXT_PUBLIC_FIREBASE_PROJECT_ID} \
+              --build-arg NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=${NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET} \
+              --build-arg NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=${NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID} \
+              --build-arg NEXT_PUBLIC_FIREBASE_APP_ID=${NEXT_PUBLIC_FIREBASE_APP_ID} \
+              --build-arg NEXT_PUBLIC_FIREBASE_VAPID_KEY=${NEXT_PUBLIC_FIREBASE_VAPID_KEY} \
+              -t ${tagBuild} -t ${tagLatest} .
 
             docker push ${tagBuild}
             docker push ${tagLatest}
