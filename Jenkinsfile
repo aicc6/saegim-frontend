@@ -150,7 +150,7 @@ pipeline {
             ls -al "${CONTEXT_DIR}/.env.local"
 
             # .dockerignore에 .env.local 제외 여부 경고 (POSIX 공백 클래스 사용)
-            if [ -f "${CONTEXT_DIR}/.dockerignore" ] && grep -E '^[[:space:]]*\.env\.local[[:space:]]*$' "${CONTEXT_DIR}/.dockerignore" >/dev/null 2>&1; then
+            if [ -f "${CONTEXT_DIR}/.dockerignore" ] && grep -E '^[[:space:]]*\\.env\\.local[[:space:]]*$' "${CONTEXT_DIR}/.dockerignore" >/dev/null 2>&1; then
               echo "[WARN] ${CONTEXT_DIR}/.dockerignore 에 .env.local 이 제외되어 있습니다. 이미지에 포함되지 않을 수 있습니다."
             fi
           '''
