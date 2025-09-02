@@ -191,10 +191,10 @@ export default function CalendarPage() {
 
     const emotionLabels = {
       happy: { emoji: '😊', name: '행복' },
-      sad: { emoji: '😢', name: '슬픔' },
+      sad: { emoji: '', name: '슬픔' },
       angry: { emoji: '😡', name: '화남' },
       peaceful: { emoji: '😌', name: '평온' },
-      unrest: { emoji: '😨', name: '불안' }, // worried를 unrest로 통일
+      unrest: { emoji: '😡', name: '불안' }, // worried를 unrest로 통일
     };
 
     const topEmotion = maxEmotion

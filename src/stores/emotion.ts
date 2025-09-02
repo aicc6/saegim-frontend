@@ -68,7 +68,7 @@ const EMOTION_CONFIGS: EmotionConfig[] = [
   {
     value: 'unrest',
     label: '불안',
-    emoji: '🫨',
+    emoji: '😨',
     styles: {
       bg: 'bg-orange-100',
       text: 'text-orange-700',

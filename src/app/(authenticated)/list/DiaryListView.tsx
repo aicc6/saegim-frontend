@@ -280,7 +280,7 @@ export default function DiaryListView() {
               <option value="sad">😢 슬픔</option>
               <option value="angry">😡 화남</option>
               <option value="peaceful">😌 평온</option>
-              <option value="unrest">😨 불안</option>
+              <option value="unrest">� 불안</option>
             </select>
           </div>
 
