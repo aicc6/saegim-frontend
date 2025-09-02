@@ -75,6 +75,15 @@ interface GeneratedTextCard {
   isEditMode: boolean;
   editedText: string;
   createdAt: Date;
+  // AI 생성 시 사용된 이미지 정보 (서버 업로드 후 결과)
+  uploadedImages?: Array<{
+    file_id: string;
+    original_url: string;
+    thumbnail_url: string;
+    mime_type: string;
+    file_size: number;
+    filename: string;
+  }>;
 }
 
 // 메모이제이션된 서브 컴포넌트들
@@ -175,6 +184,7 @@ function CreateAi() {
     keywords,
     isComplete,
     isPending, // 새로 추가된 pending 상태
+    uploadedImages, // 업로드된 이미지 정보
     startStreaming,
     startRegeneration, // 재생성 스트리밍 함수 추가
     resetState,
@@ -219,6 +229,8 @@ function CreateAi() {
                     keywords: keywords || [],
                   },
                 ],
+                // 스트리밍에서 업로드된 이미지 정보 저장
+                uploadedImages: uploadedImages || undefined,
               };
             }
             return card;
@@ -227,7 +239,14 @@ function CreateAi() {
         return prev;
       });
     }
-  }, [isComplete, sessionId, accumulatedText, aiEmotion, keywords]);
+  }, [
+    isComplete,
+    sessionId,
+    accumulatedText,
+    aiEmotion,
+    keywords,
+    uploadedImages,
+  ]);
 
   // 컴포넌트 언마운트 시 재생성 상태 정리
   useEffect(() => {
@@ -331,6 +350,8 @@ function CreateAi() {
           isEditMode: false,
           editedText: accumulatedText,
           createdAt: new Date(),
+          // 새 글 생성 시 사용된 이미지 저장
+          uploadedImages: uploadedImages || undefined,
         };
 
         // 신규 생성 완료 후 폼 리셋
@@ -369,6 +390,7 @@ function CreateAi() {
     emotion,
     clearNewImages,
     resetState,
+    uploadedImages,
   ]);
 
   const handleGenerateText = useCallback(async () => {
@@ -404,6 +426,8 @@ function CreateAi() {
         isEditMode: false,
         editedText: '',
         createdAt: new Date(),
+        // AI 생성에 사용된 이미지 저장 - 스트리밍 시 업로드됨
+        uploadedImages: undefined, // 스트리밍 완료 후 업데이트됨
       };
 
       setShowResults(true);
@@ -502,6 +526,11 @@ function CreateAi() {
               ? currentVersion.keywords
               : undefined,
           is_public: false,
+          // AI 생성 시 사용된 이미지 포함 (이미 서버에 업로드됨)
+          uploaded_images:
+            card.uploadedImages && card.uploadedImages.length > 0
+              ? card.uploadedImages
+              : undefined,
         });
 
         if (result.success) {
