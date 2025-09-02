@@ -1,5 +1,4 @@
 # Saegim Frontend (Next.js 15) - Multi-stage
-# ===========================================
 
 # ---- Stage 1: deps ----
   FROM node:20-alpine AS deps
@@ -11,6 +10,7 @@
   # ---- Stage 2: builder ----
   FROM node:20-alpine AS builder
   WORKDIR /app
+  
   # 빌드 인자 (Jenkins에서 전달)
   ARG NEXT_PUBLIC_API_BASE_URL
   ARG GOOGLE_REDIRECT_URI
@@ -22,17 +22,21 @@
   ARG NEXT_PUBLIC_FIREBASE_APP_ID
   ARG NEXT_PUBLIC_FIREBASE_VAPID_KEY
   
-  # 런타임 유틸
+  # 유틸
   RUN apk add --no-cache dumb-init curl
   
-  # 의존성 복사
+  # 의존성/소스
   COPY --from=deps /app/node_modules ./node_modules
   COPY package.json package-lock.json* ./
-  # 앱 소스 복사
   COPY . .
   
-  # 빌드(환경변수는 빌드타임에 주입)
+  # 빌드 전에 코드 포맷 & ESLint 자동 수정
   ENV NEXT_TELEMETRY_DISABLED=1
+  # 1) Prettier 자동 포맷 (scripts 존재 시 우선)
+  RUN npm run format:fix || npx --yes prettier --write --ignore-unknown .
+  # 2) ESLint 자동 수정 (가능한 범위)
+  RUN npm run lint:fix || npm run lint -- --fix || true
+  # 3) Next 실제 빌드
   RUN npm run build
   
   # ---- Stage 3: runner ----
@@ -40,17 +44,16 @@
   WORKDIR /app
   RUN apk add --no-cache dumb-init curl
   
-  # node 유저는 base image에 이미 존재 (재생성 금지)
-  # 소유권만 정돈
+  # node 유저는 base image에 이미 존재 → 재생성 금지
   RUN mkdir -p /app && chown -R node:node /app
   
-  # 앱 배포 산출물만 복사
+  # 배포 산출물/필요 파일만 복사
   COPY --from=builder --chown=node:node /app/.next ./.next
   COPY --from=builder --chown=node:node /app/public ./public
   COPY --from=builder --chown=node:node /app/package.json ./package.json
   COPY --from=builder --chown=node:node /app/node_modules ./node_modules
-  # (필요 시) next.config.js 등 설정파일 복사
-  COPY --from=builder --chown=node:node /app/next.config.js ./next.config.js
+  # next.config.(js|mjs|ts) 중 하나를 복사
+  COPY --from=builder --chown=node:node /app/next.config.* ./
   
   ENV NODE_ENV=production
   USER node
