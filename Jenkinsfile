@@ -24,18 +24,17 @@ pipeline {
   }
 
   environment {
-    // ====== 레지스트리/크리덴셜 (Jenkins 환경변수에서 자동 읽힘) ======
+    // ====== 레지스트리/자격증명 (Jenkins 환경변수에서 자동 읽힘) ======
     // 우선순위: Job/글로벌의 DOCKER_REGISTRY → CUSTOM_DOCKER_REGISTRY
-    DOCKER_REGISTRY = "${env.DOCKER_REGISTRY ?: env.CUSTOM_DOCKER_REGISTRY}"
+    DOCKER_REGISTRY     = "${env.DOCKER_REGISTRY ?: env.CUSTOM_DOCKER_REGISTRY}"
 
     // 우선순위: Job/글로벌의 DOCKER_CREDENTIALS → CUSTOM_DOCKER_CREDENTIALS
-    DOCKER_CREDENTIALS = "${env.DOCKER_CREDENTIALS ?: env.CUSTOM_DOCKER_CREDENTIALS}"
+    DOCKER_CREDENTIALS  = "${env.DOCKER_CREDENTIALS ?: env.CUSTOM_DOCKER_CREDENTIALS}"
 
     // 이미지 이름 (조직 규칙에 맞춰 필요시 변경)
-    DOCKER_IMAGE = "${env.DOCKER_IMAGE ?: 'aicc/saegim-frontend'}"
+    DOCKER_IMAGE        = "${env.DOCKER_IMAGE ?: 'aicc/saegim-frontend'}"
 
-    // Node 버전 고정(선택)
-    NODE_ENV = "production"
+    NODE_ENV            = "production"
   }
 
   stages {
@@ -113,11 +112,29 @@ pipeline {
     stage('Build App') { ... }
     */
 
+    // (선택) 필요한 빌드 인자 검증—비어있으면 명확한 에러로 종료
+    stage('Validate Build Args') {
+      steps {
+        sh '''
+          : "${NEXT_PUBLIC_API_BASE_URL:?NEXT_PUBLIC_API_BASE_URL is required}"
+          : "${GOOGLE_REDIRECT_URI:?GOOGLE_REDIRECT_URI is required}"
+          # 아래 값들도 Jenkins 환경변수로 등록돼 있다면 주석 해제하여 검증 가능
+          # : "${NEXT_PUBLIC_FIREBASE_API_KEY:?required}"
+          # : "${NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN:?required}"
+          # : "${NEXT_PUBLIC_FIREBASE_PROJECT_ID:?required}"
+          # : "${NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET:?required}"
+          # : "${NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID:?required}"
+          # : "${NEXT_PUBLIC_FIREBASE_APP_ID:?required}"
+          # : "${NEXT_PUBLIC_FIREBASE_VAPID_KEY:?required}"
+        '''
+      }
+    }
+
     stage('Docker Build & Push') {
       steps {
         script {
-          def imageBase = "${env.DO‌​CKER_REGISTRY}/${env.DOCKER_IMAGE}"
-          def tagBuild = "${imageBase}:${env.BUILD_NUMBER}"
+          def imageBase = "${env.DOCKER_REGISTRY}/${env.DOCKER_IMAGE}"
+          def tagBuild  = "${imageBase}:${env.BUILD_NUMBER}"
           def tagLatest = "${imageBase}:latest"
 
           sh """
@@ -125,16 +142,16 @@ pipeline {
             docker pull ${tagLatest} || true
             set -e
 
-            docker build \
-              --build-arg NEXT_PUBLIC_API_BASE_URL=${NEXT_PUBLIC_API_BASE_URL} \
-              --build-arg GOOGLE_REDIRECT_URI=${GOOGLE_REDIRECT_URI} \
-              --build-arg NEXT_PUBLIC_FIREBASE_API_KEY=${NEXT_PUBLIC_FIREBASE_API_KEY} \
-              --build-arg NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=${NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN} \
-              --build-arg NEXT_PUBLIC_FIREBASE_PROJECT_ID=${NEXT_PUBLIC_FIREBASE_PROJECT_ID} \
-              --build-arg NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=${NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET} \
-              --build-arg NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=${NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID} \
-              --build-arg NEXT_PUBLIC_FIREBASE_APP_ID=${NEXT_PUBLIC_FIREBASE_APP_ID} \
-              --build-arg NEXT_PUBLIC_FIREBASE_VAPID_KEY=${NEXT_PUBLIC_FIREBASE_VAPID_KEY} \
+            docker build \\
+              --build-arg NEXT_PUBLIC_API_BASE_URL=${env.NEXT_PUBLIC_API_BASE_URL} \\
+              --build-arg GOOGLE_REDIRECT_URI=${env.GOOGLE_REDIRECT_URI} \\
+              --build-arg NEXT_PUBLIC_FIREBASE_API_KEY=${env.NEXT_PUBLIC_FIREBASE_API_KEY} \\
+              --build-arg NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=${env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN} \\
+              --build-arg NEXT_PUBLIC_FIREBASE_PROJECT_ID=${env.NEXT_PUBLIC_FIREBASE_PROJECT_ID} \\
+              --build-arg NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=${env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET} \\
+              --build-arg NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=${env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID} \\
+              --build-arg NEXT_PUBLIC_FIREBASE_APP_ID=${env.NEXT_PUBLIC_FIREBASE_APP_ID} \\
+              --build-arg NEXT_PUBLIC_FIREBASE_VAPID_KEY=${env.NEXT_PUBLIC_FIREBASE_VAPID_KEY} \\
               -t ${tagBuild} -t ${tagLatest} .
 
             docker push ${tagBuild}
