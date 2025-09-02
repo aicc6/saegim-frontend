@@ -19,9 +19,9 @@ const ModalOverlay = React.forwardRef<
   <DialogPrimitive.Overlay
     ref={ref}
     className={cn(
-      // Enhanced backdrop styling with softer colors
-      'fixed inset-0 z-50 bg-gray-500/20 dark:bg-gray-900/40 backdrop-blur-sm',
-      // Improved animations
+      // Enhanced backdrop with improved visibility and contrast
+      'fixed inset-0 z-50 bg-black/60 dark:bg-black/70 backdrop-blur-md',
+      // Improved animations with better transitions
       'data-[state=open]:animate-in data-[state=closed]:animate-out',
       'data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0',
       'duration-300 ease-out',
@@ -49,11 +49,12 @@ const ModalContent = React.forwardRef<
       <DialogPrimitive.Content
         ref={ref}
         className={cn(
-          // Base styling
+          // Base styling with improved positioning
           'fixed left-[50%] top-[50%] z-50 translate-x-[-50%] translate-y-[-50%]',
           'w-full max-h-[90vh] overflow-hidden',
-          // Enhanced background and border
-          'bg-background border border-border shadow-2xl',
+          // Enhanced background with stronger contrast and borders
+          'bg-white dark:bg-gray-900 border-2 border-gray-200 dark:border-gray-700',
+          'shadow-2xl ring-1 ring-black/10 dark:ring-white/10',
           'rounded-2xl', // More rounded corners for modern look
           // Improved animations
           'data-[state=open]:animate-in data-[state=closed]:animate-out',
@@ -77,7 +78,7 @@ const ModalContent = React.forwardRef<
         <div className="flex flex-col max-h-[90vh]">
           {children}
           {showCloseButton && (
-            <DialogPrimitive.Close className="absolute right-4 top-4 rounded-full p-1 opacity-70 ring-offset-background transition-all hover:opacity-100 hover:bg-accent focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none">
+            <DialogPrimitive.Close className="absolute right-4 top-4 rounded-full p-2 bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-gray-400 dark:focus:ring-gray-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-900 disabled:pointer-events-none shadow-sm hover:shadow-md">
               <X className="h-5 w-5" />
               <span className="sr-only">닫기</span>
             </DialogPrimitive.Close>
@@ -185,10 +186,13 @@ const AlertModal: React.FC<AlertModalProps> = ({
   };
 
   const colorMap = {
-    info: 'bg-blue-50 dark:bg-blue-950',
-    success: 'bg-green-50 dark:bg-green-950',
-    warning: 'bg-yellow-50 dark:bg-yellow-950',
-    error: 'bg-red-50 dark:bg-red-950',
+    info: 'bg-blue-100 dark:bg-blue-900/60 border border-blue-200 dark:border-blue-800',
+    success:
+      'bg-green-100 dark:bg-green-900/60 border border-green-200 dark:border-green-800',
+    warning:
+      'bg-yellow-100 dark:bg-yellow-900/60 border border-yellow-200 dark:border-yellow-800',
+    error:
+      'bg-red-100 dark:bg-red-900/60 border border-red-200 dark:border-red-800',
   };
 
   return (
@@ -260,13 +264,17 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
   };
 
   const colorMap = {
-    warning: 'bg-yellow-50 dark:bg-yellow-950',
-    danger: 'bg-red-50 dark:bg-red-950',
+    warning:
+      'bg-yellow-100 dark:bg-yellow-900/60 border border-yellow-200 dark:border-yellow-800',
+    danger:
+      'bg-red-100 dark:bg-red-900/60 border border-red-200 dark:border-red-800',
   };
 
   const buttonColorMap = {
-    warning: 'bg-yellow-600 hover:bg-yellow-700 text-white',
-    danger: 'bg-red-600 hover:bg-red-700 text-white',
+    warning:
+      'bg-yellow-600 hover:bg-yellow-700 focus:bg-yellow-700 text-white shadow-md hover:shadow-lg focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2',
+    danger:
+      'bg-red-600 hover:bg-red-700 focus:bg-red-700 text-white shadow-md hover:shadow-lg focus:ring-2 focus:ring-red-500 focus:ring-offset-2',
   };
 
   return (
@@ -297,6 +305,7 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
               onOpenChange(false);
             }}
             disabled={isLoading}
+            className="bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 font-medium shadow-sm hover:shadow-md transition-all"
           >
             {cancelText}
           </Button>

@@ -15,6 +15,7 @@ import {
 import PageHeader from '@/components/common/PageHeader';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
+import { showSuccess, showError } from '@/hooks/use-modal';
 import DeleteConfirmModal from '@/components/diary/DeleteConfirmModal';
 
 const emotionLabels = {
@@ -253,13 +254,13 @@ export default function ViewPostPage({
         // (false); // 이 줄 제거
 
         // 성공 메시지 표시
-        alert('다이어리가 성공적으로 수정되었습니다.');
+        showSuccess('다이어리가 성공적으로 수정되었습니다.');
 
         // 페이지 새로고침 없이 상태만 업데이트
         // window.location.reload();
       } catch (error) {
         logger.error('다이어리 수정 실패:', error);
-        alert('다이어리 수정에 실패했습니다. 다시 시도해주세요.');
+        showError('다이어리 수정에 실패했습니다. 다시 시도해주세요.');
       }
     } else if (!isEditing && entry) {
       // 수정 모드 시작
@@ -290,7 +291,21 @@ export default function ViewPostPage({
       });
       setDeleteModalOpen(false);
 
-      // 삭제 후 이전 페이지로 이동
+      // 삭제 후 이동 로직
+      const urlParams = new URLSearchParams(window.location.search);
+      const fromParam = urlParams.get('from');
+
+      if (fromParam) {
+        const targetPath = decodeURIComponent(fromParam);
+        // /create에서 온 경우 /list로 이동
+        if (targetPath === '/create') {
+          logger.debug('삭제 후 다이어리 목록으로 이동');
+          router.push('/list');
+          return;
+        }
+      }
+
+      // 다른 경우는 기존 handleBack 로직 사용
       handleBack();
     } catch (error) {
       toast({
@@ -503,20 +518,20 @@ export default function ViewPostPage({
             ),
           });
 
-          alert(
+          showSuccess(
             '기존 이미지를 성공적으로 불러왔습니다. (삭제된 이미지도 복원됨)',
           );
         } else {
           logger.error('기존 이미지 조회 실패:', data.message);
-          alert('기존 이미지 조회에 실패했습니다. 다시 시도해주세요.');
+          showError('기존 이미지 조회에 실패했습니다. 다시 시도해주세요.');
         }
       } else {
         logger.error('기존 이미지 조회 실패:', response.status);
-        alert('기존 이미지 조회에 실패했습니다. 다시 시도해주세요.');
+        showError('기존 이미지 조회에 실패했습니다. 다시 시도해주세요.');
       }
     } catch (error) {
       logger.error('기존 이미지 조회 실패:', error);
-      alert('기존 이미지 조회에 실패했습니다. 다시 시도해주세요.');
+      showError('기존 이미지 조회에 실패했습니다. 다시 시도해주세요.');
     }
   };
 
@@ -573,13 +588,13 @@ export default function ViewPostPage({
         logger.info('새 이미지 업로드 완료 - 캘린더와 동기화됨');
         logger.debug('업로드된 이미지 수:', updatedImages.length);
 
-        alert('이미지가 성공적으로 업로드되었습니다.');
+        showSuccess('이미지가 성공적으로 업로드되었습니다.');
       } else {
         throw new Error('이미지 업로드 실패');
       }
     } catch (error) {
       logger.error('이미지 업로드 실패:', error);
-      alert('이미지 업로드에 실패했습니다. 다시 시도해주세요.');
+      showError('이미지 업로드에 실패했습니다. 다시 시도해주세요.');
     }
   };
 
@@ -594,12 +609,12 @@ export default function ViewPostPage({
       if (file) {
         // 파일 검증
         if (file.size > 10 * 1024 * 1024) {
-          alert('파일 크기는 10MB 이하여야 합니다.');
+          showError('파일 크기는 10MB 이하여야 합니다.');
           return;
         }
 
         if (!file.type.startsWith('image/')) {
-          alert('이미지 파일만 업로드 가능합니다.');
+          showError('이미지 파일만 업로드 가능합니다.');
           return;
         }
 
@@ -608,7 +623,7 @@ export default function ViewPostPage({
           await handleImageUpload(file);
         } catch (error) {
           logger.error('이미지 업로드 실패:', error);
-          alert('이미지 업로드에 실패했습니다. 다시 시도해주세요.');
+          showError('이미지 업로드에 실패했습니다. 다시 시도해주세요.');
         }
       }
     };

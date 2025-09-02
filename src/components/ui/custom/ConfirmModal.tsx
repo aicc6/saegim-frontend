@@ -1,6 +1,6 @@
 'use client';
 
-import { ConfirmModal as UnifiedConfirmModal } from '@/components/ui/modal';
+import { ConfirmModal as UnifiedConfirmModal } from '@/components/ui/enhanced-modal';
 
 interface ConfirmModalProps {
   isOpen: boolean;

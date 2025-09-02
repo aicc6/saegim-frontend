@@ -351,12 +351,13 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
             {cancelText}
           </Button>
           <Button
+            variant="outline"
             onClick={handleConfirm}
             disabled={isLoading}
-            className={cn(buttonColorMap[type])}
+            className="border-border-strong hover:bg-background-hover"
           >
             {isLoading && (
-              <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+              <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-gray-600" />
             )}
             {confirmText}
           </Button>
