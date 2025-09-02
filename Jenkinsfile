@@ -149,9 +149,13 @@ pipeline {
             # 실제 존재 확인
             ls -al "${CONTEXT_DIR}/.env.local"
 
-            # .dockerignore에 .env.local 제외 여부 경고 (POSIX 공백 클래스 사용)
-            if [ -f "${CONTEXT_DIR}/.dockerignore" ] && grep -E '^[[:space:]]*\\.env\\.local[[:space:]]*$' "${CONTEXT_DIR}/.dockerignore" >/dev/null 2>&1; then
-              echo "[WARN] ${CONTEXT_DIR}/.dockerignore 에 .env.local 이 제외되어 있습니다. 이미지에 포함되지 않을 수 있습니다."
+            # .dockerignore에 .env.local 제외 여부 경고
+            # - 제외 라인이 있고(! .env.local 예외가 없을 때)만 경고
+            if [ -f "${CONTEXT_DIR}/.dockerignore" ]; then
+              if grep -Eq '^[[:space:]]*\\.env\\.local([[:space:]]|$)' "${CONTEXT_DIR}/.dockerignore" && \
+                 ! grep -Eq '^[[:space:]]*![[:space:]]*\\.env\\.local([[:space:]]|$)' "${CONTEXT_DIR}/.dockerignore"; then
+                echo "[WARN] ${CONTEXT_DIR}/.dockerignore 에 .env.local 제외 규칙이 있어 이미지에 포함되지 않을 수 있습니다."
+              fi
             fi
           '''
         }
@@ -180,7 +184,6 @@ pipeline {
     stage('Docker Build & Push') {
       steps {
         script {
-          // 환경변수 검증
           if (!env.CONTEXT_DIR?.trim())     { error "[ERROR] CONTEXT_DIR 미설정"; }
           if (!env.DOCKERFILE_PATH?.trim()) { error "[ERROR] DOCKERFILE_PATH 미설정"; }
 
@@ -250,7 +253,7 @@ pipeline {
       echo "❌ 실패 — 콘솔 로그에서 .env.local 준비/검증 및 레지스트리 로그인/푸시 단계 확인"
     }
     always {
-      // 공유 서버 안전: 우리 태그만 정리 + 빌더 캐시만 정리
+      # 공유 서버 안전: 우리 태그만 정리 + 빌더 캐시만 정리
       sh '''
         docker rmi -f "${TAG_BUILD}" "${TAG_SHA}" "${TAG_BRANCH}" 2>/dev/null || true
         if [ -n "${TAG_LATEST}" ]; then docker rmi -f "${TAG_LATEST}" 2>/dev/null || true; fi
