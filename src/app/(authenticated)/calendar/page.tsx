@@ -141,12 +141,32 @@ export default function CalendarPage() {
     const year = viewDate.getFullYear();
     const month = viewDate.getMonth() + 1;
 
-    // 현재 월의 다이어리만 필터링
+    // 현재 월의 다이어리만 필터링 (diary_date 우선, 없으면 created_at 사용)
     const currentMonthDiaries = diaries.filter((diary) => {
-      const diaryDate = new Date(diary.created_at);
-      return (
-        diaryDate.getFullYear() === year && diaryDate.getMonth() + 1 === month
-      );
+      let diaryDate: Date;
+
+      if (diary.diary_date) {
+        // diary_date가 있으면 해당 날짜 사용
+        diaryDate = new Date(diary.diary_date + 'T00:00:00'); // 시간대 문제 방지
+        console.log(
+          `[DEBUG] 월별 필터링 - diary_date 사용: ${diary.id} -> ${diary.diary_date} (${diaryDate.getFullYear()}-${diaryDate.getMonth() + 1})`,
+        );
+      } else {
+        // diary_date가 없으면 created_at 사용
+        diaryDate = new Date(diary.created_at);
+        console.log(
+          `[DEBUG] 월별 필터링 - created_at 사용: ${diary.id} -> ${diary.created_at} (${diaryDate.getFullYear()}-${diaryDate.getMonth() + 1})`,
+        );
+      }
+
+      const isInCurrentMonth =
+        diaryDate.getFullYear() === year && diaryDate.getMonth() + 1 === month;
+      if (isInCurrentMonth) {
+        console.log(
+          `[DEBUG] 월별 필터링 - 포함됨: ${diary.id} (${diaryDate.getFullYear()}-${diaryDate.getMonth() + 1})`,
+        );
+      }
+      return isInCurrentMonth;
     });
 
     // 감정별 빈도 계산
@@ -161,16 +181,29 @@ export default function CalendarPage() {
     // 키워드 분포 계산
     const keywordCounts: Record<string, number> = {};
 
+    console.log(
+      `[DEBUG] 월별 데이터 계산 - 총 다이어리 수: ${currentMonthDiaries.length}`,
+    );
+
     currentMonthDiaries.forEach((diary) => {
+      console.log(`[DEBUG] 다이어리 분석: ${diary.id}`, {
+        ai_emotion: diary.ai_emotion,
+        keywords: diary.keywords,
+        diary_date: diary.diary_date,
+        created_at: diary.created_at,
+      });
+
       // 감정 카운트 (AI 감정 사용)
       if (diary.ai_emotion && diary.ai_emotion in emotionCounts) {
         emotionCounts[diary.ai_emotion as EmotionType]++;
+        console.log(`[DEBUG] 감정 카운트 증가: ${diary.ai_emotion}`);
       }
 
       // 키워드 카운트
       if (diary.keywords && Array.isArray(diary.keywords)) {
         diary.keywords.forEach((keyword: string) => {
           keywordCounts[keyword] = (keywordCounts[keyword] || 0) + 1;
+          console.log(`[DEBUG] 키워드 카운트 증가: ${keyword}`);
         });
       }
     });
@@ -251,13 +284,27 @@ export default function CalendarPage() {
     if (!selectedDate) return [];
 
     return filteredDiaries.filter((diary) => {
-      const diaryDate = new Date(diary.created_at);
-      const selectedDateObj = new Date(selectedDate);
-      return (
-        diaryDate.getFullYear() === selectedDateObj.getFullYear() &&
-        diaryDate.getMonth() === selectedDateObj.getMonth() &&
-        diaryDate.getDate() === selectedDateObj.getDate()
-      );
+      let diaryDateStr: string;
+
+      if (diary.diary_date) {
+        // diary_date가 있으면 해당 날짜 사용 (YYYY-MM-DD 형식)
+        diaryDateStr = diary.diary_date;
+        console.log(`[DEBUG] diary_date 사용: ${diary.id} -> ${diaryDateStr}`);
+      } else {
+        // diary_date가 없으면 created_at에서 날짜 부분만 추출
+        const createdDate = new Date(diary.created_at);
+        diaryDateStr = createdDate.toISOString().split('T')[0];
+        console.log(`[DEBUG] created_at 사용: ${diary.id} -> ${diaryDateStr}`);
+      }
+
+      // 날짜 문자열로 직접 비교 (YYYY-MM-DD 형식)
+      const matches = diaryDateStr === selectedDate;
+      if (matches) {
+        console.log(
+          `[DEBUG] 날짜 매칭: ${diary.id} (${diaryDateStr}) === ${selectedDate}`,
+        );
+      }
+      return matches;
     });
   }, [selectedDate, filteredDiaries]);
 

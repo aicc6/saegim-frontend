@@ -446,7 +446,7 @@ export default function DiaryListView() {
                 (diary.ai_emotion as string) ||
                 (diary.user_emotion as string) ||
                 'peaceful',
-              date: diary.created_at || '',
+              date: diary.diary_date || diary.created_at || '',
               keywords: diary.keywords || [],
               thumbnail:
                 diary.images && diary.images.length > 0

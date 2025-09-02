@@ -58,6 +58,7 @@ export const diaryApi = {
     ai_emotion?: string;
     ai_emotion_confidence?: number;
     keywords?: string[];
+    diary_date?: string; // 다이어리 작성 날짜 (YYYY-MM-DD 형식)
     is_public?: boolean;
     uploaded_images?: Array<{
       file_id: string;
