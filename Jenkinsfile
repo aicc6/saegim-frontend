@@ -150,8 +150,8 @@ pipeline {
             # .dockerignore에 .env.local 제외 여부 경고
             # - 제외 라인이 있고(! .env.local 예외가 없을 때)만 경고
             if [ -f "${CONTEXT_DIR}/.dockerignore" ]; then
-              if grep -Eq '^[[:space:]]*\.env\.local([[:space:]]|$)' "${CONTEXT_DIR}/.dockerignore" && \
-                 ! grep -Eq '^[[:space:]]*![[:space:]]*\.env\.local([[:space:]]|$)' "${CONTEXT_DIR}/.dockerignore"; then
+              if grep -Eq '^[[:space:]]*[.]env[.]local([[:space:]]|$)' "${CONTEXT_DIR}/.dockerignore" && \al([[:space:]]|$)' "${CONTEXT_DIR}/.dockerignore" && \
+                 ! grep -Eq '^[[:space:]]*![[:space:]]*[.]env[.]local([[:space:]]|$)' "${CONTEXT_DIR}/.dockerignore"; then
                 echo "[WARN] ${CONTEXT_DIR}/.dockerignore 에 .env.local 제외 규칙이 있어 이미지에 포함되지 않을 수 있습니다."
               fi
             fi
