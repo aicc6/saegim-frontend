@@ -65,6 +65,7 @@ export const ThumbnailImage = ({
               maxHeight: '100%',
               maxWidth: '100%',
             }}
+            loading="lazy" // 지연 로딩 추가
             onError={(e) => {
               logger.warn('캘린더 썸네일 이미지 로드 실패', {
                 imagePath: allImages[currentImageIndex],

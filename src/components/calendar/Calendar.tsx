@@ -47,12 +47,13 @@ export const Calendar = forwardRef<CalendarRef, CalendarProps>(
       handleDateClick(dateStr, onDateSelect);
     };
 
-    // Update current date when prop changes
+    // Update current date when prop changes (only when currentViewDate changes)
     useEffect(() => {
       if (currentViewDate && onDateChange) {
-        onDateChange(currentDate);
+        // currentViewDate가 변경되었을 때만 onDateChange 호출
+        onDateChange(currentViewDate);
       }
-    }, [currentDate, currentViewDate, onDateChange]);
+    }, [currentViewDate, onDateChange]);
 
     // Expose imperative methods through ref
     useImperativeHandle(ref, () => ({
