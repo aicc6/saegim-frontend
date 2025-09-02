@@ -1,6 +1,14 @@
 pipeline {
   agent any
 
+  options {
+    // 기본 'Declarative: Checkout SCM' 비활성화 (중복 checkout 방지)
+    skipDefaultCheckout(true)
+    // 로그 깔끔하게
+    ansiColor('xterm')
+    timestamps()
+  }
+
   parameters {
     choice(
       name: 'BRANCH_TO_BUILD',
@@ -21,28 +29,32 @@ pipeline {
   environment {
     // ====== 레지스트리/크리덴셜 (Jenkins 환경변수에서 자동 읽힘) ======
     // 우선순위: Job/글로벌의 DOCKER_REGISTRY → CUSTOM_DOCKER_REGISTRY
-    DOCKER_REGISTRY = "${env.DOCKER_REGISTRY ?: env.CUSTOM_DOCKER_REGISTRY}"
-
+    DOCKER_REGISTRY     = "${env.DOCKER_REGISTRY ?: env.CUSTOM_DOCKER_REGISTRY}"
     // 우선순위: Job/글로벌의 DOCKER_CREDENTIALS → CUSTOM_DOCKER_CREDENTIALS
-    DOCKER_CREDENTIALS = "${env.DOCKER_CREDENTIALS ?: env.CUSTOM_DOCKER_CREDENTIALS}"
+    DOCKER_CREDENTIALS  = "${env.DOCKER_CREDENTIALS ?: env.CUSTOM_DOCKER_CREDENTIALS}"
 
-    // 이미지 이름 (조직 규칙에 맞춰 필요시 변경)
-    DOCKER_IMAGE = "${env.DOCKER_IMAGE ?: 'aicc/saegim-frontend'}"
+    // 이미지 이름 (조직 규칙에 맞게 필요 시 변경)
+    DOCKER_IMAGE        = "${env.DOCKER_IMAGE ?: 'aicc/saegim-frontend'}"
 
-    // Node 버전 고정(선택)
-    NODE_ENV = "production"
+    NODE_ENV            = "production"
   }
 
   stages {
     stage('Resolve Branch') {
       steps {
         script {
-          // GitHub Webhook에서 넘어오는 브랜치(ref) 우선, 없으면 파라미터
-          // 예: refs/heads/develop → develop
-          def ref = env.GIT_BRANCH ?: env.BRANCH_NAME ?: ''
-          def fromRef = ref.replace('refs/heads/', '')
+          // 다양한 환경에서 들어오는 브랜치 표기를 안전하게 정규화
+          // 예: refs/heads/develop, origin/develop, remotes/origin/develop → develop
+          def ref = env.CHANGE_BRANCH ?: env.BRANCH_NAME ?: env.GIT_BRANCH ?: ''
+          def cleaned = ref
+            .replaceFirst(/^refs\/heads\//, '')
+            .replaceFirst(/^remotes\/origin\//, '')
+            .replaceFirst(/^origin\//, '')
+            .trim()
+
           def paramBranch = params.BRANCH_TO_BUILD ?: 'develop'
-          env.EFFECTIVE_BRANCH = (fromRef?.trim()) ? fromRef : paramBranch
+          env.EFFECTIVE_BRANCH = cleaned ? cleaned : paramBranch
+
           echo "Using branch: ${env.EFFECTIVE_BRANCH}"
         }
       }
@@ -52,10 +64,8 @@ pipeline {
       steps {
         checkout([
           $class: 'GitSCM',
-          branches: [[name: "*/${env.EFFECTIVE_BRANCH}"]],
-          userRemoteConfigs: [[
-            url: 'https://github.com/aicc6/saegim-frontend.git'
-          ]]
+          branches: [[ name: "*/${env.EFFECTIVE_BRANCH}" ]],
+          userRemoteConfigs: [[ url: 'https://github.com/aicc6/saegim-frontend.git' ]]
         ])
       }
     }
@@ -77,10 +87,10 @@ pipeline {
       steps {
         script {
           if (!env.DOCKER_REGISTRY?.trim()) {
-            error "DOCKER_REGISTRY가 비어 있습니다. (정확한 정보) Jenkins 환경변수에서 설정하세요."
+            error "DOCKER_REGISTRY가 비어 있습니다. Jenkins 환경변수에서 설정하세요. (정확한 정보)"
           }
           if (!env.DOCKER_CREDENTIALS?.trim()) {
-            error "DOCKER_CREDENTIALS가 비어 있습니다. (정확한 정보) Jenkins Credentials ID를 환경변수로 지정하세요."
+            error "DOCKER_CREDENTIALS가 비어 있습니다. Jenkins Credentials ID를 지정하세요. (정확한 정보)"
           }
         }
         withCredentials([usernamePassword(
@@ -135,7 +145,7 @@ pipeline {
 
           sh """
             set +e
-            docker pull ${tagLatest} || true
+            docker pull ${tagLatest} || true   # 캐시 없으면 실패 무시 (정확한 정보)
             set -e
 
             docker build -t ${tagBuild} -t ${tagLatest} .
@@ -158,7 +168,7 @@ pipeline {
       echo '✅ Build & Push 성공'
     }
     failure {
-      echo '❌ 실패 — 콘솔 로그에서 NEXUS 로그인/태그/푸시에러 확인'
+      echo '❌ 실패 — 콘솔 로그에서 브랜치/로그인/푸시 단계 확인'
     }
   }
 }
