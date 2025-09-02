@@ -142,64 +142,85 @@ pipeline {
       steps {
         // 📦 Secret file(.env.local) → 즉시 source → --build-arg로 바로 전달
         withCredentials([file(credentialsId: 'saegim-frontend', variable: 'ENV_FILE')]) {
-          sh """
-            set -eu
+          // Docker 빌드 전 필수 환경변수 추가 검증
+          script {
+            if (!env.CONTEXT_DIR || !env.DOCKERFILE_PATH) {
+              error "Required environment variables not set: CONTEXT_DIR=${env.CONTEXT_DIR}, DOCKERFILE_PATH=${env.DOCKERFILE_PATH}"
+            }
+          }
+          sh '''#!/usr/bin/env bash
+            set -euo pipefail
 
-            # 1) .env.local을 현재 쉘 환경으로 로드 (임시파일 없이)
+            # ===== .env 파일 로드 =====
             set -o allexport
-            . "\$ENV_FILE"
+            . "$ENV_FILE"  # 실제 .env 파일 경로로 치환하세요
             set +o allexport
 
-            # 2) 필수 키들 검증 (누설 방지: 값 노출 금지)
-            req='NEXT_PUBLIC_API_BASE_URL GOOGLE_REDIRECT_URI NEXT_PUBLIC_FIREBASE_API_KEY NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN NEXT_PUBLIC_FIREBASE_PROJECT_ID NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID NEXT_PUBLIC_FIREBASE_APP_ID NEXT_PUBLIC_FIREBASE_VAPID_KEY'
+            # ===== 필수 키 목록 =====
+            req="NEXT_PUBLIC_API_BASE_URL GOOGLE_REDIRECT_URI NEXT_PUBLIC_FIREBASE_API_KEY NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN NEXT_PUBLIC_FIREBASE_PROJECT_ID NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID NEXT_PUBLIC_FIREBASE_APP_ID NEXT_PUBLIC_FIREBASE_VAPID_KEY"
+
             miss=0
-            for v in \$req; do
-              if [ -z "\${!v:-}" ]; then
-                echo "[ERROR] \$v is empty"; miss=1
+            missing=""
+
+            for k in $req; do
+              if [ -z "${!k:-}" ]; then
+                miss=$((miss+1))
+                missing="$missing $k"
+              else
+                # 환경변수 값 마스킹 (보안상 값 노출 방지)
+                echo "$k=***MASKED***"
               fi
             done
-            [ "\$miss" -eq 0 ] || { echo '❌ Missing env(s). Abort.'; exit 1; }
 
-            # 3) 태그 계산
+            if (( miss > 0 )); then
+              echo "[ERROR] 누락된 환경변수:$missing" 1>&2
+              exit 2
+            fi
+
+            # ===== 태그 계산 =====
             REG_PREFIX=""
             if [ -n "${DOCKER_REGISTRY}" ]; then
               REG_PREFIX="${DOCKER_REGISTRY}/"
             fi
-            IMAGE_TAG_LATEST="\${REG_PREFIX}${IMAGE_NAME}:latest"
-            IMAGE_TAG_SHA="\${REG_PREFIX}${IMAGE_NAME}:${GIT_SHORT_SHA}"
+            IMAGE_TAG_LATEST="${REG_PREFIX}${IMAGE_NAME}:latest"
+            IMAGE_TAG_SHA="${REG_PREFIX}${IMAGE_NAME}:${GIT_SHORT_SHA}"
 
-            # 4) Docker Build (ARG 직접 주입)
-            docker build \\
+            # ===== Docker Build (ARG 직접 주입) =====
+            # 보안상 빌드 명령어를 변수로 저장하여 로그 노출 방지
+            BUILD_CMD="docker build \\
               --file ${DOCKERFILE_PATH} \\
               --label ${IMAGE_LABEL_SOURCE}=${GIT_REPOSITORY_URL} \\
               --label ${IMAGE_LABEL_OWNER}=${IMAGE_NAME} \\
               --label org.opencontainers.image.revision=${GIT_SHORT_SHA} \\
-              --tag "\${IMAGE_TAG_LATEST}" \\
-              --tag "\${IMAGE_TAG_SHA}" \\
-              --build-arg NEXT_PUBLIC_API_BASE_URL="\${NEXT_PUBLIC_API_BASE_URL}" \\
-              --build-arg GOOGLE_REDIRECT_URI="\${GOOGLE_REDIRECT_URI}" \\
-              --build-arg NEXT_PUBLIC_FIREBASE_API_KEY="\${NEXT_PUBLIC_FIREBASE_API_KEY}" \\
-              --build-arg NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN="\${NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN}" \\
-              --build-arg NEXT_PUBLIC_FIREBASE_PROJECT_ID="\${NEXT_PUBLIC_FIREBASE_PROJECT_ID}" \\
-              --build-arg NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET="\${NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET}" \\
-              --build-arg NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID="\${NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID}" \\
-              --build-arg NEXT_PUBLIC_FIREBASE_APP_ID="\${NEXT_PUBLIC_FIREBASE_APP_ID}" \\
-              --build-arg NEXT_PUBLIC_FIREBASE_VAPID_KEY="\${NEXT_PUBLIC_FIREBASE_VAPID_KEY}" \\
-              ${CONTEXT_DIR}
+              --tag \"${IMAGE_TAG_LATEST}\" \\
+              --tag \"${IMAGE_TAG_SHA}\" \\
+              --build-arg NEXT_PUBLIC_API_BASE_URL=\"${NEXT_PUBLIC_API_BASE_URL}\" \\
+              --build-arg GOOGLE_REDIRECT_URI=\"${GOOGLE_REDIRECT_URI}\" \\
+              --build-arg NEXT_PUBLIC_FIREBASE_API_KEY=\"${NEXT_PUBLIC_FIREBASE_API_KEY}\" \\
+              --build-arg NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=\"${NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN}\" \\
+              --build-arg NEXT_PUBLIC_FIREBASE_PROJECT_ID=\"${NEXT_PUBLIC_FIREBASE_PROJECT_ID}\" \\
+              --build-arg NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=\"${NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET}\" \\
+              --build-arg NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=\"${NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID}\" \\
+              --build-arg NEXT_PUBLIC_FIREBASE_APP_ID=\"${NEXT_PUBLIC_FIREBASE_APP_ID}\" \\
+              --build-arg NEXT_PUBLIC_FIREBASE_VAPID_KEY=\"${NEXT_PUBLIC_FIREBASE_VAPID_KEY}\" \\
+              ${CONTEXT_DIR}"
+            
+            echo "Starting Docker build with masked arguments..."
+            eval "\$BUILD_CMD"
 
-            # 5) Push (레지스트리 설정된 경우에만)
+            # ===== Push (레지스트리 설정된 경우에만) =====
             if [ -n "${DOCKER_REGISTRY}" ]; then
-              docker push "\${IMAGE_TAG_LATEST}"
-              docker push "\${IMAGE_TAG_SHA}"
+              docker push "${IMAGE_TAG_LATEST}"
+              docker push "${IMAGE_TAG_SHA}"
             else
               echo "DOCKER_REGISTRY not set — skipping push (built locally only)."
             fi
 
-            # 6) 다음 post 단계에서 쓰도록 환경변수 export
+            # ===== 다음 post 단계에서 쓰도록 환경변수 export =====
             #    (Jenkins env에 반영되도록 echo "::set-output" 류는 미사용; 여기서는 파일 없이 변수 재계산)
-            echo "IMAGE_TAG_LATEST=\${IMAGE_TAG_LATEST}" > .tags.env
-            echo "IMAGE_TAG_SHA=\${IMAGE_TAG_SHA}"     >> .tags.env
-          """
+            echo "IMAGE_TAG_LATEST=${IMAGE_TAG_LATEST}" > .tags.env
+            echo "IMAGE_TAG_SHA=${IMAGE_TAG_SHA}"     >> .tags.env
+          '''
         }
 
         // 스크립트 스코프 변수로 다시 읽어 post에서 활용
