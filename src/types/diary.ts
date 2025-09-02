@@ -80,7 +80,7 @@ export const EMOTION_EMOJIS: Record<EmotionType, string> = {
   sad: '😢',
   angry: '😠',
   peaceful: '😌',
-  unrest: '😰',
+  unrest: '😨',
 };
 
 // 차트용 키워드 타입

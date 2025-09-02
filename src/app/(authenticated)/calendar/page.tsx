@@ -194,7 +194,7 @@ export default function CalendarPage() {
       sad: { emoji: '😢', name: '슬픔' },
       angry: { emoji: '😡', name: '화남' },
       peaceful: { emoji: '😌', name: '평온' },
-      unrest: { emoji: '😰', name: '불안' }, // worried를 unrest로 통일
+      unrest: { emoji: '😨', name: '불안' }, // worried를 unrest로 통일
     };
 
     const topEmotion = maxEmotion
