@@ -32,9 +32,12 @@ pipeline {
     // Git
     GIT_REPOSITORY_URL = 'https://github.com/aicc6/saegim-frontend.git'
 
-    // Docker Registry(옵션)
-    DOCKER_REGISTRY    = "${env.DOCKER_REGISTRY ?: env.CUSTOM_DOCKER_REGISTRY}"
-    DOCKER_CREDENTIALS = "${env.DOCKER_CREDENTIALS ?: env.CUSTOM_DOCKER_CREDENTIALS}"
+    // Docker Registry (옵션: Job/Global에서 빈 값이면 Push 스킵)
+    DOCKER_REGISTRY = "${env.DOCKER_REGISTRY ?: env.CUSTOM_DOCKER_REGISTRY}"
+
+    // 🔑 Nexus 계정(jd) 크리덴셜 바인딩 (Declarative)
+    // => REGISTRY_CREDS_USR / REGISTRY_CREDS_PSW 자동 생성
+    REGISTRY_CREDS = credentials('jd')
 
     // 이미지 네이밍
     IMAGE_NAME = 'saegim-frontend'
@@ -109,30 +112,13 @@ pipeline {
     }
 
     stage('Nexus Login') {
-      when {
-        expression { return env.DOCKER_REGISTRY?.trim() && env.DOCKER_CREDENTIALS?.trim() }
-      }
+      when { expression { return env.DOCKER_REGISTRY?.trim() } }
       steps {
-        script {
-          withCredentials([usernamePassword(credentialsId: env.DOCKER_CREDENTIALS, usernameVariable: 'REG_USER', passwordVariable: 'REG_PASS')]) {
-            sh '''
-              echo "${REG_PASS}" | docker login "${DOCKER_REGISTRY}" -u "${REG_USER}" --password-stdin
-              docker info
-            '''
-          }
-        }
-      }
-    }
-
-    stage('Prepare .env.local') {
-      steps {
-        script {
-          if (fileExists('.env.local')) {
-            echo '.env.local already exists — using it.'
-          } else {
-            echo 'No .env.local found — skipping creation.'
-          }
-        }
+        sh '''
+          echo "$REGISTRY_CREDS_PSW" | docker login "${DOCKER_REGISTRY}" \
+            -u "$REGISTRY_CREDS_USR" --password-stdin
+          docker info
+        '''
       }
     }
 
@@ -154,44 +140,76 @@ pipeline {
 
     stage('Docker Build & Push') {
       steps {
-        script {
-          def registryPrefix = env.DOCKER_REGISTRY?.trim() ? "${env.DOCKER_REGISTRY}/" : ""
-          env.IMAGE_TAG_LATEST = "${registryPrefix}${env.IMAGE_NAME}:latest"
-          env.IMAGE_TAG_SHA    = "${registryPrefix}${env.IMAGE_NAME}:${env.GIT_SHORT_SHA}"
-
-          // 환경변수 ARG 전달 추가
-          def buildArgs = [
-            "--build-arg", "NEXT_PUBLIC_API_BASE_URL=${env.NEXT_PUBLIC_API_BASE_URL ?: ''}",
-            "--build-arg", "GOOGLE_REDIRECT_URI=${env.GOOGLE_REDIRECT_URI ?: ''}",
-            "--build-arg", "NEXT_PUBLIC_FIREBASE_API_KEY=${env.NEXT_PUBLIC_FIREBASE_API_KEY ?: ''}",
-            "--build-arg", "NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=${env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN ?: ''}",
-            "--build-arg", "NEXT_PUBLIC_FIREBASE_PROJECT_ID=${env.NEXT_PUBLIC_FIREBASE_PROJECT_ID ?: ''}",
-            "--build-arg", "NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=${env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET ?: ''}",
-            "--build-arg", "NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=${env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID ?: ''}",
-            "--build-arg", "NEXT_PUBLIC_FIREBASE_APP_ID=${env.NEXT_PUBLIC_FIREBASE_APP_ID ?: ''}",
-            "--build-arg", "NEXT_PUBLIC_FIREBASE_VAPID_KEY=${env.NEXT_PUBLIC_FIREBASE_VAPID_KEY ?: ''}"
-          ].join(' ')
-
+        // 📦 Secret file(.env.local) → 즉시 source → --build-arg로 바로 전달
+        withCredentials([file(credentialsId: 'saegim-frontend', variable: 'ENV_FILE')]) {
           sh """
+            set -eu
+
+            # 1) .env.local을 현재 쉘 환경으로 로드 (임시파일 없이)
+            set -o allexport
+            . "\$ENV_FILE"
+            set +o allexport
+
+            # 2) 필수 키들 검증 (누설 방지: 값 노출 금지)
+            req='NEXT_PUBLIC_API_BASE_URL GOOGLE_REDIRECT_URI NEXT_PUBLIC_FIREBASE_API_KEY NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN NEXT_PUBLIC_FIREBASE_PROJECT_ID NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID NEXT_PUBLIC_FIREBASE_APP_ID NEXT_PUBLIC_FIREBASE_VAPID_KEY'
+            miss=0
+            for v in \$req; do
+              if [ -z "\${!v:-}" ]; then
+                echo "[ERROR] \$v is empty"; miss=1
+              fi
+            done
+            [ "\$miss" -eq 0 ] || { echo '❌ Missing env(s). Abort.'; exit 1; }
+
+            # 3) 태그 계산
+            REG_PREFIX=""
+            if [ -n "${DOCKER_REGISTRY}" ]; then
+              REG_PREFIX="${DOCKER_REGISTRY}/"
+            fi
+            IMAGE_TAG_LATEST="\${REG_PREFIX}${IMAGE_NAME}:latest"
+            IMAGE_TAG_SHA="\${REG_PREFIX}${IMAGE_NAME}:${GIT_SHORT_SHA}"
+
+            # 4) Docker Build (ARG 직접 주입)
             docker build \\
-              --file ${env.DOCKERFILE_PATH} \\
+              --file ${DOCKERFILE_PATH} \\
               --label ${IMAGE_LABEL_SOURCE}=${GIT_REPOSITORY_URL} \\
               --label ${IMAGE_LABEL_OWNER}=${IMAGE_NAME} \\
               --label org.opencontainers.image.revision=${GIT_SHORT_SHA} \\
-              --tag ${IMAGE_TAG_LATEST} \\
-              --tag ${IMAGE_TAG_SHA} \\
-              ${buildArgs} \\
-              ${env.CONTEXT_DIR}
-          """
+              --tag "\${IMAGE_TAG_LATEST}" \\
+              --tag "\${IMAGE_TAG_SHA}" \\
+              --build-arg NEXT_PUBLIC_API_BASE_URL="\${NEXT_PUBLIC_API_BASE_URL}" \\
+              --build-arg GOOGLE_REDIRECT_URI="\${GOOGLE_REDIRECT_URI}" \\
+              --build-arg NEXT_PUBLIC_FIREBASE_API_KEY="\${NEXT_PUBLIC_FIREBASE_API_KEY}" \\
+              --build-arg NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN="\${NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN}" \\
+              --build-arg NEXT_PUBLIC_FIREBASE_PROJECT_ID="\${NEXT_PUBLIC_FIREBASE_PROJECT_ID}" \\
+              --build-arg NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET="\${NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET}" \\
+              --build-arg NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID="\${NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID}" \\
+              --build-arg NEXT_PUBLIC_FIREBASE_APP_ID="\${NEXT_PUBLIC_FIREBASE_APP_ID}" \\
+              --build-arg NEXT_PUBLIC_FIREBASE_VAPID_KEY="\${NEXT_PUBLIC_FIREBASE_VAPID_KEY}" \\
+              ${CONTEXT_DIR}
 
-          if (env.DOCKER_REGISTRY?.trim()) {
-            sh """
-              docker push ${IMAGE_TAG_LATEST}
-              docker push ${IMAGE_TAG_SHA}
-            """
-          } else {
-            echo "DOCKER_REGISTRY not set — skipping push (built locally only)."
+            # 5) Push (레지스트리 설정된 경우에만)
+            if [ -n "${DOCKER_REGISTRY}" ]; then
+              docker push "\${IMAGE_TAG_LATEST}"
+              docker push "\${IMAGE_TAG_SHA}"
+            else
+              echo "DOCKER_REGISTRY not set — skipping push (built locally only)."
+            fi
+
+            # 6) 다음 post 단계에서 쓰도록 환경변수 export
+            #    (Jenkins env에 반영되도록 echo "::set-output" 류는 미사용; 여기서는 파일 없이 변수 재계산)
+            echo "IMAGE_TAG_LATEST=\${IMAGE_TAG_LATEST}" > .tags.env
+            echo "IMAGE_TAG_SHA=\${IMAGE_TAG_SHA}"     >> .tags.env
+          """
+        }
+
+        // 스크립트 스코프 변수로 다시 읽어 post에서 활용
+        script {
+          def tags = readFile('.tags.env').split('\n').collectEntries { line ->
+            def kv = line.trim().split('=', 2)
+            [(kv[0]): (kv.length > 1 ? kv[1] : "")]
           }
+          env.IMAGE_TAG_LATEST = tags['IMAGE_TAG_LATEST'] ?: ''
+          env.IMAGE_TAG_SHA    = tags['IMAGE_TAG_SHA']    ?: ''
         }
       }
     }
@@ -205,7 +223,6 @@ pipeline {
       echo "❌ 실패 — Detect Build Context · 변수 설정 · 빌드 로그 확인"
     }
     always {
-      // 🔒 공유 서버 안전 정리: '이번 Job이 만든 태그'와 '이 저장소 레이블의 dangling 레이어'만 정리
       script {
         sh '''
           set -e
