@@ -100,7 +100,6 @@ pipeline {
     stage('Prepare .env.local (frontend)') {
       steps {
         script {
-          // 백엔드와 동일하게 "파일 크리덴셜"을 워크스페이스 파일로 복사
           // Jenkins Credentials에 Secret file로 등록: ID = "saegim-frontend"
           def ENV_FILE_ID = 'saegim-frontend'
 
@@ -110,7 +109,7 @@ pipeline {
               cp "$ENV_FILE" .env.local
               chmod 640 .env.local
 
-              # 백엔드와 유사한 메타 주입
+              # 메타 정보 주입
               {
                 echo "BUILD_TIME=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
                 echo "GIT_COMMIT=${GIT_SHORT_SHA}"
@@ -118,7 +117,6 @@ pipeline {
 
               # .dockerignore 가 .env* 를 무시하더라도 .env.local 만은 포함되도록 안전장치
               if [ -f .dockerignore ]; then
-                # 이미 허용 규칙이 없는 경우에만 추가
                 if ! grep -qE '^!\\.env\\.local$' .dockerignore; then
                   echo '!/.env.local' >> .dockerignore
                 fi
@@ -126,6 +124,22 @@ pipeline {
             '''
           }
         }
+      }
+    }
+
+    stage('Validate required envs') {
+      steps {
+        sh '''
+          set -e
+          # 필수 키 확인 (빌드 타임 문제 재발 방지)
+          for k in NEXT_PUBLIC_API_BASE_URL GOOGLE_REDIRECT_URI NEXT_PUBLIC_FIREBASE_API_KEY NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN NEXT_PUBLIC_FIREBASE_PROJECT_ID NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID NEXT_PUBLIC_FIREBASE_APP_ID NEXT_PUBLIC_FIREBASE_VAPID_KEY; do
+            if ! grep -qE "^${k}=" .env.local; then
+              echo "[ERROR] .env.local에 ${k} 가 없습니다."
+              exit 1
+            fi
+          done
+          echo "[OK] .env.local 필수 키 존재 확인"
+        '''
       }
     }
 
@@ -158,43 +172,64 @@ pipeline {
       steps {
         script {
           // 통일된 태깅 규칙
-          // main: latest + <sha>
-          // others: <sha> (+ 선택적으로 branch tag)
-          def isMain = (env.TARGET_BRANCH == 'main')
-          def TAG_SHA = env.GIT_SHORT_SHA
-          def TAG_BRANCH = env.TARGET_BRANCH.replaceAll(/[^a-zA-Z0-9._-]/, '-')
+          def isMain   = (env.TARGET_BRANCH == 'main')
+          def TAG_SHA  = env.GIT_SHORT_SHA
+          def TAG_BR   = env.TARGET_BRANCH.replaceAll(/[^a-zA-Z0-9._-]/, '-')
 
-          // 빌드
+          // 빌드 (+ .env.local을 로드해서 --build-arg 주입)
           sh """
             set -e
+
             echo "Starting Docker build with normalized tags..."
-            docker build -f "${DOCKERFILE_PATH}" -t "${DOCKER_IMAGE}:${TAG_SHA}" "${CONTEXT_DIR}"
+
+            # .env.local 로드 (POSIX 표준: set -a)
+            set -a
+            . ./.env.local
+            set +a
+
+            : "\${NEXT_PUBLIC_API_BASE_URL:?NEXT_PUBLIC_API_BASE_URL is required}"
+            : "\${GOOGLE_REDIRECT_URI:?GOOGLE_REDIRECT_URI is required}"
+            : "\${NEXT_PUBLIC_FIREBASE_API_KEY:?NEXT_PUBLIC_FIREBASE_API_KEY is required}"
+            : "\${NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN:?NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN is required}"
+            : "\${NEXT_PUBLIC_FIREBASE_PROJECT_ID:?NEXT_PUBLIC_FIREBASE_PROJECT_ID is required}"
+            : "\${NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET:?NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET is required}"
+            : "\${NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID:?NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID is required}"
+            : "\${NEXT_PUBLIC_FIREBASE_APP_ID:?NEXT_PUBLIC_FIREBASE_APP_ID is required}"
+            : "\${NEXT_PUBLIC_FIREBASE_VAPID_KEY:?NEXT_PUBLIC_FIREBASE_VAPID_KEY is required}"
+
+            docker build -f "${DOCKERFILE_PATH}" \\
+              --build-arg NEXT_PUBLIC_API_BASE_URL="\${NEXT_PUBLIC_API_BASE_URL}" \\
+              --build-arg GOOGLE_REDIRECT_URI="\${GOOGLE_REDIRECT_URI}" \\
+              --build-arg NEXT_PUBLIC_FIREBASE_API_KEY="\${NEXT_PUBLIC_FIREBASE_API_KEY}" \\
+              --build-arg NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN="\${NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN}" \\
+              --build-arg NEXT_PUBLIC_FIREBASE_PROJECT_ID="\${NEXT_PUBLIC_FIREBASE_PROJECT_ID}" \\
+              --build-arg NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET="\${NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET}" \\
+              --build-arg NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID="\${NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID}" \\
+              --build-arg NEXT_PUBLIC_FIREBASE_APP_ID="\${NEXT_PUBLIC_FIREBASE_APP_ID}" \\
+              --build-arg NEXT_PUBLIC_FIREBASE_VAPID_KEY="\${NEXT_PUBLIC_FIREBASE_VAPID_KEY}" \\
+              -t "${DOCKER_IMAGE}:${TAG_SHA}" \\
+              "${CONTEXT_DIR}"
           """
 
           // push (레지스트리 설정이 있으면)
           if (env.DOCKER_REGISTRY && env.DOCKER_CREDENTIALS) {
-            // SHA 태그 푸시
             sh """ docker push "${DOCKER_IMAGE}:${TAG_SHA}" """
 
             if (isMain) {
-              // main에서만 latest 푸시
               sh """
                 docker tag "${DOCKER_IMAGE}:${TAG_SHA}" "${DOCKER_IMAGE}:latest"
                 docker push "${DOCKER_IMAGE}:latest"
               """
             } else {
-              // develop 등에서는 branch 보조 태그(선택)
-              // 원치 않으면 아래 2줄 주석 처리 가능
               sh """
-                docker tag "${DOCKER_IMAGE}:${TAG_SHA}" "${DOCKER_IMAGE}:${TAG_BRANCH}"
-                docker push "${DOCKER_IMAGE}:${TAG_BRANCH}"
+                docker tag "${DOCKER_IMAGE}:${TAG_SHA}" "${DOCKER_IMAGE}:${TAG_BR}"
+                docker push "${DOCKER_IMAGE}:${TAG_BR}"
               """
             }
           } else {
             echo "No registry configured — using local image only."
           }
 
-          // 다음 stage에서 참조할 최종 태그(배포 이미지)
           env.IMAGE_TAG_FOR_DEPLOY = TAG_SHA
         }
       }
@@ -212,7 +247,6 @@ pipeline {
             set -e
 
             echo "== Ensure docker network =="
-            # 네트워크 존재 여부를 docker network inspect 로 확인 (성능/안정성↑)
             if ! docker network inspect "$DOCKER_NETWORK" >/dev/null 2>&1; then
               docker network create "$DOCKER_NETWORK"
             fi
@@ -243,7 +277,6 @@ pipeline {
             echo "== No host port binding by policy (NPM routes by container name) =="
             echo "Example NPM target: http://${containerName}:3000"
 
-            # (선택) 이미지 정리
             docker image prune -f || true
           """
         }
@@ -254,8 +287,6 @@ pipeline {
   post {
     always {
       script {
-        // 로컬 정리는 과도하면 배포 직후 이미지 소실 위험 → 최소화
-        // 여기서는 로그인 해제만 확실히
         if (env.DOCKER_REGISTRY) {
           sh 'docker logout "${DOCKER_REGISTRY}" || true'
         }
