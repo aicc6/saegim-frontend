@@ -253,12 +253,12 @@ pipeline {
       echo "❌ 실패 — 콘솔 로그에서 .env.local 준비/검증 및 레지스트리 로그인/푸시 단계 확인"
     }
     always {
-      # 공유 서버 안전: 우리 태그만 정리 + 빌더 캐시만 정리
+      // 공유 서버 안전: 우리 태그만 정리 (전역 캐시/이미지 건드리지 않음)
       sh '''
         docker rmi -f "${TAG_BUILD}" "${TAG_SHA}" "${TAG_BRANCH}" 2>/dev/null || true
         if [ -n "${TAG_LATEST}" ]; then docker rmi -f "${TAG_LATEST}" 2>/dev/null || true; fi
       '''
-      sh 'docker builder prune -f || true'
+      // 전역 캐시 삭제 명령(docker builder prune)은 사용하지 않습니다.
     }
   }
 }
