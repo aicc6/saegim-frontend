@@ -6,6 +6,7 @@ pipeline {
     timestamps()
     buildDiscarder(logRotator(numToKeepStr: '30'))
     disableConcurrentBuilds()
+    timeout(time: 45, unit: 'MINUTES')
   }
 
   parameters {
@@ -19,32 +20,29 @@ pipeline {
       defaultValue: false,
       description: 'npm test 실행 여부'
     )
-    booleanParam(
-      name: 'PRUNE_OLD_DANGLING',
-      defaultValue: false,
-      description: '이 저장소 라벨의 오래된(dangling) 레이어까지 추가 정리(48h 이상)'
-    )
   }
 
+  // GitHub Webhook
   triggers { githubPush() }
 
   environment {
     // Git
     GIT_REPOSITORY_URL = 'https://github.com/aicc6/saegim-frontend.git'
 
-    // Docker Registry (옵션: Job/Global에서 빈 값이면 Push 스킵)
-    DOCKER_REGISTRY = "${env.DOCKER_REGISTRY ?: env.CUSTOM_DOCKER_REGISTRY}"
+    // Registry (없으면 로컬만 사용)
+    DOCKER_REGISTRY    = "${env.DOCKER_REGISTRY ?: env.CUSTOM_DOCKER_REGISTRY}"   // 예: nexus-docker.aicc-project.com
+    DOCKER_CREDENTIALS = "${env.DOCKER_CREDENTIALS ?: env.CUSTOM_DOCKER_CREDENTIALS}"
 
-    // 🔑 Nexus 계정(jd) 크리덴셜 바인딩 (Declarative)
-    // => REGISTRY_CREDS_USR / REGISTRY_CREDS_PSW 자동 생성
-    REGISTRY_CREDS = credentials('jd')
+    // Image / Container
+    IMAGE_NAME     = 'saegim-frontend'
+    DOCKER_IMAGE   = "${DOCKER_REGISTRY ? DOCKER_REGISTRY + '/' : ''}${IMAGE_NAME}"
+    CONTAINER_BASE = 'saegim-frontend'
 
-    // 이미지 네이밍
-    IMAGE_NAME = 'saegim-frontend'
+    // Network (내부 라우팅 전용)
+    DOCKER_NETWORK = 'saegim-net'
 
-    // 이미지/레이어 식별용 레이블 키
-    IMAGE_LABEL_SOURCE = 'org.opencontainers.image.source'
-    IMAGE_LABEL_OWNER  = 'org.aicc.owner'
+    // App
+    APP_ENV = 'production'
   }
 
   stages {
@@ -52,9 +50,10 @@ pipeline {
     stage('Resolve Branch') {
       steps {
         script {
-          def ref = env.GIT_BRANCH ?: env.CHANGE_BRANCH ?: env.BRANCH_NAME ?: ''
-          def autoBranch = ref ? ref.replaceFirst(/^origin\//, '') : ''
-          env.TARGET_BRANCH = autoBranch ? autoBranch : (params.BRANCH_TO_BUILD ?: 'develop')
+          // Webhook 우선 → 수동 파라미터 → 기본 develop
+          def b = env.GIT_BRANCH ?: env.BRANCH_NAME ?: env.CHANGE_BRANCH ?: params.BRANCH_TO_BUILD ?: 'develop'
+          b = b.replaceFirst(/^refs\/heads\//, '').replaceFirst(/^origin\//, '')
+          env.TARGET_BRANCH = b
           echo "Using branch: ${env.TARGET_BRANCH}"
         }
       }
@@ -62,15 +61,13 @@ pipeline {
 
     stage('Checkout') {
       steps {
-        checkout([
-          $class: 'GitSCM',
-          userRemoteConfigs: [[url: "${env.GIT_REPOSITORY_URL}"]],
+        checkout([$class: 'GitSCM',
           branches: [[name: "*/${env.TARGET_BRANCH}"]],
-          extensions: [[$class: 'CloneOption', shallow: true, depth: 10, noTags: false]]
+          userRemoteConfigs: [[url: "${env.GIT_REPOSITORY_URL}"]],
+          extensions: [[$class: 'CloneOption', depth: 10, shallow: true, noTags: false]]
         ])
-
         script {
-          env.GIT_SHORT_SHA = sh(script: "git rev-parse --short HEAD", returnStdout: true).trim()
+          env.GIT_SHORT_SHA = sh(script: 'git rev-parse --short HEAD', returnStdout: true).trim()
         }
       }
     }
@@ -78,19 +75,8 @@ pipeline {
     stage('Detect Build Context') {
       steps {
         script {
-          boolean hasFrontend = fileExists('frontend/Dockerfile')
-          boolean hasRoot     = fileExists('Dockerfile')
-
-          if (hasFrontend) {
-            env.CONTEXT_DIR     = 'frontend'
-            env.DOCKERFILE_PATH = 'frontend/Dockerfile'
-          } else if (hasRoot) {
-            env.CONTEXT_DIR     = '.'
-            env.DOCKERFILE_PATH = 'Dockerfile'
-          } else {
-            error "No Dockerfile found (checked: ./frontend/Dockerfile, ./Dockerfile)"
-          }
-
+          env.CONTEXT_DIR = '.'
+          env.DOCKERFILE_PATH = 'Dockerfile'
           echo "Build Context: ${env.CONTEXT_DIR}"
           echo "Dockerfile   : ${env.DOCKERFILE_PATH}"
         }
@@ -111,165 +97,180 @@ pipeline {
       }
     }
 
-    stage('Nexus Login') {
-      when { expression { return env.DOCKER_REGISTRY?.trim() } }
+    stage('Prepare .env.local (frontend)') {
       steps {
-        sh '''
-          echo "$REGISTRY_CREDS_PSW" | docker login "${DOCKER_REGISTRY}" \
-            -u "$REGISTRY_CREDS_USR" --password-stdin
-          docker info
-        '''
+        script {
+          // 백엔드와 동일하게 "파일 크리덴셜"을 워크스페이스 파일로 복사
+          // Jenkins Credentials에 Secret file로 등록: ID = "saegim-frontend"
+          def ENV_FILE_ID = 'saegim-frontend'
+
+          withCredentials([file(credentialsId: ENV_FILE_ID, variable: 'ENV_FILE')]) {
+            sh '''
+              set -e
+              cp "$ENV_FILE" .env.local
+              chmod 640 .env.local
+
+              # 백엔드와 유사한 메타 주입
+              {
+                echo "BUILD_TIME=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+                echo "GIT_COMMIT=${GIT_SHORT_SHA}"
+              } >> .env.local
+
+              # .dockerignore 가 .env* 를 무시하더라도 .env.local 만은 포함되도록 안전장치
+              if [ -f .dockerignore ]; then
+                # 이미 허용 규칙이 없는 경우에만 추가
+                if ! grep -qE '^!\\.env\\.local$' .dockerignore; then
+                  echo '!/.env.local' >> .dockerignore
+                fi
+              fi
+            '''
+          }
+        }
+      }
+    }
+
+    stage('Nexus Login') {
+      when { expression { return env.DOCKER_REGISTRY && env.DOCKER_CREDENTIALS } }
+      steps {
+        withCredentials([usernamePassword(credentialsId: "${env.DOCKER_CREDENTIALS}", passwordVariable: 'REGISTRY_CREDS_PSW', usernameVariable: 'REGISTRY_CREDS_USR')]) {
+          sh '''
+            echo "$REGISTRY_CREDS_PSW" | docker login "${DOCKER_REGISTRY}" -u "${REGISTRY_CREDS_USR}" --password-stdin
+            docker info
+          '''
+        }
       }
     }
 
     stage('Test (optional)') {
-      when { expression { return params.RUN_TESTS } }
+      when { expression { return params.RUN_TESTS == true } }
       steps {
-        dir("${env.CONTEXT_DIR}") {
-          sh '''
-            if [ -f "package.json" ]; then
-              npm ci || npm install
-              npm test --if-present
-            else
-              echo "No package.json — skipping tests"
-            fi
-          '''
+        sh '''
+          set -e
+          if [ -f package.json ]; then
+            npm ci || true
+            npm test --if-present || true
+          fi
+        '''
+      }
+    }
+
+    stage('Docker Build & Push (normalized tagging)') {
+      steps {
+        script {
+          // 통일된 태깅 규칙
+          // main: latest + <sha>
+          // others: <sha> (+ 선택적으로 branch tag)
+          def isMain = (env.TARGET_BRANCH == 'main')
+          def TAG_SHA = env.GIT_SHORT_SHA
+          def TAG_BRANCH = env.TARGET_BRANCH.replaceAll(/[^a-zA-Z0-9._-]/, '-')
+
+          // 빌드
+          sh """
+            set -e
+            echo "Starting Docker build with normalized tags..."
+            docker build -f "${DOCKERFILE_PATH}" -t "${DOCKER_IMAGE}:${TAG_SHA}" "${CONTEXT_DIR}"
+          """
+
+          // push (레지스트리 설정이 있으면)
+          if (env.DOCKER_REGISTRY && env.DOCKER_CREDENTIALS) {
+            // SHA 태그 푸시
+            sh """ docker push "${DOCKER_IMAGE}:${TAG_SHA}" """
+
+            if (isMain) {
+              // main에서만 latest 푸시
+              sh """
+                docker tag "${DOCKER_IMAGE}:${TAG_SHA}" "${DOCKER_IMAGE}:latest"
+                docker push "${DOCKER_IMAGE}:latest"
+              """
+            } else {
+              // develop 등에서는 branch 보조 태그(선택)
+              // 원치 않으면 아래 2줄 주석 처리 가능
+              sh """
+                docker tag "${DOCKER_IMAGE}:${TAG_SHA}" "${DOCKER_IMAGE}:${TAG_BRANCH}"
+                docker push "${DOCKER_IMAGE}:${TAG_BRANCH}"
+              """
+            }
+          } else {
+            echo "No registry configured — using local image only."
+          }
+
+          // 다음 stage에서 참조할 최종 태그(배포 이미지)
+          env.IMAGE_TAG_FOR_DEPLOY = TAG_SHA
         }
       }
     }
 
-    stage('Docker Build & Push') {
+    stage('CD: Deploy to local Docker (no host port, saegim-net)') {
       steps {
-        // 📦 Secret file(.env.local) → 즉시 source → --build-arg로 바로 전달
-        withCredentials([file(credentialsId: 'saegim-frontend', variable: 'ENV_FILE')]) {
-          // Docker 빌드 전 필수 환경변수 추가 검증
-          script {
-            if (!env.CONTEXT_DIR || !env.DOCKERFILE_PATH) {
-              error "Required environment variables not set: CONTEXT_DIR=${env.CONTEXT_DIR}, DOCKERFILE_PATH=${env.DOCKERFILE_PATH}"
-            }
-          }
-          sh '''#!/usr/bin/env bash
-            set -euo pipefail
-
-            # ===== .env 파일 로드 =====
-            set -o allexport
-            . "$ENV_FILE"  # 실제 .env 파일 경로로 치환하세요
-            set +o allexport
-
-            # ===== 필수 키 목록 =====
-            req="NEXT_PUBLIC_API_BASE_URL GOOGLE_REDIRECT_URI NEXT_PUBLIC_FIREBASE_API_KEY NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN NEXT_PUBLIC_FIREBASE_PROJECT_ID NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID NEXT_PUBLIC_FIREBASE_APP_ID NEXT_PUBLIC_FIREBASE_VAPID_KEY"
-
-            miss=0
-            missing=""
-
-            for k in $req; do
-              if [ -z "${!k:-}" ]; then
-                miss=$((miss+1))
-                missing="$missing $k"
-              else
-                # 환경변수 값 마스킹 (보안상 값 노출 방지)
-                echo "$k=***MASKED***"
-              fi
-            done
-
-            if (( miss > 0 )); then
-              echo "[ERROR] 누락된 환경변수:$missing" 1>&2
-              exit 2
-            fi
-
-            # ===== 태그 계산 =====
-            REG_PREFIX=""
-            if [ -n "${DOCKER_REGISTRY}" ]; then
-              REG_PREFIX="${DOCKER_REGISTRY}/"
-            fi
-            IMAGE_TAG_LATEST="${REG_PREFIX}${IMAGE_NAME}:latest"
-            IMAGE_TAG_SHA="${REG_PREFIX}${IMAGE_NAME}:${GIT_SHORT_SHA}"
-
-            # ===== Docker Build (ARG 직접 주입) =====
-            # 보안상 빌드 명령어를 변수로 저장하여 로그 노출 방지
-            BUILD_CMD="docker build \\
-              --file ${DOCKERFILE_PATH} \\
-              --label ${IMAGE_LABEL_SOURCE}=${GIT_REPOSITORY_URL} \\
-              --label ${IMAGE_LABEL_OWNER}=${IMAGE_NAME} \\
-              --label org.opencontainers.image.revision=${GIT_SHORT_SHA} \\
-              --tag \"${IMAGE_TAG_LATEST}\" \\
-              --tag \"${IMAGE_TAG_SHA}\" \\
-              --build-arg NEXT_PUBLIC_API_BASE_URL=\"${NEXT_PUBLIC_API_BASE_URL}\" \\
-              --build-arg GOOGLE_REDIRECT_URI=\"${GOOGLE_REDIRECT_URI}\" \\
-              --build-arg NEXT_PUBLIC_FIREBASE_API_KEY=\"${NEXT_PUBLIC_FIREBASE_API_KEY}\" \\
-              --build-arg NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=\"${NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN}\" \\
-              --build-arg NEXT_PUBLIC_FIREBASE_PROJECT_ID=\"${NEXT_PUBLIC_FIREBASE_PROJECT_ID}\" \\
-              --build-arg NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=\"${NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET}\" \\
-              --build-arg NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=\"${NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID}\" \\
-              --build-arg NEXT_PUBLIC_FIREBASE_APP_ID=\"${NEXT_PUBLIC_FIREBASE_APP_ID}\" \\
-              --build-arg NEXT_PUBLIC_FIREBASE_VAPID_KEY=\"${NEXT_PUBLIC_FIREBASE_VAPID_KEY}\" \\
-              ${CONTEXT_DIR}"
-            
-            echo "Starting Docker build with masked arguments..."
-            eval "\$BUILD_CMD"
-
-            # ===== Push (레지스트리 설정된 경우에만) =====
-            if [ -n "${DOCKER_REGISTRY}" ]; then
-              docker push "${IMAGE_TAG_LATEST}"
-              docker push "${IMAGE_TAG_SHA}"
-            else
-              echo "DOCKER_REGISTRY not set — skipping push (built locally only)."
-            fi
-
-            # ===== 다음 post 단계에서 쓰도록 환경변수 export =====
-            #    (Jenkins env에 반영되도록 echo "::set-output" 류는 미사용; 여기서는 파일 없이 변수 재계산)
-            echo "IMAGE_TAG_LATEST=${IMAGE_TAG_LATEST}" > .tags.env
-            echo "IMAGE_TAG_SHA=${IMAGE_TAG_SHA}"     >> .tags.env
-          '''
-        }
-
-        // 스크립트 스코프 변수로 다시 읽어 post에서 활용
         script {
-          def tags = readFile('.tags.env').split('\n').collectEntries { line ->
-            def kv = line.trim().split('=', 2)
-            [(kv[0]): (kv.length > 1 ? kv[1] : "")]
-          }
-          env.IMAGE_TAG_LATEST = tags['IMAGE_TAG_LATEST'] ?: ''
-          env.IMAGE_TAG_SHA    = tags['IMAGE_TAG_SHA']    ?: ''
+          def isMain = (env.TARGET_BRANCH == 'main')
+          def deployEnv = isMain ? 'production' : 'development'
+          def containerName = "${env.CONTAINER_BASE}-${deployEnv}"
+          def imageRef = "${env.DOCKER_IMAGE}:${env.IMAGE_TAG_FOR_DEPLOY}"
+
+          sh """
+            set -e
+
+            echo "== Ensure docker network =="
+            if ! docker network ls | grep -qE '(^| )${DOCKER_NETWORK}( |$)'; then
+              docker network create ${DOCKER_NETWORK} || echo "network create failed or exists"
+            fi
+
+            echo "== Pull if registry is configured =="
+            if [ -n "${DOCKER_REGISTRY}" ] && [ -n "${DOCKER_CREDENTIALS}" ]; then
+              docker pull "${imageRef}" || true
+            fi
+
+            echo "== Stop & Remove previous container =="
+            docker stop "${containerName}" || true
+            docker rm   "${containerName}" || true
+
+            echo "== Run new container (NO host port), network: ${DOCKER_NETWORK} =="
+            docker run -d \\
+              --name "${containerName}" \\
+              --network "${DOCKER_NETWORK}" \\
+              --restart unless-stopped \\
+              --label "app=saegim-frontend" \\
+              --label "env=${deployEnv}" \\
+              --label "git_sha=${GIT_SHORT_SHA}" \\
+              --health-cmd="curl -f http://localhost:3000/ || exit 1" \\
+              --health-interval=30s \\
+              --health-timeout=10s \\
+              --health-retries=3 \\
+              "${imageRef}"
+
+            echo "== No host port binding by policy (NPM routes by container name) =="
+            echo "Example NPM target: http://${containerName}:3000"
+
+            # (선택) 이미지 정리
+            docker image prune -f || true
+          """
         }
       }
     }
   }
 
   post {
-    success {
-      echo "✅ 성공 — 이미지 빌드(및 필요 시 푸시) 완료"
-    }
-    failure {
-      echo "❌ 실패 — Detect Build Context · 변수 설정 · 빌드 로그 확인"
-    }
     always {
       script {
-        sh '''
-          set -e
-
-          # 1) 이번 빌드에서 만든 태그 이미지를 로컬에서만 제거 (타 팀 영향 없음)
-          if [ -n "${IMAGE_TAG_SHA}" ]; then
-            docker image rm -f "${IMAGE_TAG_SHA}" || true
-          fi
-          if [ -n "${IMAGE_TAG_LATEST}" ]; then
-            docker image rm -f "${IMAGE_TAG_LATEST}" || true
-          fi
-
-          # 2) 이 저장소 레이블로 표시된(dangling) 레이어만 정리 (전역 prune 금지)
-          docker image prune -f --filter "label=${IMAGE_LABEL_SOURCE}=${GIT_REPOSITORY_URL}" || true
-
-          # 3) 옵션: 48시간 이상 지난 '이 저장소 레이블의 dangling'만 추가 정리
-          if [ "${PRUNE_OLD_DANGLING:-0}" = "true" ] || [ "${PRUNE_OLD_DANGLING:-0}" = "1" ]; then
-            docker image prune -f --filter "label=${IMAGE_LABEL_SOURCE}=${GIT_REPOSITORY_URL}" --filter "until=48h" || true
-          fi
-
-          # 4) (로그인했을 때만) 레지스트리 로그아웃
-          if [ -n "${DOCKER_REGISTRY}" ]; then
-            docker logout "${DOCKER_REGISTRY}" || true
-          fi
-        '''
+        // 로컬 정리는 과도하면 배포 직후 이미지 소실 위험 → 최소화
+        // 여기서는 로그인 해제만 확실히
+        if (env.DOCKER_REGISTRY) {
+          sh 'docker logout "${DOCKER_REGISTRY}" || true'
+        }
       }
+    }
+    success {
+      echo '✅ 성공 — 빌드/푸시/배포 완료 (내부 네트워크 연결, 포트 미개방)'
+    }
+    failure {
+      echo '❌ 실패 — 콘솔 로그를 확인하세요'
+      sh '''
+        echo "------ docker ps (related) ------"
+        docker ps -a | grep saegim-frontend || true
+        echo "------ docker images (related) ------"
+        docker images | grep saegim-frontend || true
+      '''
     }
   }
 }

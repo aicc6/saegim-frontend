@@ -3,6 +3,8 @@
 
 ### dotenv ###
 .env
+.env.local
+!.env.example
 
 ### Git ###
 # Created by git for backups. To disable backups in Git:
@@ -27,7 +29,6 @@
 
 # Icon must end with two \r
 Icon
-
 
 # Thumbnails
 ._*
