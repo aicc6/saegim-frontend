@@ -107,34 +107,11 @@ pipeline {
       }
     }
 
-    stage('Install') {
-      steps {
-        sh '''
-          set -e
-          corepack enable || true
-          npm ci
-        '''
-      }
-    }
-
-    stage('Test') {
-      when { expression { return params.RUN_TESTS } }
-      steps {
-        sh '''
-          set -e
-          npm test --if-present
-        '''
-      }
-    }
-
-    stage('Build App') {
-      steps {
-        sh '''
-          set -e
-          npm run build
-        '''
-      }
-    }
+    /* ⛔️ 삭제: 에이전트에 Node/npm 없음 → Dockerfile에서 빌드하므로 불필요
+    stage('Install') { ... }
+    stage('Test')   { ... }
+    stage('Build App') { ... }
+    */
 
     stage('Docker Build & Push') {
       steps {
