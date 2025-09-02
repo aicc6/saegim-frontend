@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { Providers } from '@/components/providers/theme-provider';
 import { Toaster } from '@/components/ui/toaster';
+import { Toaster as SonnerToaster } from '@/components/ui/sonner';
 import { DEFAULT_METADATA } from '@/constants/metadata';
 import { createWebsiteSchema, createJsonLdScript } from '@/lib/structured-data';
 import '@/lib/env-validation';
@@ -38,6 +39,13 @@ export default function RootLayout({
       <body suppressHydrationWarning>
         <Providers>{children}</Providers>
         <Toaster />
+        <SonnerToaster
+          position="top-right"
+          expand={true}
+          richColors={true}
+          closeButton={true}
+          className="toast-custom"
+        />
       </body>
     </html>
   );

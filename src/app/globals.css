@@ -336,3 +336,136 @@ body {
 .dark::-webkit-scrollbar-thumb:hover {
   background: var(--interactive-primary-hover);
 }
+
+/* =====================================
+   Enhanced Toast Styles (Sonner)
+   ===================================== */
+
+/* 토스트 컨테이너 기본 스타일 */
+[data-sonner-toaster] {
+  --normal-bg: var(--background-primary);
+  --normal-border: var(--border-subtle);
+  --normal-text: var(--text-primary);
+  --success-bg: #f0fdf4;
+  --success-border: #22c55e;
+  --success-text: #166534;
+  --error-bg: #fef2f2;
+  --error-border: #ef4444;
+  --error-text: #991b1b;
+}
+
+/* 개별 토스트 스타일 */
+[data-sonner-toast] {
+  border-radius: 12px;
+  box-shadow:
+    0 4px 12px rgba(0, 0, 0, 0.1),
+    0 2px 4px rgba(0, 0, 0, 0.05);
+  border: 1px solid var(--normal-border);
+  font-family: inherit;
+}
+
+/* 사이지-스타일 토스트 커스텀 클래스 */
+.saegim-toast-success {
+  background: linear-gradient(135deg, #f0fdf4 0%, #ecfccb 100%);
+  border-color: #22c55e;
+  color: #166534;
+}
+
+.saegim-toast-success [data-icon] {
+  color: #22c55e;
+}
+
+.saegim-toast-success [data-button] {
+  background: #22c55e;
+  color: white;
+  border-radius: 8px;
+  padding: 6px 12px;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.saegim-toast-success [data-button]:hover {
+  background: #16a34a;
+  transform: translateY(-1px);
+}
+
+.saegim-toast-error {
+  background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+  border-color: #ef4444;
+  color: #991b1b;
+}
+
+.saegim-toast-error [data-icon] {
+  color: #ef4444;
+}
+
+.saegim-toast-loading {
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  border-color: var(--sage-60);
+  color: var(--text-primary);
+}
+
+.saegim-toast-loading [data-icon] {
+  color: var(--sage-60);
+}
+
+.saegim-toast-info {
+  background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+  border-color: #0ea5e9;
+  color: #0c4a6e;
+}
+
+.saegim-toast-info [data-icon] {
+  color: #0ea5e9;
+}
+
+/* 토스트 액션 버튼 글로벌 스타일 */
+[data-sonner-toast] [data-button] {
+  border-radius: 8px;
+  padding: 6px 12px;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  border: none;
+  cursor: pointer;
+}
+
+[data-sonner-toast] [data-button]:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+/* 토스트 설명 텍스트 스타일 */
+[data-sonner-toast] [data-description] {
+  opacity: 0.8;
+  font-size: 13px;
+  line-height: 1.4;
+  margin-top: 2px;
+}
+
+/* 토스트 제목 스타일 */
+[data-sonner-toast] [data-title] {
+  font-weight: 600;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+/* 다크 모드 대응 */
+.dark [data-sonner-toaster] {
+  --normal-bg: var(--background-secondary);
+  --normal-border: var(--border-subtle);
+  --normal-text: var(--text-primary);
+}
+
+.dark .saegim-toast-success {
+  background: linear-gradient(135deg, #064e3b 0%, #065f46 100%);
+  border-color: #059669;
+  color: #a7f3d0;
+}
+
+.dark .saegim-toast-error {
+  background: linear-gradient(135deg, #7f1d1d 0%, #991b1b 100%);
+  border-color: #dc2626;
+  color: #fecaca;
+}
