@@ -3,13 +3,9 @@ pipeline {
 
   /* ===== 공통 옵션 ===== */
   options {
-    // 중복 체크아웃 방지 (SCM 단계는 명시적으로 수행)
-    skipDefaultCheckout(true)
-    // 콘솔 타임스탬프
-    timestamps()
-    // 빌드 로그 크기 제한(필요시)
+    skipDefaultCheckout(true)          // SCM 중복 체크아웃 방지
+    timestamps()                       // 콘솔 타임스탬프
     buildDiscarder(logRotator(numToKeepStr: '30'))
-    // 작업중단시 이전 빌드 종료
     disableConcurrentBuilds()
   }
 
@@ -29,50 +25,30 @@ pipeline {
 
   /* ===== 트리거 ===== */
   triggers {
-    // GitHub Webhook
     githubPush()
   }
 
   /* ===== 환경 변수 ===== */
   environment {
-    // 레지스트리/크리덴셜은 전역/Job에 정의돼 있으면 우선 사용
     DOCKER_REGISTRY    = "${env.DOCKER_REGISTRY ?: env.CUSTOM_DOCKER_REGISTRY}"
     DOCKER_CREDENTIALS = "${env.DOCKER_CREDENTIALS ?: env.CUSTOM_DOCKER_CREDENTIALS}"
-
-    // 이미지 네임(레지스트리 앞을 제외한 path)
     DOCKER_IMAGE_PATH  = "aicc/saegim-frontend"
-
-    // Git
     GIT_URL            = "https://github.com/aicc6/saegim-frontend.git"
+    // 아래 두 값은 Detect Build Context에서 설정됨
+    CONTEXT_DIR        = ""
+    DOCKERFILE_PATH    = ""
   }
 
   stages {
 
-    /* ===== 브랜치 결정(웹훅/수동 모두 커버) ===== */
+    /* ===== 브랜치 결정(웹훅/수동) ===== */
     stage('Resolve Branch') {
       steps {
         script {
-          // Webhook이면 env.CHANGE_BRANCH, env.BRANCH_NAME, env.GIT_BRANCH 등에서 추론
+          // 승인 이슈 유발하는 rawBuild 접근 없이 단순 결정
           def ref = (env.BRANCH_NAME ?: env.GIT_BRANCH ?: "").trim()
-          def fromWebhook = ""
-          if (ref) {
-            fromWebhook = ref.replaceAll(/^origin\//, '')
-          } else {
-            // 멀티브랜치가 아닌 단일 Job 환경에서 changeLogSets를 통해 추론 시도
-            try {
-              def sets = currentBuild.rawBuild.getChangeSets()
-              if (sets && sets.size() > 0) {
-                def entries = sets[0].items
-                if (entries && entries.size() > 0) {
-                  // 가장 최근 entry의 브랜치 참조 추출 시도(없을 수 있음)
-                  fromWebhook = params.BRANCH_TO_BUILD ?: 'develop'
-                }
-              }
-            } catch (ignored) {
-              fromWebhook = params.BRANCH_TO_BUILD ?: 'develop'
-            }
-          }
-          env.EFFECTIVE_BRANCH = (fromWebhook ?: (params.BRANCH_TO_BUILD ?: 'develop')).trim()
+          ref = ref.replaceAll(/^origin\//, '')
+          env.EFFECTIVE_BRANCH = (ref ?: (params.BRANCH_TO_BUILD ?: 'develop')).trim()
           echo "Using branch: ${env.EFFECTIVE_BRANCH}"
         }
       }
@@ -90,9 +66,32 @@ pipeline {
           ]
         ])
         script {
-          // 커밋 SHA/짧은 SHA
           env.GIT_COMMIT_SHA = sh(script: "git rev-parse HEAD", returnStdout: true).trim()
           env.GIT_SHORT_SHA  = sh(script: "git rev-parse --short HEAD", returnStdout: true).trim()
+        }
+      }
+    }
+
+    /* ===== 빌드 컨텍스트/도커파일 자동 감지 ===== */
+    stage('Detect Build Context') {
+      steps {
+        script {
+          // 우선순위: ./frontend/Dockerfile → ./Dockerfile
+          def hasFrontendDockerfile = sh(script: 'test -f ./frontend/Dockerfile && echo yes || echo no', returnStdout: true).trim() == 'yes'
+          def hasRootDockerfile     = sh(script: 'test -f ./Dockerfile && echo yes || echo no', returnStdout: true).trim() == 'yes'
+
+          if (hasFrontendDockerfile) {
+            env.CONTEXT_DIR     = './frontend'
+            env.DOCKERFILE_PATH = './frontend/Dockerfile'
+          } else if (hasRootDockerfile) {
+            env.CONTEXT_DIR     = '.'
+            env.DOCKERFILE_PATH = './Dockerfile'
+          } else {
+            error "[ERROR] Dockerfile 을 찾을 수 없습니다. ./frontend/Dockerfile 또는 ./Dockerfile 이 필요합니다."
+          }
+
+          echo "Build Context: ${env.CONTEXT_DIR}"
+          echo "Dockerfile   : ${env.DOCKERFILE_PATH}"
         }
       }
     }
@@ -109,6 +108,8 @@ pipeline {
           echo BUILD_NUMBER=${BUILD_NUMBER}
           echo GIT_COMMIT_SHA=${GIT_COMMIT_SHA}
           echo GIT_SHORT_SHA=${GIT_SHORT_SHA}
+          echo CONTEXT_DIR=${CONTEXT_DIR}
+          echo DOCKERFILE_PATH=${DOCKERFILE_PATH}
         '''
       }
     }
@@ -127,28 +128,28 @@ pipeline {
       }
     }
 
-    /* ===== Secret file → ./frontend/.env.local 준비 ===== */
+    /* ===== Secret file → ${CONTEXT_DIR}/.env.local 준비 ===== */
     stage('Prepare .env.local') {
       steps {
-        withCredentials([file(credentialsId: 'saegim-frontend', variable: 'ENVFILE')]) { // ← 실제 credentialsId 확인
+        withCredentials([file(credentialsId: 'saegim-frontend', variable: 'ENVFILE')]) { // 실제 credentialsId 확인
           sh '''
             set -e
-            test -d ./frontend || { echo "[ERROR] ./frontend 디렉터리가 없습니다."; exit 2; }
+            test -d "${CONTEXT_DIR}" || { echo "[ERROR] ${CONTEXT_DIR} 디렉터리가 없습니다."; exit 2; }
 
             # Secret file을 빌드 컨텍스트에 복사
-            cp "$ENVFILE" ./frontend/.env.local
-            echo "[INFO] .env.local copied to ./frontend/.env.local"
+            cp "$ENVFILE" "${CONTEXT_DIR}/.env.local"
+            echo "[INFO] .env.local copied to ${CONTEXT_DIR}/.env.local"
 
             # 핵심 키 최소 검증
-            grep -E '^NEXT_PUBLIC_API_BASE_URL=' ./frontend/.env.local >/dev/null \
+            grep -E '^NEXT_PUBLIC_API_BASE_URL=' "${CONTEXT_DIR}/.env.local" >/dev/null \
               || { echo "[ERROR] NEXT_PUBLIC_API_BASE_URL missing in .env.local"; exit 2; }
 
-            # 빌드 컨텍스트에 실제로 존재하는지 확인
-            ls -al ./frontend/.env.local
+            # 실제 존재 확인
+            ls -al "${CONTEXT_DIR}/.env.local"
 
-            # .dockerignore에 .env.local 이 제외되어 있으면 경고 (제외되어 있으면 빌드 컨텍스트에서 빠짐)
-            if grep -E '^\\s*\\.env\\.local\\s*$' ./frontend/.dockerignore >/dev/null 2>&1; then
-              echo "[WARN] ./frontend/.dockerignore 에 .env.local 이 제외되어 있습니다. 이미지에 포함되지 않을 수 있습니다."
+            # .dockerignore에 .env.local 제외 여부 경고
+            if [ -f "${CONTEXT_DIR}/.dockerignore" ] && grep -E '^\\s*\\.env\\.local\\s*$' "${CONTEXT_DIR}/.dockerignore" >/dev/null 2>&1; then
+              echo "[WARN] ${CONTEXT_DIR}/.dockerignore 에 .env.local 이 제외되어 있습니다. 이미지에 포함되지 않을 수 있습니다."
             fi
           '''
         }
@@ -161,13 +162,13 @@ pipeline {
       steps {
         sh '''
           set -e
-          cd ./frontend
+          cd "${CONTEXT_DIR}"
           if [ -f package.json ]; then
             echo "[INFO] Running npm ci & npm test --if-present"
             npm ci
             npm test --if-present
           else
-            echo "[INFO] No package.json under ./frontend, skip tests."
+            echo "[INFO] No package.json under ${CONTEXT_DIR}, skip tests."
           fi
         '''
       }
@@ -177,7 +178,6 @@ pipeline {
     stage('Docker Build & Push') {
       steps {
         script {
-          // 브랜치 기반 태그
           def branchSafe = env.EFFECTIVE_BRANCH.replaceAll(/[^a-zA-Z0-9._-]/, '-').toLowerCase()
           env.IMAGE_BASE = (env.DOCKER_REGISTRY?.trim() ? "${env.DOCKER_REGISTRY}/${env.DOCKER_IMAGE_PATH}" : "${env.DOCKER_IMAGE_PATH}")
 
@@ -193,22 +193,22 @@ pipeline {
           if (env.TAG_LATEST) { echo " - ${env.TAG_LATEST}" }
         }
 
-        // 빌드(컨텍스트: ./frontend)
+        // Build
         sh '''
           set -e
           docker build \
-            -f ./frontend/Dockerfile \
+            -f "${DOCKERFILE_PATH}" \
             -t "${TAG_BUILD}" \
             -t "${TAG_SHA}" \
             -t "${TAG_BRANCH}" \
-            ./frontend
+            "${CONTEXT_DIR}"
 
           if [ -n "${TAG_LATEST}" ]; then
             docker tag "${TAG_BUILD}" "${TAG_LATEST}"
           fi
         '''
 
-        // 푸시
+        // Push
         sh '''
           set -e
           docker push "${TAG_BUILD}"
