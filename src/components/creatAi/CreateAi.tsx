@@ -681,7 +681,7 @@ function CreateAi() {
   // showResults가 true이거나 스트리밍 중일 때는 CreateChat 스타일 레이아웃 사용
   if (showResults || isStreaming) {
     return (
-      <div className="flex min-h-screen flex-col relative">
+      <div className="flex bg-sage-20 min-h-screen flex-col relative">
         {/* 상단 스크롤 영역 - 단순한 스타일 */}
         <div className="flex-1 overflow-y-auto p-4 pb-8">
           <div className="mx-auto max-w-2xl space-y-4">
@@ -924,7 +924,7 @@ function CreateAi() {
         </div>
 
         {/* 하단 고정 입력 영역 - CreateChat 스타일 */}
-        <div className="sticky bottom-0 z-50">
+        <div className="fixed bottom-19 lg:bottom-0 z-20  w-full max-w-2xl px-4">
           <div className="mx-auto max-w-2xl">
             <div className="border-t border-gray-200 rounded-t-4xl bg-white/95 backdrop-blur-sm shadow-lg p-4 space-y-3">
               {/* 선택된 이미지들 미리보기 */}
