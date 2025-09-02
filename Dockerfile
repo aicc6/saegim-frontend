@@ -70,6 +70,9 @@ COPY --from=builder   --chown=node:node /app/package.json ./package.json
 COPY --from=builder   --chown=node:node /app/next.config.* ./
 COPY --from=prod-deps --chown=node:node /app/node_modules ./node_modules
 
+# ✅ 런타임 TS 의존성 충족 (next.config.ts 실행 시 필요)
+RUN npm install --no-save typescript @types/node
+
 # 최종 이미지에는 .env.local을 포함하지 않음 (보안/일관성)
 # Next.js는 빌드 시 env를 이미 인라인함
 
