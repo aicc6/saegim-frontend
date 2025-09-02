@@ -19,7 +19,7 @@
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
     "clean:install": "rimraf node_modules .next && npm install",
-    "prepare": "husky"
+    "prepare": "husky || true"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.1",
