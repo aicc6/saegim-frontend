@@ -298,7 +298,7 @@ export function getEmotionEmoji(emotion: string): string {
     평온: '😌',
     슬픔: '😢',
     화남: '😠',
-    걱정: '😰',
+    걱정: '😨',
     스트레스: '😵',
     외로움: '😔',
     기타: '🤔',

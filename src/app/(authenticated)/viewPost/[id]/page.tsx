@@ -22,7 +22,7 @@ const emotionLabels = {
   sad: { emoji: '😢', name: '슬픔', color: 'text-emotion-sad' },
   angry: { emoji: '😡', name: '화남', color: 'text-emotion-angry' },
   peaceful: { emoji: '😌', name: '평온', color: 'text-emotion-peaceful' },
-  unrest: { emoji: '😰', name: '불안', color: 'text-emotion-unrest' },
+  unrest: { emoji: '😨', name: '불안', color: 'text-emotion-unrest' },
 };
 
 const emotionOptions: EmotionType[] = [
@@ -965,8 +965,10 @@ export default function ViewPostPage({
                           src={
                             image.thumbnail_path
                               ? `${
-                                  process.env.NEXT_PUBLIC_API_BASE_URL || 
-                                (process.env.NODE_ENV === 'development' ? 'http://localhost:8000' : '')
+                                  process.env.NEXT_PUBLIC_API_BASE_URL ||
+                                  (process.env.NODE_ENV === 'development'
+                                    ? 'http://localhost:8000'
+                                    : '')
                                 }/api/public/image-proxy?url=${encodeURIComponent(
                                   image.thumbnail_path,
                                 )}`
