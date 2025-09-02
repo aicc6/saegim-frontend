@@ -31,14 +31,14 @@ export const ThumbnailImage = ({
     }
   };
 
-  const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 
+  const baseUrl =
+    process.env.NEXT_PUBLIC_API_BASE_URL ||
     (process.env.NODE_ENV === 'development' ? 'http://localhost:8000' : '');
-  
+
   if (!baseUrl) {
     logger.error('NEXT_PUBLIC_API_BASE_URL 환경변수가 설정되지 않았습니다.');
     return null;
   }
-  
   const imageUrl = `${baseUrl}/api/public/image-proxy?url=${encodeURIComponent(allImages[currentImageIndex])}`;
 
   return (
@@ -63,13 +63,10 @@ export const ThumbnailImage = ({
             alt="다이어리 이미지"
             width={90}
             height={70}
+            sizes="(max-width: 768px) 40px, (max-width: 1024px) 60px, 90px"
             className="w-full h-full object-contain rounded-sm border border-white shadow-sm transition-all duration-200 bg-gray-50"
             style={{
-              width: '100%',
-              height: '100%',
               objectFit: 'contain',
-              maxHeight: '100%',
-              maxWidth: '100%',
             }}
             loading="lazy" // 지연 로딩 추가
             onError={(e) => {
