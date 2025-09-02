@@ -367,7 +367,7 @@ export function Sidebar() {
 
       {/* 모바일 하단 네비게이션 */}
       <div
-        className={`lg:hidden fixed bottom-0 left-0 right-0 border-t px-4 py-2 ${
+        className={`lg:hidden fixed bottom-0 z-40 left-0 right-0 border-t px-4 py-2 ${
           isDark ? 'bg-gray-900 border-gray-700' : 'bg-white border-sage-20'
         }`}
       >
