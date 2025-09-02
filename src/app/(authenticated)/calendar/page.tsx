@@ -625,11 +625,14 @@ export default function CalendarPage() {
                                             : ''
                                         }
                                         alt={`다이어리 이미지 ${index + 1}`}
-                                        className="rounded-md border border-border-subtle shadow-sm hover:shadow-md transition-all duration-200 hover:scale-105"
+                                        className="rounded-md border border-border-subtle shadow-sm hover:shadow-md transition-all duration-200"
                                         width={70}
                                         height={70}
+                                        sizes="70px"
                                         style={{
                                           objectFit: 'cover',
+                                          width: '70px',
+                                          height: '70px',
                                         }}
                                         loading="lazy" // 지연 로딩 추가
                                         onError={(e) => {
