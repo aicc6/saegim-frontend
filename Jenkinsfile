@@ -46,7 +46,7 @@ pipeline {
       }
     }
 
-    stage('Install deps') {ㄴ
+    stage('Install deps') {
       steps {
         sh '''
           set -e
