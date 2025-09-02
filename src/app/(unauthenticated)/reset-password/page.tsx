@@ -14,7 +14,7 @@ import {
 } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useToast } from '@/hooks/use-toast';
-import { apiClient } from '@/lib/api';
+import { apiClient } from '@/lib/api/client';
 import { logger } from '@/lib/logger';
 
 function ResetPasswordForm() {
@@ -81,7 +81,7 @@ function ResetPasswordForm() {
 
     try {
       // 비밀번호 재설정 API 호출
-      const response = await apiClient.post('/auth/forgot-password/reset', {
+      const response = await apiClient.post('/api/auth/forgot-password/reset', {
         email: email,
         verification_code: token,
         new_password: newPassword,

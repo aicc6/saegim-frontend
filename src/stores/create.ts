@@ -3,7 +3,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { immer } from 'zustand/middleware/immer';
-import { AIService } from '@/services/ai-service';
+import { aiApi } from '@/lib/api/ai';
 import { getLogger } from '../lib/logger';
 
 const logger = getLogger('create');
@@ -163,7 +163,7 @@ export const useCreateStore = create<CreateState>()(
         });
 
         try {
-          const response = await AIService.generateText({
+          const response = await aiApi.generateText({
             prompt: prompt.trim(),
             style,
             length,
@@ -171,19 +171,25 @@ export const useCreateStore = create<CreateState>()(
             regeneration_count: 1,
           });
 
-          set((state) => {
-            state.generatedText = response.ai_generated_text;
-            state.generatedKeywords = response.keywords;
-            state.sessionId = response.session_id;
-            state.originalPrompt = state.prompt;
-            state.isGenerating = false;
-            state.wasJustGenerated = true;
-          });
+          if (response.success && response.data) {
+            set((state) => {
+              state.generatedText = response.data.ai_generated_text;
+              state.generatedKeywords = response.data.keywords;
+              state.sessionId = response.data.session_id;
+              state.originalPrompt = state.prompt;
+              state.isGenerating = false;
+              state.wasJustGenerated = true;
+            });
 
-          logger.info('AI 텍스트 생성 성공', {
-            sessionId: response.session_id,
-            textLength: response.ai_generated_text.length,
-          });
+            logger.info('AI 텍스트 생성 성공', {
+              sessionId: response.data.session_id,
+              textLength: response.data.ai_generated_text.length,
+            });
+          } else {
+            throw new Error(
+              response.message || 'AI 텍스트 생성에 실패했습니다.',
+            );
+          }
         } catch (error) {
           const errorMessage =
             error instanceof APIError
@@ -219,7 +225,10 @@ export const useCreateStore = create<CreateState>()(
         if (!sessionId) return;
 
         try {
-          const originalInput = await AIService.getOriginalUserInput(sessionId);
+          const response = await aiApi.getOriginalUserInput(sessionId);
+          const originalInput = response.success
+            ? response.data?.original_input
+            : null;
           if (originalInput) {
             set((state) => {
               state.originalPrompt = originalInput;

@@ -30,8 +30,9 @@ export const useFormValidation = () => {
     [],
   );
 
-  const showValidationAlert = useCallback((errorMessage: string) => {
-    alert(errorMessage);
+  const showValidationAlert = useCallback(async (errorMessage: string) => {
+    const { showWarning } = await import('@/hooks/use-modal');
+    showWarning(errorMessage);
   }, []);
 
   return {

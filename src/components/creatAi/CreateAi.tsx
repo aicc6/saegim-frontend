@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState, memo, useMemo, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { X, Copy, RotateCcw, Save, Edit3 } from 'lucide-react';
@@ -13,7 +13,7 @@ import { useErrorManagement } from '@/hooks/use-error-management';
 import { useFormOptions } from '@/hooks/use-form-options';
 import { useStreaming } from '@/hooks/use-streaming';
 import { useClipboard } from '@/hooks/use-clipboard';
-import { diaryApi } from '@/lib/api';
+import { diaryApi } from '@/lib/api/diary';
 import { useSimpleToast } from '@/hooks/use-simple-toast';
 import { useTempOptions } from '@/hooks/use-temp-options';
 import { useChatUi } from '@/hooks/use-chat-ui';
@@ -75,9 +75,24 @@ interface GeneratedTextCard {
   isEditMode: boolean;
   editedText: string;
   createdAt: Date;
+  // AI 생성 시 사용된 이미지 정보 (서버 업로드 후 결과)
+  uploadedImages?: Array<{
+    file_id: string;
+    original_url: string;
+    thumbnail_url: string;
+    mime_type: string;
+    file_size: number;
+    filename: string;
+  }>;
 }
 
-export default function CreateAi() {
+// 메모이제이션된 서브 컴포넌트들
+const MemoizedChatInput = memo(ChatInput);
+const MemoizedChatOptions = memo(ChatOptions);
+const MemoizedImagePreview = memo(ImagePreview);
+
+// 메인 컴포넌트
+function CreateAi() {
   const router = useRouter();
   const [showResults, setShowResults] = useState(false);
   const [newPrompt, setNewPrompt] = useState('');
@@ -105,6 +120,10 @@ export default function CreateAi() {
   } = useEmotionStore();
 
   const { validateForm, showValidationAlert } = useFormValidation();
+
+  // 현재 생성 중인 프롬프트를 저장하는 ref
+  const currentGeneratingPromptRef = useRef<string>('');
+
   const {
     selectedImages,
     imageUrls,
@@ -164,8 +183,23 @@ export default function CreateAi() {
     emotion: aiEmotion,
     keywords,
     isComplete,
+    isPending, // 새로 추가된 pending 상태
+    uploadedImages, // 업로드된 이미지 정보
     startStreaming,
+    startRegeneration, // 재생성 스트리밍 함수 추가
+    resetState,
   } = useStreaming();
+
+  // 성능 최적화: 스트리밍 상태 메모이제이션
+  const streamingStatus = useMemo(
+    () => ({
+      isStreaming,
+      isPending,
+      isComplete,
+      hasContent: !!(streamedText || accumulatedText),
+    }),
+    [isStreaming, isPending, isComplete, streamedText, accumulatedText],
+  );
 
   const { showToastMessage } = useSimpleToast();
   const { copyToClipboard } = useClipboard(() =>
@@ -173,6 +207,46 @@ export default function CreateAi() {
   );
 
   useErrorManagement({ error: error || streamError, clearError });
+
+  // ✅ 스트리밍 완료 시 카드 업데이트 로직
+  useEffect(() => {
+    if (isComplete && sessionId && accumulatedText) {
+      setGeneratedCards((prev) => {
+        const cardToUpdate = prev.find(
+          (card) => card.sessionId === '' && card.versions[0].text === '',
+        );
+        if (cardToUpdate) {
+          return prev.map((card) => {
+            if (card.id === cardToUpdate.id) {
+              return {
+                ...card,
+                sessionId,
+                versions: [
+                  {
+                    ...card.versions[0],
+                    text: accumulatedText,
+                    aiEmotion: aiEmotion || '',
+                    keywords: keywords || [],
+                  },
+                ],
+                // 스트리밍에서 업로드된 이미지 정보 저장
+                uploadedImages: uploadedImages || undefined,
+              };
+            }
+            return card;
+          });
+        }
+        return prev;
+      });
+    }
+  }, [
+    isComplete,
+    sessionId,
+    accumulatedText,
+    aiEmotion,
+    keywords,
+    uploadedImages,
+  ]);
 
   // 컴포넌트 언마운트 시 재생성 상태 정리
   useEffect(() => {
@@ -210,43 +284,47 @@ export default function CreateAi() {
     onApply: onApplyOptions,
   });
 
-  // 스트리밍 완료 시 카드 추가/업데이트
+  // 스트리밍 완료 시 카드 추가/업데이트 (분리된 로직)
   useEffect(() => {
     if (!isComplete || !accumulatedText || isStreaming || !sessionId) {
       return;
     }
 
-    // 재생성인지 신규 생성인지 확인하고 카드 업데이트
+    // ✅ Best Practice: 단순한 상태 업데이트로 롤백
     setGeneratedCards((prev) => {
-      const existingCardIndex = prev.findIndex(
-        (card) => card.sessionId === sessionId,
-      );
+      // 재생성 중인 카드가 있으면 해당 카드만 업데이트
+      if (regeneratingCardId) {
+        const existingCardIndex = prev.findIndex(
+          (card) => card.id === regeneratingCardId,
+        );
 
-      if (existingCardIndex !== -1) {
-        // 재생성: 기존 카드에 새 버전 추가
-        return prev.map((card, index) => {
-          if (index === existingCardIndex) {
-            const newVersion: TextVersion = {
-              id: `${sessionId}_v${card.versions.length + 1}`,
-              text: accumulatedText,
-              aiEmotion: aiEmotion || null,
-              keywords: keywords || [],
-              createdAt: new Date(),
-              versionNumber: card.versions.length + 1,
-            };
-            return {
-              ...card,
-              versions: [newVersion, ...card.versions],
-              currentVersionIndex: 0,
-              editedText: accumulatedText,
-            };
-          }
-          return card;
-        });
-      } else {
-        // 신규 생성: 새 카드 생성 (타이핑 애니메이션 완료 후)
+        if (existingCardIndex !== -1) {
+          return prev.map((card, index) => {
+            if (index === existingCardIndex) {
+              const newVersion: TextVersion = {
+                id: `${sessionId}_v${card.versions.length + 1}`,
+                text: accumulatedText,
+                aiEmotion: aiEmotion || null,
+                keywords: keywords || [],
+                createdAt: new Date(),
+                versionNumber: card.versions.length + 1,
+              };
+              return {
+                ...card,
+                versions: [newVersion, ...card.versions],
+                currentVersionIndex: 0,
+                editedText: accumulatedText,
+              };
+            }
+            return card;
+          });
+        }
+        return prev; // 재생성 중인 카드를 찾지 못한 경우
+      }
+
+      // 신규 생성: currentGeneratingPromptRef가 있을 때만 새 카드 생성
+      if (currentGeneratingPromptRef.current) {
         const cardId = `card_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
-        const currentPrompt = newPrompt || prompt;
         const currentStyle = tempStyle || style;
         const currentLength = tempLength || length;
         const currentEmotion = tempEmotion || emotion;
@@ -263,7 +341,7 @@ export default function CreateAi() {
         const newCard: GeneratedTextCard = {
           id: cardId,
           sessionId: sessionId,
-          prompt: currentPrompt,
+          prompt: currentGeneratingPromptRef.current,
           style: currentStyle,
           length: currentLength,
           emotion: currentEmotion,
@@ -272,18 +350,23 @@ export default function CreateAi() {
           isEditMode: false,
           editedText: accumulatedText,
           createdAt: new Date(),
+          // 새 글 생성 시 사용된 이미지 저장
+          uploadedImages: uploadedImages || undefined,
         };
 
-        // 신규 생성인 경우 폼 리셋
-        if (newPrompt) {
-          setTimeout(() => {
-            setNewPrompt('');
-            clearNewImages();
-          }, 100);
-        }
+        // 신규 생성 완료 후 폼 리셋
+        setTimeout(() => {
+          setNewPrompt('');
+          clearNewImages();
+          resetState(false); // 스트리밍 상태도 완전 초기화
+          currentGeneratingPromptRef.current = ''; // ref도 초기화
+        }, 100);
 
-        return [newCard, ...prev];
+        return [...prev, newCard];
       }
+
+      // 신규 생성도 재생성도 아닌 경우 (예: 직접 sessionId가 전달된 경우)
+      return prev;
     });
 
     setShowResults(true);
@@ -297,6 +380,7 @@ export default function CreateAi() {
     aiEmotion,
     keywords,
     newPrompt,
+    regeneratingCardId,
     prompt,
     tempStyle,
     style,
@@ -305,20 +389,50 @@ export default function CreateAi() {
     tempEmotion,
     emotion,
     clearNewImages,
+    resetState,
+    uploadedImages,
   ]);
 
   const handleGenerateText = useCallback(async () => {
     if (isStreaming) return;
 
-    const validation = validateForm(prompt, style, length);
-    if (!validation.isValid && validation.errorMessage) {
-      showValidationAlert(validation.errorMessage);
-      return;
-    }
-
     try {
-      // 스트리밍 시작
+      const validation = validateForm(prompt, style, length);
+      if (!validation.isValid && validation.errorMessage) {
+        showValidationAlert(validation.errorMessage);
+        return;
+      }
+
+      // ✅ 핵심 수정: 스트리밍 시작과 동시에 빈 카드 즉시 생성
+      const newCardId = `card-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
+      const newCard: GeneratedTextCard = {
+        id: newCardId,
+        prompt,
+        style,
+        length,
+        emotion: emotion || null,
+        sessionId: '', // startStreaming에서 업데이트됨
+        versions: [
+          {
+            id: `version-${Date.now()}`,
+            text: '', // 빈 텍스트로 시작
+            aiEmotion: '',
+            keywords: [],
+            createdAt: new Date(),
+            versionNumber: 1,
+          },
+        ],
+        currentVersionIndex: 0,
+        isEditMode: false,
+        editedText: '',
+        createdAt: new Date(),
+        // AI 생성에 사용된 이미지 저장 - 스트리밍 시 업로드됨
+        uploadedImages: undefined, // 스트리밍 완료 후 업데이트됨
+      };
+
       setShowResults(true);
+      setGeneratedCards((prev) => [newCard, ...prev]); // 즉시 카드 추가
+
       await startStreaming({
         prompt,
         style,
@@ -328,6 +442,9 @@ export default function CreateAi() {
       });
     } catch (error) {
       logger.error('스트리밍 글 생성 실패', { error });
+      // 오류 시 결과 화면 숨기기 및 실패한 카드 제거
+      setShowResults(false);
+      setGeneratedCards((prev) => prev.slice(1)); // 첫 번째 카드 제거
     }
   }, [
     prompt,
@@ -344,6 +461,7 @@ export default function CreateAi() {
   // 카드별 액션 핸들러들
   const handleCardEdit = useCallback(
     (cardId: string) => {
+      // ✅ 사용자 상호작용: 즉시 반응해야 하므로 transition 사용 안함
       setGeneratedCards((prev) =>
         prev.map((card) => {
           if (card.id === cardId) {
@@ -408,12 +526,23 @@ export default function CreateAi() {
               ? currentVersion.keywords
               : undefined,
           is_public: false,
+          // AI 생성 시 사용된 이미지 포함 (이미 서버에 업로드됨)
+          uploaded_images:
+            card.uploadedImages && card.uploadedImages.length > 0
+              ? card.uploadedImages
+              : undefined,
         });
 
         if (result.success) {
           showToastMessage('다이어리가 성공적으로 저장되었습니다!', 'success');
 
-          if (window.confirm('저장된 다이어리를 보시겠습니까?')) {
+          const { showConfirm } = await import('@/hooks/use-modal');
+          const viewDiary = await showConfirm(
+            '저장된 다이어리를 보시겠습니까?',
+            '다이어리 저장 완료',
+          );
+
+          if (viewDiary) {
             router.push(
               `/viewPost/${(result.data as { id: string }).id}?from=${encodeURIComponent('/create')}`,
             );
@@ -438,20 +567,16 @@ export default function CreateAi() {
       if (!card || isStreaming || card.versions.length >= 5) return;
 
       setRegeneratingCardId(cardId);
+
       try {
-        await startStreaming({
-          prompt: card.prompt,
-          style: card.style,
-          length: card.length,
-          emotion: card.emotion || undefined,
-          sessionId: card.sessionId, // 카드에 저장된 실제 sessionId 사용
-        });
+        // 스트리밍 재생성 시작 (sessionId 기반)
+        await startRegeneration(card.sessionId);
       } catch (error) {
         setRegeneratingCardId(null);
         logger.error('재생성 실패', { error });
       }
     },
-    [generatedCards, isStreaming, startStreaming],
+    [generatedCards, isStreaming, startRegeneration],
   );
 
   const handleCardCopy = useCallback(
@@ -491,6 +616,10 @@ export default function CreateAi() {
     }
 
     try {
+      // 현재 생성 중인 프롬프트 저장
+      currentGeneratingPromptRef.current = newPrompt;
+
+      // 새 글 생성 시작 (별도 초기화 불필요)
       await startStreaming({
         prompt: newPrompt,
         style: tempStyle,
@@ -538,41 +667,6 @@ export default function CreateAi() {
         {/* 상단 스크롤 영역 - 단순한 스타일 */}
         <div className="flex-1 overflow-y-auto p-4 pb-8">
           <div className="mx-auto max-w-2xl space-y-4">
-            {/* 현재 스트리밍 중인 카드 (임시) - 신규 생성 시에만 */}
-            {isStreaming && !regeneratingCardId && (
-              <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-medium text-gray-900">
-                    생성 중...
-                  </h3>
-                </div>
-
-                <div className="prose prose-gray max-w-none">
-                  <div className="text-gray-800 leading-relaxed whitespace-pre-wrap">
-                    {streamedText || '생성 중...'}
-                    <span className="inline-block w-px h-5 bg-gray-400 ml-1 animate-pulse"></span>
-                  </div>
-                </div>
-
-                <div className="mt-4 flex items-center gap-3 text-gray-500">
-                  <div className="flex gap-1">
-                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
-                    <div
-                      className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
-                      style={{ animationDelay: '0.1s' }}
-                    ></div>
-                    <div
-                      className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
-                      style={{ animationDelay: '0.2s' }}
-                    ></div>
-                  </div>
-                  <span className="text-sm">
-                    AI가 글을 생성하고 있습니다...
-                  </span>
-                </div>
-              </div>
-            )}
-
             {/* 생성된 카드들 */}
             {generatedCards.map((card) => {
               const currentVersion = card.versions[card.currentVersionIndex];
@@ -700,13 +794,71 @@ export default function CreateAi() {
                         />
                       </div>
                     ) : (
-                      // 일반 표시 모드
+                      // ✅ Best Practice: 스트리밍 콘텐츠 즉시 표시 + 완료 후 연속성 보장
                       <div className="text-gray-800 leading-relaxed whitespace-pre-wrap">
-                        {isStreaming && sessionId === card.sessionId
-                          ? streamedText || '생성 중...'
-                          : currentVersion.text}
-                        {isStreaming && sessionId === card.sessionId && (
-                          <span className="inline-block w-px h-5 bg-gray-400 ml-1 animate-pulse"></span>
+                        {/* ✅ 스트리밍 중이거나 완료 직후 streamedText/accumulatedText 우선 표시 */}
+                        {isStreaming &&
+                        (card.sessionId === '' ||
+                          card.sessionId === sessionId) ? (
+                          <div className="min-h-[1.5em]">
+                            {streamedText ? (
+                              <>
+                                {streamedText}
+                                <span className="inline-block w-px h-5 bg-gray-400 ml-1 animate-pulse"></span>
+                              </>
+                            ) : accumulatedText ? (
+                              <>
+                                {accumulatedText}
+                                <span className="inline-block w-px h-5 bg-gray-400 ml-1 animate-pulse"></span>
+                              </>
+                            ) : (
+                              <span className="text-gray-500 italic">
+                                AI 응답을 기다리는 중...
+                              </span>
+                            )}
+                          </div>
+                        ) : regeneratingCardId === card.id && isStreaming ? (
+                          // 재생성 중 스트리밍 상태 표시
+                          <div className="relative">
+                            {streamedText ? (
+                              <>
+                                {streamedText}
+                                <span className="inline-block w-px h-5 bg-indigo-400 ml-1 animate-pulse"></span>
+                              </>
+                            ) : accumulatedText ? (
+                              <>
+                                {accumulatedText}
+                                <span className="inline-block w-px h-5 bg-indigo-400 ml-1 animate-pulse"></span>
+                              </>
+                            ) : (
+                              <div className="flex items-center gap-2">
+                                <div className="flex gap-1">
+                                  <div className="w-1.5 h-1.5 bg-indigo-400 rounded-full animate-bounce"></div>
+                                  <div
+                                    className="w-1.5 h-1.5 bg-indigo-400 rounded-full animate-bounce"
+                                    style={{ animationDelay: '0.1s' }}
+                                  ></div>
+                                  <div
+                                    className="w-1.5 h-1.5 bg-indigo-400 rounded-full animate-bounce"
+                                    style={{ animationDelay: '0.2s' }}
+                                  ></div>
+                                </div>
+                                <span className="text-indigo-600 text-sm">
+                                  새 버전 생성 중...
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          // ✅ 핵심 수정: 스트리밍 완료 후 연속성 보장
+                          // currentVersion.text가 없으면 streamedText나 accumulatedText 우선 사용
+                          currentVersion.text ||
+                          streamedText ||
+                          accumulatedText || (
+                            <span className="text-gray-400 italic">
+                              텍스트가 없습니다
+                            </span>
+                          )
                         )}
                       </div>
                     )}
@@ -736,28 +888,6 @@ export default function CreateAi() {
                       {new Date(currentVersion.createdAt).toLocaleTimeString()}
                     </span>
                   </div>
-
-                  {/* 재생성 중일 때 로딩 오버레이 */}
-                  {isRegenerating && (
-                    <div className="absolute inset-0 bg-white/80 backdrop-blur-sm rounded-lg flex items-center justify-center">
-                      <div className="flex flex-col items-center gap-3">
-                        <div className="flex gap-1">
-                          <div className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce"></div>
-                          <div
-                            className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce"
-                            style={{ animationDelay: '0.1s' }}
-                          ></div>
-                          <div
-                            className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce"
-                            style={{ animationDelay: '0.2s' }}
-                          ></div>
-                        </div>
-                        <span className="text-sm font-medium text-indigo-600">
-                          새 버전 생성 중...
-                        </span>
-                      </div>
-                    </div>
-                  )}
                 </div>
               );
             })}
@@ -780,16 +910,18 @@ export default function CreateAi() {
           <div className="mx-auto max-w-2xl">
             <div className="border-t border-gray-200 rounded-t-4xl bg-white/95 backdrop-blur-sm shadow-lg p-4 space-y-3">
               {/* 선택된 이미지들 미리보기 */}
-              <ImagePreview
+              <MemoizedImagePreview
                 selectedImages={newSelectedImages}
                 onRemove={handleNewImageRemove}
               />
 
+              {/* ✅ 로딩 블록 제거: 실제 카드에서 실시간 스트리밍 표시 */}
+
               {/* 메인 입력창 */}
-              <ChatInput
+              <MemoizedChatInput
                 textareaRef={textareaRef}
                 prompt={newPrompt}
-                isGenerating={isStreaming}
+                isGenerating={streamingStatus.isStreaming}
                 selectedImages={newSelectedImages}
                 onPromptChange={setNewPrompt}
                 onKeyDown={handleKeyDown}
@@ -808,7 +940,7 @@ export default function CreateAi() {
               />
 
               {/* 옵션 선택 */}
-              <ChatOptions
+              <MemoizedChatOptions
                 config={config}
                 emotionConfigs={emotionConfigs}
                 tempStyle={tempStyle}
@@ -1065,3 +1197,6 @@ export default function CreateAi() {
     </div>
   );
 }
+
+// React.memo로 감싸서 불필요한 리렌더링 방지
+export default memo(CreateAi);

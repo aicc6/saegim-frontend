@@ -7,7 +7,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 
 import { FormInput } from '@/components/ui/form-input';
 import { useApiError } from '@/hooks/use-api-error';
-import { authApi } from '@/lib/api';
+import { authApi } from '@/lib/api/auth';
 import { BRAND_COLORS, VALIDATION, TEXT_STYLES } from '@/constants';
 import { signupSchema, type SignupFormData } from '@/schemas/auth';
 import { NicknameAvailabilityResponse } from '@/types/api';

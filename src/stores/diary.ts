@@ -3,7 +3,7 @@
  */
 
 import { create } from 'zustand';
-import { diaryApi } from '@/lib/api';
+import { diaryApi } from '@/lib/api/diary';
 import {
   DiaryEntry,
   DiaryListEntry,

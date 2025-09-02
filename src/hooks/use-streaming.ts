@@ -1,8 +1,9 @@
 'use client';
 
-import { useState, useCallback, useRef, useEffect } from 'react';
-import { flushSync } from 'react-dom';
+import { useState, useCallback, useRef, useEffect, useTransition } from 'react';
 import { getLogger } from '@/lib/logger';
+import { imageApi } from '@/lib/api/image';
+import { aiApi } from '@/lib/api/ai';
 
 const logger = getLogger('useStreaming');
 
@@ -51,6 +52,8 @@ export interface StreamChunk {
   chunk_index?: number; // 청크 순서
 }
 
+// ✅ Best Practice: 복잡한 큐 시스템 제거로 상수 불필요
+
 export const useStreaming = () => {
   const [state, setState] = useState<StreamingState>({
     isStreaming: false,
@@ -69,6 +72,17 @@ export const useStreaming = () => {
     uploadedImages: null,
     regenerationHistory: [],
   });
+  const [isPending, startTransition] = useTransition();
+
+  // 메모리 최적화된 상태 업데이트
+  const updateStateOptimized = useCallback(
+    (updater: (prev: StreamingState) => StreamingState) => {
+      startTransition(() => {
+        setState(updater);
+      });
+    },
+    [],
+  );
 
   // 로컬 스토리지 키 생성
   const getStorageKey = useCallback((sessionId: string) => {
@@ -105,14 +119,11 @@ export const useStreaming = () => {
     [getStorageKey],
   );
 
+  // ✅ Best Practice: 필요한 ref만 유지
   const eventSourceRef = useRef<EventSource | null>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const streamingTypingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const chunkQueueRef = useRef<Array<{ content: string; timestamp: number }>>(
-    [],
-  );
-  const isProcessingQueueRef = useRef<boolean>(false);
-  const lastRenderTimeRef = useRef<number>(0);
+  // 복잡한 큐 시스템 관련 ref들 제거됨
 
   // sessionId가 변경될 때 저장된 regenerationHistory 로드
   useEffect(() => {
@@ -134,72 +145,20 @@ export const useStreaming = () => {
     }
   }, [state.sessionId, state.regenerationHistory, saveRegenerationHistory]);
 
-  // 타임스탬프 기반 청크 처리 함수
-  const processChunkQueue = useCallback(() => {
-    if (isProcessingQueueRef.current || chunkQueueRef.current.length === 0) {
-      return;
-    }
+  // ✅ Best Practice: 단순화된 직접 텍스트 업데이트
+  const appendStreamText = useCallback((content: string) => {
+    if (!content) return;
 
-    isProcessingQueueRef.current = true;
+    logger.debug('청크 렌더링', { content });
 
-    const processNextChunk = () => {
-      const queue = chunkQueueRef.current;
-      if (queue.length === 0) {
-        isProcessingQueueRef.current = false;
-        return;
-      }
-
-      const chunk = queue.shift()!;
-      const timeDiff = chunk.timestamp - lastRenderTimeRef.current;
-      const minDelay = 50; // 최소 50ms 간격
-      const maxDelay = 1500; // 최대 1.5초로 제한
-      const naturalDelay = Math.max(minDelay, Math.min(timeDiff, maxDelay));
-
-      setTimeout(() => {
-        setState((prev) => ({
-          ...prev,
-          streamedText: prev.streamedText + chunk.content,
-        }));
-
-        lastRenderTimeRef.current = chunk.timestamp;
-        processNextChunk(); // 다음 청크 처리
-      }, naturalDelay);
-    };
-
-    processNextChunk();
+    // 🔥 핵심 개선: 복잡한 큐 없이 즉시 상태 업데이트
+    setState((prev) => ({
+      ...prev,
+      streamedText: prev.streamedText + content,
+    }));
   }, []);
 
-  // ChatGPT 스타일 타이핑 애니메이션 함수 (완료 후에만 사용)
-  const startTypingAnimation = useCallback((fullText: string) => {
-    // 기존 타이핑 애니메이션 중단
-    if (typingTimeoutRef.current) {
-      clearTimeout(typingTimeoutRef.current);
-    }
-
-    // displayText를 빈 문자열로 초기화하고 타이핑 시작
-    setState((prev) => ({ ...prev, isTyping: true, displayText: '' }));
-
-    let currentIndex = 0;
-    const typeNextChar = () => {
-      if (currentIndex < fullText.length) {
-        const currentText = fullText.slice(0, currentIndex + 1);
-        flushSync(() => {
-          setState((prev) => ({
-            ...prev,
-            displayText: currentText,
-          }));
-        });
-        currentIndex++;
-        typingTimeoutRef.current = setTimeout(typeNextChar, 100); // 100ms 간격 (더 잘 보이는 타이핑 속도)
-      } else {
-        flushSync(() => {
-          setState((prev) => ({ ...prev, isTyping: false }));
-        });
-      }
-    };
-
-    typeNextChar();
-  }, []);
+  // 타이핑 애니메이션 제거됨 - 순수 스트리밍 경험 제공
 
   const startStreaming = useCallback(
     async (data: {
@@ -224,10 +183,8 @@ export const useStreaming = () => {
           clearTimeout(streamingTypingTimeoutRef.current);
         }
 
-        // 청크 큐 초기화
-        chunkQueueRef.current = [];
-        isProcessingQueueRef.current = false;
-        lastRenderTimeRef.current = Date.now();
+        // ✅ Best Practice: 단순한 초기화
+        // 복잡한 큐 시스템 변수들 제거됨
 
         // 초기 상태 설정
         setState((prev) => ({
@@ -237,7 +194,7 @@ export const useStreaming = () => {
           accumulatedText: '',
           displayText: '',
           error: null,
-          sessionId: prev.sessionId || null,
+          sessionId: data.sessionId || null, // 새 글 생성 시 sessionId 초기화
           emotion: null,
           keywords: [],
           isComplete: false,
@@ -257,23 +214,12 @@ export const useStreaming = () => {
         }> | null = null;
         if (data.images && data.images.length > 0) {
           try {
-            const formData = new FormData();
-            data.images.forEach((image) => {
-              formData.append(`images`, image);
-            });
-
-            const imageUploadResponse = await fetch(
-              'http://localhost:8000/api/diary/images/upload',
-              {
-                method: 'POST',
-                body: formData,
-                credentials: 'include',
-              },
+            const imageUploadResponse = await imageApi.uploadDiaryImages(
+              data.images,
             );
 
-            if (imageUploadResponse.ok) {
-              const imageResult = await imageUploadResponse.json();
-              uploadedImages = imageResult.data;
+            if (imageUploadResponse.success) {
+              uploadedImages = imageUploadResponse.data;
 
               // 업로드된 이미지를 상태에 저장
               setState((prev) => ({
@@ -292,28 +238,15 @@ export const useStreaming = () => {
           }
         }
 
-        // JSON 형식 요청 데이터 생성
-        const requestData = {
+        // 스트리밍 요청 시작
+        const response = await aiApi.generateTextStream({
           prompt: data.prompt,
           style: data.style,
           length: data.length,
           emotion: data.emotion || '',
-          session_id: data.sessionId || undefined,
+          sessionId: data.sessionId,
           uploaded_images: uploadedImages,
-        };
-
-        // 스트리밍 요청 시작
-        const response = await fetch(
-          'http://localhost:8000/api/ai/generate/stream',
-          {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(requestData),
-            credentials: 'include',
-          },
-        );
+        });
 
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
@@ -323,15 +256,35 @@ export const useStreaming = () => {
           throw new Error('응답 본문이 없습니다.');
         }
 
-        // ReadableStream 처리
+        // ReadableStream 처리 + 디버깅 로깅
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
 
+        let chunkCount = 0;
+        let totalData = '';
+        logger.debug('🎬 ReadableStream 처리 시작');
+
         while (true) {
           const { value, done } = await reader.read();
-          if (done) break;
+          if (done) {
+            logger.debug('📋 스트리밍 완료 요약', {
+              totalChunks: chunkCount,
+              totalDataLength: totalData.length,
+              isRealStreaming: chunkCount > 1,
+            });
+            break;
+          }
 
+          chunkCount++;
           const chunk = decoder.decode(value, { stream: true });
+          totalData += chunk;
+
+          logger.debug(`📦 청크 #${chunkCount} 수신`, {
+            chunkSize: chunk.length,
+            chunkPreview: chunk.substring(0, 100),
+            timestamp: Date.now(),
+          });
+
           const lines = chunk.split('\n');
 
           for (const line of lines) {
@@ -341,33 +294,41 @@ export const useStreaming = () => {
                 if (jsonData.trim()) {
                   const parsedData: StreamChunk = JSON.parse(jsonData);
 
+                  logger.debug('🎯 스트리밍 이벤트 수신', {
+                    type: parsedData.type,
+                    contentLength: parsedData.content?.length || 0,
+                    contentPreview:
+                      parsedData.content?.substring(0, 50) || null,
+                    timestamp: parsedData.timestamp || Date.now(),
+                  });
+
                   switch (parsedData.type) {
                     case 'start':
                       setState((prev) => ({
                         ...prev,
                         sessionId: parsedData.session_id || null,
                       }));
-                      logger.info('스트리밍 시작', {
+                      logger.info('✅ 스트리밍 시작', {
                         sessionId: parsedData.session_id,
                       });
                       break;
 
                     case 'content': {
                       const newContent = parsedData.content || '';
-                      const chunkTimestamp = parsedData.timestamp || Date.now();
 
-                      // 청크를 큐에 추가
+                      logger.debug('📝 콘텐츠 청크 처리', {
+                        contentLength: newContent.length,
+                        content: newContent,
+                        accumulated: parsedData.accumulated?.length || 0,
+                      });
+
+                      // 🔥 핵심 개선: 인위적 지연과 복잡한 큐 시스템 제거
                       if (newContent) {
-                        chunkQueueRef.current.push({
-                          content: newContent,
-                          timestamp: chunkTimestamp,
-                        });
-
-                        // 큐 처리 시작 (이미 진행 중이면 무시됨)
-                        processChunkQueue();
+                        // 즉시 텍스트 추가 (업계 표준 방식)
+                        appendStreamText(newContent);
                       }
 
-                      // accumulatedText만 즉시 업데이트 (streamedText는 큐에서 처리)
+                      // accumulatedText 즉시 업데이트
                       setState((prev) => ({
                         ...prev,
                         accumulatedText:
@@ -407,21 +368,13 @@ export const useStreaming = () => {
                         };
                       });
 
-                      // 남은 큐 처리 완료 후 타이핑 애니메이션 시작
-                      const finishQueueAndStartTyping = () => {
-                        if (
-                          chunkQueueRef.current.length === 0 &&
-                          !isProcessingQueueRef.current
-                        ) {
-                          setTimeout(() => {
-                            startTypingAnimation(finalText);
-                          }, 100);
-                        } else {
-                          // 아직 처리 중인 큐가 있으면 잠시 후 다시 확인
-                          setTimeout(finishQueueAndStartTyping, 100);
-                        }
-                      };
-                      finishQueueAndStartTyping();
+                      // ✅ Best Practice: 단순한 완료 처리
+                      // 스트리밍 완료 시 displayText를 streamedText와 동일하게 설정
+                      setState((prev) => ({
+                        ...prev,
+                        displayText: finalText,
+                        isTyping: false,
+                      }));
 
                       logger.info('스트리밍 완료', {
                         emotion: parsedData.emotion,
@@ -461,19 +414,249 @@ export const useStreaming = () => {
         }));
       }
     },
-    [startTypingAnimation, processChunkQueue, state.accumulatedText],
+    [appendStreamText, state.accumulatedText],
+  );
+
+  // 최적화된 스트리밍 중단 함수
+  // 스트리밍 재생성 함수 (폴백 로직 포함)
+  const startRegeneration = useCallback(
+    async (sessionId: string) => {
+      try {
+        // 기존 연결 정리
+        if (eventSourceRef.current) {
+          eventSourceRef.current.close();
+        }
+
+        // 기존 타이핑 애니메이션 정리
+        if (typingTimeoutRef.current) {
+          clearTimeout(typingTimeoutRef.current);
+        }
+        if (streamingTypingTimeoutRef.current) {
+          clearTimeout(streamingTypingTimeoutRef.current);
+        }
+
+        // 재생성 상태로 설정 (기존 메타데이터 유지)
+        setState((prev) => ({
+          ...prev,
+          isStreaming: true,
+          streamedText: '',
+          accumulatedText: '',
+          displayText: '',
+          error: null,
+          isComplete: false,
+          isTyping: false,
+        }));
+
+        let response: Response;
+        let isUsingFallback = false;
+
+        try {
+          // 1차 시도: 전용 재생성 스트리밍 엔드포인트
+          response = await aiApi.regenerateStream(sessionId);
+
+          if (!response.ok) {
+            // 404 또는 501 에러인 경우 폴백 로직 사용
+            if (response.status === 404 || response.status === 501) {
+              logger.warn(
+                '⚠️ 재생성 스트리밍 엔드포인트 미구현, 폴백 모드 사용',
+              );
+              isUsingFallback = true;
+
+              // 2차 시도: 원본 입력으로 신규 생성 스트리밍
+              const originalResponse =
+                await aiApi.getOriginalUserInput(sessionId);
+              if (!originalResponse.success) {
+                throw new Error('원본 입력을 찾을 수 없습니다.');
+              }
+
+              const originalPrompt = originalResponse.data.original_input;
+
+              // 기본 설정으로 새로운 스트리밍 생성 (재생성과 동일한 효과)
+              const fallbackData = {
+                prompt: originalPrompt,
+                style: 'short_story', // 기본값
+                length: 'medium', // 기본값
+                sessionId: sessionId, // 동일한 세션 ID 사용
+              };
+
+              response = await aiApi.generateTextStream(fallbackData);
+
+              if (!response.ok) {
+                throw new Error(`폴백 스트리밍 실패: HTTP ${response.status}`);
+              }
+
+              logger.info('✅ 폴백 모드로 재생성 스트리밍 시작');
+            } else {
+              throw new Error(`HTTP error! status: ${response.status}`);
+            }
+          }
+        } catch (error) {
+          logger.error('재생성 시도 실패', error);
+          throw error;
+        }
+
+        if (!response.body) {
+          throw new Error('응답 본문이 없습니다.');
+        }
+
+        // ReadableStream 처리 (기존과 동일한 로직)
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+
+        logger.info(
+          `🎬 ${isUsingFallback ? '폴백' : '재생성'} 스트리밍 처리 시작`,
+        );
+
+        while (true) {
+          const { value, done } = await reader.read();
+          if (done) break;
+
+          const chunk = decoder.decode(value, { stream: true });
+          const lines = chunk.split('\n');
+
+          for (const line of lines) {
+            if (line.startsWith('data: ')) {
+              try {
+                const jsonData = line.slice(6);
+                if (jsonData.trim()) {
+                  const parsedData: StreamChunk = JSON.parse(jsonData);
+
+                  switch (parsedData.type) {
+                    case 'start':
+                      logger.info(
+                        `${isUsingFallback ? '폴백' : '재생성'} 스트리밍 시작`,
+                        {
+                          sessionId: parsedData.session_id,
+                          fallbackMode: isUsingFallback,
+                        },
+                      );
+                      break;
+
+                    case 'content': {
+                      const newContent = parsedData.content || '';
+                      if (newContent) {
+                        appendStreamText(newContent);
+                      }
+
+                      setState((prev) => ({
+                        ...prev,
+                        accumulatedText:
+                          parsedData.accumulated || prev.accumulatedText,
+                      }));
+                      break;
+                    }
+
+                    case 'complete': {
+                      const finalText =
+                        parsedData.generated_text || state.accumulatedText;
+
+                      setState((prev) => {
+                        const newRegenerationCount =
+                          parsedData.regeneration_count ||
+                          prev.regenerationCount + 1;
+
+                        // 재생성 이력에 현재 결과 추가
+                        const newHistoryEntry = {
+                          text: finalText,
+                          emotion: parsedData.emotion || null,
+                          keywords: parsedData.keywords || [],
+                          timestamp: Date.now(),
+                        };
+
+                        return {
+                          ...prev,
+                          isStreaming: false,
+                          isComplete: true,
+                          emotion: parsedData.emotion || null,
+                          keywords: parsedData.keywords || [],
+                          accumulatedText: finalText,
+                          regenerationCount: newRegenerationCount,
+                          regenerationHistory: [
+                            ...(prev.regenerationHistory || []),
+                            newHistoryEntry,
+                          ],
+                        };
+                      });
+
+                      // 스트리밍 완료 시 displayText를 streamedText와 동일하게 설정
+                      setState((prev) => ({
+                        ...prev,
+                        displayText: finalText,
+                        isTyping: false,
+                      }));
+
+                      logger.info(
+                        `${isUsingFallback ? '폴백' : '재생성'} 스트리밍 완료`,
+                        {
+                          emotion: parsedData.emotion,
+                          tokensUsed: parsedData.tokens_used,
+                          fallbackMode: isUsingFallback,
+                        },
+                      );
+                      break;
+                    }
+
+                    case 'error':
+                      setState((prev) => ({
+                        ...prev,
+                        isStreaming: false,
+                        error:
+                          parsedData.error || '재생성 중 오류가 발생했습니다.',
+                      }));
+                      logger.error('재생성 스트리밍 오류', {
+                        error: parsedData.error,
+                        fallbackMode: isUsingFallback,
+                      });
+                      break;
+                  }
+                }
+              } catch (parseError) {
+                logger.error('재생성 JSON 파싱 오류', { parseError, line });
+              }
+            }
+          }
+        }
+      } catch (error) {
+        logger.error('재생성 스트리밍 시작 실패', { error });
+        setState((prev) => ({
+          ...prev,
+          isStreaming: false,
+          error:
+            error instanceof Error
+              ? error.message
+              : '재생성 중 오류가 발생했습니다.',
+        }));
+      }
+    },
+    [appendStreamText, state.accumulatedText],
   );
 
   const stopStreaming = useCallback(() => {
+    // EventSource 정리
     if (eventSourceRef.current) {
       eventSourceRef.current.close();
       eventSourceRef.current = null;
     }
-    setState((prev) => ({
+
+    // 타이머 정리
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+      typingTimeoutRef.current = null;
+    }
+    if (streamingTypingTimeoutRef.current) {
+      clearTimeout(streamingTypingTimeoutRef.current);
+      streamingTypingTimeoutRef.current = null;
+    }
+
+    // ✅ Best Practice: 단순한 정리
+    // 복잡한 큐 시스템 제거로 정리할 것이 줄어듦
+
+    // useTransition을 활용한 논블로킹 상태 업데이트
+    updateStateOptimized((prev) => ({
       ...prev,
       isStreaming: false,
     }));
-  }, []);
+  }, [updateStateOptimized]);
 
   const setEditMode = useCallback((isEditMode: boolean, text?: string) => {
     setState((prev) => ({
@@ -522,9 +705,8 @@ export const useStreaming = () => {
       clearTimeout(streamingTypingTimeoutRef.current);
     }
 
-    // 청크 큐 정리
-    chunkQueueRef.current = [];
-    isProcessingQueueRef.current = false;
+    // ✅ Best Practice: 단순한 상태 정리
+    // 큐 시스템 제거로 정리 로직 단순화
 
     setState((prev) => ({
       isStreaming: false,
@@ -545,9 +727,33 @@ export const useStreaming = () => {
     }));
   }, []);
 
+  // 컴포넌트 언마운트 시 리소스 정리
+  useEffect(() => {
+    return () => {
+      // EventSource 연결 해제
+      if (eventSourceRef.current) {
+        eventSourceRef.current.close();
+      }
+
+      // 모든 타이머 정리
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
+      if (streamingTypingTimeoutRef.current) {
+        clearTimeout(streamingTypingTimeoutRef.current);
+      }
+
+      // ✅ Best Practice: 리소스 정리
+      // 단순화된 정리 로직
+    };
+  }, []);
+
+  // isPending 상태를 포함한 확장된 반환값
   return {
     ...state,
+    isPending, // useTransition의 pending 상태 추가
     startStreaming,
+    startRegeneration, // 재생성 스트리밍 함수 추가
     stopStreaming,
     resetState,
     setEditMode,

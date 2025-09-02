@@ -16,6 +16,8 @@ import PageHeader from '@/components/common/PageHeader';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import DeleteConfirmModal from '@/components/diary/DeleteConfirmModal';
+import { imageApi } from '@/lib/api/image';
+import { formatDateTime } from '@/lib/utils';
 
 const emotionLabels = {
   happy: { emoji: '😊', name: '행복', color: 'text-emotion-happy' },
@@ -243,13 +245,15 @@ export default function ViewPostPage({
         // (false); // 이 줄 제거
 
         // 성공 메시지 표시
-        alert('다이어리가 성공적으로 수정되었습니다.');
+        const { showSuccess } = await import('@/hooks/use-modal');
+        showSuccess('다이어리가 성공적으로 수정되었습니다.');
 
         // 페이지 새로고침 없이 상태만 업데이트
         // window.location.reload();
       } catch (error) {
         logger.error('다이어리 수정 실패:', error);
-        alert('다이어리 수정에 실패했습니다. 다시 시도해주세요.');
+        const { showError } = await import('@/hooks/use-modal');
+        showError('다이어리 수정에 실패했습니다. 다시 시도해주세요.');
       }
     } else if (!isEditing && entry) {
       // 수정 모드 시작
@@ -423,85 +427,71 @@ export default function ViewPostPage({
 
     try {
       logger.debug('기존 이미지 불러오기 시작');
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/diary/${entry.id}/images`,
-        {
-          method: 'GET',
-          credentials: 'include',
-        },
-      );
+      const response = await imageApi.getDiaryImages(entry.id);
 
-      if (response.ok) {
-        const data = await response.json();
-        if (data.success && data.data) {
-          const existingImages = data.data;
-          logger.debug('기존 이미지 조회 성공:', existingImages);
+      if (response.success && response.data) {
+        const existingImages = response.data;
+        logger.debug('기존 이미지 조회 성공:', existingImages);
 
-          // 삭제된 이미지는 제외하고 필터링하지 않고 모든 이미지 복원
-          // const filteredImages = existingImages.filter(
-          //   (img: ImageInfo) => !deletedImageIds.has(img.id),
-          // );
-          const filteredImages = existingImages; // 모든 이미지 복원
+        // 삭제된 이미지는 제외하고 필터링하지 않고 모든 이미지 복원
+        // const filteredImages = existingImages.filter(
+        //   (img: ImageInfo) => !deletedImageIds.has(img.id),
+        // );
+        const filteredImages = existingImages; // 모든 이미지 복원
 
-          // editedImages 상태 업데이트
-          setEditedImages(filteredImages);
+        // editedImages 상태 업데이트
+        setEditedImages(filteredImages);
 
-          // entry 상태도 업데이트
-          const updatedEntry = {
-            ...entry,
-            images: filteredImages,
-          };
-          setEntry(updatedEntry);
+        // entry 상태도 업데이트
+        const updatedEntry = {
+          ...entry,
+          images: filteredImages,
+        };
+        setEntry(updatedEntry);
 
-          // 다이어리 스토어 상태도 업데이트
-          const store = useDiaryStore.getState();
-          const updatedDiaries = store.diaries.map((diary) =>
-            diary.id === entry.id
-              ? { ...diary, images: filteredImages }
-              : diary,
-          );
+        // 다이어리 스토어 상태도 업데이트
+        const store = useDiaryStore.getState();
+        const updatedDiaries = store.diaries.map((diary) =>
+          diary.id === entry.id ? { ...diary, images: filteredImages } : diary,
+        );
 
-          // 전역 상태 강제 업데이트
-          useDiaryStore.setState({
-            diaries: updatedDiaries,
-          });
+        // 전역 상태 강제 업데이트
+        useDiaryStore.setState({
+          diaries: updatedDiaries,
+        });
 
-          // 현재 다이어리의 이미지 ID를 deletedImageIds에서 완전히 제거
-          const currentStore = useDiaryStore.getState();
-          existingImages.forEach((img: ImageInfo) => {
-            if (currentStore.deletedImageIds.has(img.id)) {
-              useDiaryStore.getState().removeDeletedImageId(img.id);
-            }
-          });
+        // 현재 다이어리의 이미지 ID를 deletedImageIds에서 완전히 제거
+        const currentStore = useDiaryStore.getState();
+        existingImages.forEach((img: ImageInfo) => {
+          if (currentStore.deletedImageIds.has(img.id)) {
+            useDiaryStore.getState().removeDeletedImageId(img.id);
+          }
+        });
 
-          // localStorage에서도 해당 다이어리의 삭제된 이미지 ID 제거
-          localStorage.removeItem(`deletedImageIds_${entryId}`);
-          logger.debug('localStorage에서 삭제된 이미지 ID 제거 완료');
+        // localStorage에서도 해당 다이어리의 삭제된 이미지 ID 제거
+        localStorage.removeItem(`deletedImageIds_${entryId}`);
+        logger.debug('localStorage에서 삭제된 이미지 ID 제거 완료');
 
-          // 이미지 복원 시 상태 잠금 해제
-          // clearDeletedImageIds() 호출하지 않음 - 전역 상태 유지
+        // 이미지 복원 시 상태 잠금 해제
+        // clearDeletedImageIds() 호출하지 않음 - 전역 상태 유지
 
-          logger.info('기존 이미지 복원 완료 - 캘린더와 동기화됨');
-          logger.debug('복원된 이미지 수:', filteredImages.length);
-          logger.debug('삭제된 이미지 ID 초기화 완료');
-          logger.debug('디버깅 정보:', {
-            백엔드_이미지_수: existingImages.length,
-            복원된_이미지_수: filteredImages.length,
-            현재_삭제된_이미지_ID: Array.from(deletedImageIds),
-            업데이트된_삭제된_이미지_ID: Array.from(
-              useDiaryStore.getState().deletedImageIds,
-            ),
-          });
+        logger.info('기존 이미지 복원 완료 - 캘린더와 동기화됨');
+        logger.debug('복원된 이미지 수:', filteredImages.length);
+        logger.debug('삭제된 이미지 ID 초기화 완료');
+        logger.debug('디버깅 정보:', {
+          백엔드_이미지_수: existingImages.length,
+          복원된_이미지_수: filteredImages.length,
+          현재_삭제된_이미지_ID: Array.from(deletedImageIds),
+          업데이트된_삭제된_이미지_ID: Array.from(
+            useDiaryStore.getState().deletedImageIds,
+          ),
+        });
 
-          alert(
-            '기존 이미지를 성공적으로 불러왔습니다. (삭제된 이미지도 복원됨)',
-          );
-        } else {
-          logger.error('기존 이미지 조회 실패:', data.message);
-          alert('기존 이미지 조회에 실패했습니다. 다시 시도해주세요.');
-        }
+        alert(
+          '기존 이미지를 성공적으로 불러왔습니다. (삭제된 이미지도 복원됨)',
+        );
       } else {
-        logger.error('기존 이미지 조회 실패:', response.status);
+        logger.error('기존 이미지 조회 실패:', response.message);
         alert('기존 이미지 조회에 실패했습니다. 다시 시도해주세요.');
       }
     } catch (error) {
@@ -514,31 +504,17 @@ export default function ViewPostPage({
     if (!file || !entry) return;
 
     try {
-      const formData = new FormData();
-      formData.append('image', file);
-      formData.append('diary_id', entry.id);
+      const response = await imageApi.uploadSingleImage(entry.id, file);
 
-      const apiBaseUrl =
-        process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000';
-      const response = await fetch(
-        `${apiBaseUrl}/api/diary/${entry.id}/upload-image`,
-        {
-          method: 'POST',
-          credentials: 'include',
-          body: formData,
-        },
-      );
-
-      if (response.ok) {
-        const result = await response.json();
-        logger.info('이미지 업로드 성공:', result);
+      if (response.success) {
+        logger.info('이미지 업로드 성공:', response);
 
         // 업로드된 이미지 정보를 entry에 추가
         const newImage: ImageInfo = {
-          id: result.data.id,
-          file_path: result.data.file_path,
-          thumbnail_path: result.data.thumbnail_path,
-          mime_type: result.data.mime_type,
+          id: response.data.id,
+          file_path: response.data.file_path,
+          thumbnail_path: response.data.thumbnail_path,
+          mime_type: response.data.mime_type,
         };
 
         const updatedImages = [...(entry.images || []), newImage];
@@ -691,7 +667,14 @@ export default function ViewPostPage({
       {/* 페이지 헤더 */}
       <PageHeader
         title={entry?.title || '제목 없음'}
-        subtitle={`${new Date(entry.created_at).getMonth() + 1}월 ${new Date(entry.created_at).getDate()}일`}
+        subtitle={
+          entry?.created_at
+            ? formatDateTime(entry.created_at, {
+                format: 'medium',
+                includeTime: false,
+              })
+            : '날짜 정보 없음'
+        }
         actions={
           <Button
             variant="ghost"
@@ -854,7 +837,7 @@ export default function ViewPostPage({
                             type="text"
                             value={newKeyword}
                             onChange={(e) => setNewKeyword(e.target.value)}
-                            onKeyPress={(e) => {
+                            onKeyDown={(e) => {
                               if (e.key === 'Enter') {
                                 handleAddKeyword();
                               }
@@ -1171,9 +1154,9 @@ const ImageOptionsModal = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg p-6 w-80 max-w-md">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">
+    <div className="fixed inset-0 bg-gray-500/20 dark:bg-gray-900/40 backdrop-blur-sm flex items-center justify-center z-50 animate-in fade-in-0 duration-300">
+      <div className="bg-background border border-border rounded-2xl shadow-2xl p-6 w-80 max-w-md animate-in zoom-in-95 duration-300">
+        <h3 className="text-lg font-semibold text-foreground mb-4">
           이미지 불러오기 옵션
         </h3>
         <div className="space-y-3">

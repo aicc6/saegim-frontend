@@ -1,11 +1,11 @@
 /**
- * API 클라이언트 설정
+ * 중앙화된 API 클라이언트
+ * 모든 API 호출의 기반이 되는 핵심 클라이언트
  */
 
-import { DiaryListEntry } from '@/types/diary';
 import { TIMEOUTS } from '@/constants/timeouts';
 import { CONTENT_TYPES, ACCEPT_TYPES } from '@/constants/locale';
-import { getLogger } from './logger';
+import { getLogger } from '../logger';
 
 // HTTPS 강제 - 보안상 HTTP 프로토콜 사용 금지
 const ensureHttps = (url: string): string => {
@@ -17,7 +17,7 @@ const ensureHttps = (url: string): string => {
   return url.replace(/^http:/, 'https:');
 };
 
-const logger = getLogger('api');
+const logger = getLogger('api-client');
 
 export const API_BASE_URL = ensureHttps(
   process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000',
@@ -29,22 +29,6 @@ export interface ApiResponse<T> {
   message: string | null;
   timestamp: string;
   request_id: string;
-}
-
-export interface PasswordResetEmailResponse {
-  success: boolean;
-  message: string;
-  is_social_account?: boolean;
-  email_sent?: boolean;
-  redirect_to_error_page?: boolean;
-}
-
-export interface LoginResponse {
-  user_id: string;
-  email: string;
-  nickname: string;
-  message: string;
-  // 쿠키 기반 인증이므로 토큰은 응답에 포함되지 않음
 }
 
 export interface PaginationInfo {
@@ -256,189 +240,84 @@ class ApiClient {
   async delete<T>(endpoint: string): Promise<ApiResponse<T>> {
     return this.request<T>(endpoint, { method: 'DELETE' });
   }
+
+  // FormData 업로드를 위한 특별한 메소드
+  async upload<T>(
+    endpoint: string,
+    formData: FormData,
+  ): Promise<ApiResponse<T>> {
+    const url = `${this.baseURL}${endpoint}`;
+
+    logger.debug('📤 ApiClient: 파일 업로드 시작', { endpoint });
+
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(
+        () => controller.abort(),
+        TIMEOUTS.API_UPLOAD,
+      );
+
+      const response = await fetch(url, {
+        method: 'POST',
+        body: formData,
+        credentials: 'include',
+        // FormData의 경우 Content-Type을 설정하지 않음 (브라우저가 자동 설정)
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      logger.debug('✅ ApiClient: 파일 업로드 성공');
+
+      return data;
+    } catch (error) {
+      logger.error('❌ ApiClient: 파일 업로드 실패', error);
+      throw error;
+    }
+  }
+
+  // 스트리밍을 위한 특별한 메소드
+  async stream(
+    endpoint: string,
+    data: Record<string, unknown>,
+  ): Promise<Response> {
+    const url = `${this.baseURL}${endpoint}`;
+
+    logger.debug('🌊 ApiClient: 스트리밍 요청 시작', { endpoint });
+
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': CONTENT_TYPES.JSON_UTF8,
+          Accept: ACCEPT_TYPES.JSON_UTF8,
+          'Accept-Charset': 'utf-8',
+        },
+        body: JSON.stringify(data),
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      logger.debug('🌊 ApiClient: 스트리밍 응답 받음', {
+        status: response.status,
+        ok: response.ok,
+      });
+
+      return response;
+    } catch (error) {
+      logger.error('❌ ApiClient: 스트리밍 요청 실패', error);
+      throw error;
+    }
+  }
 }
 
 // API 클라이언트 인스턴스 생성
 export const apiClient = new ApiClient(API_BASE_URL);
-
-// 인증 관련 API 엔드포인트
-export const authApi = {
-  // 구글 로그인 시작 (백엔드로 리다이렉트)
-  googleLogin: () => {
-    window.location.href = `${API_BASE_URL}/api/auth/google/login`;
-  },
-
-  // 로그아웃
-  logout: async () => {
-    try {
-      // 백엔드에 로그아웃 요청 (쿠키 기반 세션 정리)
-      await apiClient.post('/api/auth/logout', {});
-
-      // 쿠키가 자동으로 삭제되므로 localStorage 정리 불필요
-      return { success: true };
-    } catch (error) {
-      logger.error('로그아웃 API 호출 실패:', error);
-      // API 호출이 실패해도 쿠키는 자동으로 정리됨
-      return { success: true };
-    }
-  },
-
-  // 회원가입
-  signup: async (data: {
-    email: string;
-    password: string;
-    nickname: string;
-  }) => {
-    return apiClient.post('/api/auth/signup', data);
-  },
-
-  // 이메일 중복 확인
-  checkEmail: async (email: string) => {
-    return apiClient.get(`/api/auth/check-email/${email}`);
-  },
-
-  // 닉네임 중복 확인
-  checkNickname: async (nickname: string) => {
-    return apiClient.get(`/api/auth/check-nickname/${nickname}`);
-  },
-
-  // 이메일 로그인
-  login: async (data: { email: string; password: string }) => {
-    const response = await apiClient.post<LoginResponse>(
-      '/api/auth/login',
-      data,
-    );
-
-    // 쿠키에 토큰이 자동으로 설정되므로 localStorage 저장 불필요
-    return response;
-  },
-
-  // 이메일 인증 코드 발송
-  sendVerificationEmail: async (data: { email: string }) => {
-    return apiClient.post('/api/auth/send-verification-email', data);
-  },
-
-  // 이메일 인증 코드 확인
-  verifyEmail: async (data: { email: string; verification_code: string }) => {
-    return apiClient.post('/api/auth/verify-email', data);
-  },
-
-  // 현재 사용자 정보 조회
-  getCurrentUser: async () => {
-    return apiClient.get('/api/auth/me');
-  },
-
-  // 비밀번호 재설정 이메일 발송
-  sendPasswordResetEmail: async (data: { email: string }) => {
-    return apiClient.post<PasswordResetEmailResponse>(
-      '/api/auth/forgot-password',
-      data,
-    );
-  },
-
-  // 비밀번호 재설정 인증코드 확인
-  verifyPasswordResetCode: async (data: {
-    email: string;
-    verification_code: string;
-  }) => {
-    return apiClient.post('/api/auth/forgot-password/verify', data);
-  },
-
-  // 비밀번호 재설정
-  resetPassword: async (data: {
-    email: string;
-    verification_code: string;
-    new_password: string;
-  }) => {
-    return apiClient.post('/api/auth/forgot-password/reset', data);
-  },
-
-  // 계정 복구 이메일 발송
-  sendRestoreEmail: async (email: string) => {
-    return apiClient.post('/api/auth/restore/send-restore-email', { email });
-  },
-
-  // 계정 복구
-  restoreAccount: async (data: {
-    email: string;
-    verification_code: string;
-  }) => {
-    return apiClient.post('/api/auth/restore', data);
-  },
-};
-
-// 다이어리 API 엔드포인트
-export const diaryApi = {
-  // 다이어리 목록 조회
-  getDiaries: (params?: {
-    page?: number;
-    page_size?: number;
-    emotion?: string;
-    start_date?: string;
-    end_date?: string;
-    sort_order?: string;
-  }) => {
-    const stringParams: Record<string, string> = {};
-    if (params) {
-      Object.entries(params).forEach(([key, value]) => {
-        if (value !== undefined) {
-          stringParams[key] = String(value);
-        }
-      });
-    }
-    return apiClient.get<DiaryListEntry[]>('/api/diary', stringParams);
-  },
-
-  // 특정 다이어리 조회
-  getDiary: (id: string) => apiClient.get(`/api/diary/${id}`),
-
-  // 다이어리 수정
-  updateDiary: (
-    id: string,
-    data: {
-      title?: string;
-      content?: string;
-      user_emotion?: string;
-      is_public?: boolean;
-      keywords?: string[];
-    },
-  ) => apiClient.put(`/api/diary/${id}`, data),
-
-  // 캘린더용 다이어리 조회 (JWT 기반, user_id 파라미터 제거)
-  getCalendarDiaries: (startDate: string, endDate: string) =>
-    apiClient.get('/api/diary/calendar', {
-      start_date: startDate,
-      end_date: endDate,
-    }),
-
-  // 다이어리 생성
-  createDiary: async (data: {
-    title?: string;
-    content: string;
-    user_emotion?: string;
-    ai_generated_text?: string;
-    ai_emotion?: string;
-    ai_emotion_confidence?: number;
-    keywords?: string[];
-    is_public?: boolean;
-    uploaded_images?: Array<{
-      file_id: string;
-      original_url: string;
-      thumbnail_url: string;
-      mime_type: string;
-      file_size: number;
-      filename: string;
-    }> | null;
-  }) => apiClient.post('/api/diary', data),
-
-  // 다이어리 삭제
-  deleteDiary: (id: string) => apiClient.delete(`/api/diary/${id}`),
-};
-
-// AI 관련 API 엔드포인트
-export const aiApi = {
-  // AI 텍스트 재생성 (session_id 기반)
-  regenerate: async (sessionId: string) => {
-    return apiClient.post(`/api/ai/regenerate/${sessionId}`, {});
-  },
-};

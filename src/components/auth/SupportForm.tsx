@@ -6,7 +6,6 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { Button } from '@/components/ui/button';
 import { FormInput } from '@/components/ui/form-input';
 import { useApiError } from '@/hooks/use-api-error';
-import { apiClient } from '@/lib/api';
 import { supportSchema, type SupportFormData } from '@/schemas/auth';
 import { TEXT_STYLES } from '@/constants';
 
@@ -34,8 +33,15 @@ export default function SupportForm() {
 
   const onSubmit = async (data: SupportFormData) => {
     try {
-      // 고객센터 문의 API 호출 (이미지 업로드는 추후 구현)
-      await apiClient.post('/api/support/inquiries/', {
+      // TODO: 백엔드에 Support API 구현 필요 - 현재 임시 처리
+      // await apiClient.post('/api/support/inquiries', {
+      //   title: data.title,
+      //   content: data.content,
+      //   image_attached: !!selectedImage,
+      // });
+
+      // 임시로 성공 처리 (실제로는 백엔드 API 호출 필요)
+      console.log('Support inquiry (임시):', {
         title: data.title,
         content: data.content,
         image_attached: !!selectedImage,
@@ -43,7 +49,7 @@ export default function SupportForm() {
 
       showSuccess(
         '문의 접수 완료',
-        '문의가 성공적으로 접수되었습니다. 빠른 시일 내에 답변드리겠습니다.',
+        '문의가 접수되었습니다. (현재는 개발 중인 기능입니다)',
       );
 
       // 폼 초기화

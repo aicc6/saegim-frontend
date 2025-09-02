@@ -10,6 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import PageHeader from '@/components/common/PageHeader';
 import { getLogger } from '@/lib/logger';
 import { NotificationResponse } from '@/types/api';
+import { formatRelativeTime } from '@/lib/utils';
 import NotificationSettings from './notification-settings';
 
 const logger = getLogger('NotificationPage');
@@ -92,7 +93,7 @@ export function NotificationPage() {
         setIsRetrying(retryCount > 0);
 
         // Notification API를 직접 호출하여 알림 이력 조회
-        const { notificationApi } = await import('@/lib/notification-api');
+        const { notificationApi } = await import('@/lib/api/notification');
         const response = await notificationApi.getNotificationHistory(100, 0);
 
         // 응답 데이터 검증
@@ -241,19 +242,6 @@ export function NotificationPage() {
     filter === 'unread'
       ? notifications.filter((n) => !n.isRead)
       : notifications;
-
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffInHours = Math.floor(
-      (now.getTime() - date.getTime()) / (1000 * 60 * 60),
-    );
-
-    if (diffInHours < 1) return '방금 전';
-    if (diffInHours < 24) return `${diffInHours}시간 전`;
-    if (diffInHours < 48) return '어제';
-    return date.toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' });
-  };
 
   // 알림 타입에 따른 UI 요소 가져오기
   const getNotificationUIElements = (notification: Notification) => {
@@ -591,7 +579,9 @@ export function NotificationPage() {
                                 </h3>
                                 <div className="flex flex-col items-end space-y-1">
                                   <span className="text-xs text-sage-60 dark:text-gray-400 whitespace-nowrap font-medium">
-                                    {formatDate(notification.created_at)}
+                                    {formatRelativeTime(
+                                      notification.created_at,
+                                    )}
                                   </span>
                                   {isUnread && (
                                     <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>

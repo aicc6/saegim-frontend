@@ -7,7 +7,7 @@ import { useTheme } from 'next-themes';
 import { useNotifications } from '@/hooks/use-notifications';
 import { useFCMStore } from '@/stores/fcm';
 import { useAuthStore } from '@/stores/auth';
-import { authApi } from '@/lib/api';
+import { authApi } from '@/lib/api/auth';
 import { getLogger } from '@/lib/logger';
 import ThemeToggle from '../ui/custom/ThemeToggle';
 import NotificationPopover from './NotificationPopover';

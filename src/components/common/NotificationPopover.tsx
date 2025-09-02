@@ -4,6 +4,9 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Bell, Check, X } from 'lucide-react';
 import { useTheme } from 'next-themes';
+
+import { formatRelativeTime } from '@/lib/utils';
+
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
 import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
@@ -82,19 +85,6 @@ export default function NotificationPopover({
     ...convertedFCMNotifications,
     ...notifications,
   ].sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
-
-  const formatTime = (date: Date) => {
-    const now = new Date();
-    const diff = now.getTime() - date.getTime();
-    const minutes = Math.floor(diff / (1000 * 60));
-    const hours = Math.floor(diff / (1000 * 60 * 60));
-    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-
-    if (minutes < 1) return '방금 전';
-    if (minutes < 60) return `${minutes}분 전`;
-    if (hours < 24) return `${hours}시간 전`;
-    return `${days}일 전`;
-  };
 
   const getTypeColor = (type: string = 'info') => {
     switch (type) {
@@ -232,7 +222,7 @@ export default function NotificationPopover({
                           <p
                             className={`text-xs mt-2 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}
                           >
-                            {formatTime(notification.timestamp)}
+                            {formatRelativeTime(notification.timestamp)}
                           </p>
                         </div>
                       </div>

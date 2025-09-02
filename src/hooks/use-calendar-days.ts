@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { CalendarDay, EmotionCount } from '@/types/calendar';
 import { DiaryListEntry, EmotionType } from '@/types/diary';
 import { DateUtils } from '@/lib/date-utils';
+import { isToday } from '@/lib/utils';
 
 export const useCalendarDays = (
   year: number,
@@ -15,7 +16,6 @@ export const useCalendarDays = (
     const { startDate, endDate } = DateUtils.getCalendarBounds(year, month);
     const days: CalendarDay[] = [];
     const current = new Date(startDate);
-    const todayStr = DateUtils.getTodayString();
 
     while (current <= endDate) {
       const dateStr = DateUtils.formatDateString(current);
@@ -47,7 +47,7 @@ export const useCalendarDays = (
         dominantEmotion,
         keywords: topKeywords,
         isCurrentMonth: current.getMonth() === effectiveDate.getMonth(),
-        isToday: dateStr === todayStr,
+        isToday: isToday(current),
         isSelected: dateStr === selectedDate,
         thumbnailPath,
         allImages,

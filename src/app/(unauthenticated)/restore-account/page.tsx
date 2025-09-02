@@ -3,7 +3,7 @@
 import { useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { FormInput } from '@/components/ui/form-input';
-import { authApi } from '@/lib/api';
+import { authApi } from '@/lib/api/auth';
 import { useToast } from '@/hooks/use-toast';
 import { logger } from '@/lib/logger';
 import { BRAND_COLORS } from '@/constants/brand';
