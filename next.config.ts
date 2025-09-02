@@ -130,7 +130,7 @@ const nextConfig: NextConfig = {
               "font-src 'self' https://fonts.gstatic.com",
               "img-src 'self' data: https: blob:",
               "media-src 'self' https:",
-              "connect-src 'self' http://localhost:8000 https://saegim-api.aicc-project.com https://saegim-api.seongjunlee.dev https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://fcmregistrations.googleapis.com wss:",
+              "connect-src 'self' http://localhost:8000 https://saegim-api.aicc-project.com https://saegim-api.seongjunlee.dev https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://fcmregistrations.googleapis.com https://firebaseinstallations.googleapis.com wss:",
               "frame-src 'none'",
               "object-src 'none'",
               "base-uri 'self'",
