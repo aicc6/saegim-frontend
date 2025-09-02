@@ -201,6 +201,14 @@ export default function CalendarPage() {
       ? emotionLabels[maxEmotion[0] as keyof typeof emotionLabels]
       : null;
 
+    // 디버깅을 위한 로그 추가
+    logger.debug('감정분포 데이터 계산 완료', {
+      emotionCounts,
+      totalEntries,
+      topEmotion,
+      currentMonthDiaries: currentMonthDiaries.length,
+    });
+
     return {
       emotionDistribution: emotionCounts,
       keywordDistribution,
@@ -613,13 +621,7 @@ export default function CalendarPage() {
                                       <Image
                                         src={
                                           image.thumbnail_path
-                                            ? `${
-                                                process.env
-                                                  .NEXT_PUBLIC_API_BASE_URL || 
-                                                (process.env.NODE_ENV === 'development' ? 'http://localhost:8000' : '')
-                                              }/api/public/image-proxy?url=${encodeURIComponent(
-                                                image.thumbnail_path,
-                                              )}`
+                                            ? `${process.env.NEXT_PUBLIC_API_BASE_URL || (process.env.NODE_ENV === 'development' ? 'http://localhost:8000' : '')}/api/public/image-proxy?url=${encodeURIComponent(image.thumbnail_path)}`
                                             : ''
                                         }
                                         alt={`다이어리 이미지 ${index + 1}`}
