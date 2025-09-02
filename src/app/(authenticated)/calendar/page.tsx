@@ -589,8 +589,8 @@ export default function CalendarPage() {
                                           image.thumbnail_path
                                             ? `${
                                                 process.env
-                                                  .NEXT_PUBLIC_API_BASE_URL ||
-                                                'http://localhost:8000'
+                                                  .NEXT_PUBLIC_API_BASE_URL || 
+                                                (process.env.NODE_ENV === 'development' ? 'http://localhost:8000' : '')
                                               }/api/public/image-proxy?url=${encodeURIComponent(
                                                 image.thumbnail_path,
                                               )}`

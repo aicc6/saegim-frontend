@@ -23,22 +23,22 @@ function injectEnvToServiceWorker() {
   if (fs.existsSync(templatePath)) {
     let swContent = fs.readFileSync(templatePath, 'utf8');
 
-    // 환경변수 치환
+    // 환경변수 치환 - 개발/배포 환경 모두 지원
     const envVars = {
       NEXT_PUBLIC_FIREBASE_API_KEY:
-        process.env.NEXT_PUBLIC_FIREBASE_API_KEY || '',
+        process.env.NEXT_PUBLIC_FIREBASE_API_KEY || 'development_key',
       NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN:
-        process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || '',
+        process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || 'localhost',
       NEXT_PUBLIC_FIREBASE_PROJECT_ID:
-        process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || '',
+        process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || 'dev-project',
       NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET:
-        process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || '',
+        process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || 'dev-bucket',
       NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID:
-        process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || '',
+        process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || '123456789',
       NEXT_PUBLIC_FIREBASE_APP_ID:
-        process.env.NEXT_PUBLIC_FIREBASE_APP_ID || '',
+        process.env.NEXT_PUBLIC_FIREBASE_APP_ID || 'dev-app-id',
       NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID:
-        process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID || '',
+        process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID || 'dev-measurement',
     };
 
     // 환경변수 치환
@@ -74,23 +74,33 @@ const nextConfig: NextConfig = {
     ignoreBuildErrors: false,
   },
 
-  // 이미지 최적화 설정
+  // 이미지 최적화 설정 - 개발/배포 환경 모두 지원
   images: {
     remotePatterns: [
       {
         protocol: 'https',
         hostname: '**',
       },
-      {
-        protocol: 'http',
-        hostname: 'localhost',
-        port: '8000',
-      },
-      {
-        protocol: 'http',
-        hostname: '127.0.0.1',
-        port: '8000',
-      },
+      // 개발 환경 지원 (localhost)
+      ...(process.env.NODE_ENV === 'development' ? [
+        {
+          protocol: 'http' as const,
+          hostname: 'localhost',
+          port: '8000',
+        },
+        {
+          protocol: 'http' as const,
+          hostname: '127.0.0.1',
+          port: '8000',
+        },
+      ] : []),
+      // 배포 환경 지원 (실제 도메인)
+      ...(process.env.NEXT_PUBLIC_API_BASE_URL ? [
+        {
+          protocol: 'https' as const,
+          hostname: new URL(process.env.NEXT_PUBLIC_API_BASE_URL).hostname,
+        },
+      ] : []),
     ],
   },
 
@@ -130,7 +140,7 @@ const nextConfig: NextConfig = {
               "font-src 'self' https://fonts.gstatic.com",
               "img-src 'self' data: https: blob:",
               "media-src 'self' https:",
-              "connect-src 'self' http://localhost:8000 https://saegim-api.aicc-project.com https://saegim-api.seongjunlee.dev https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://fcmregistrations.googleapis.com https://firebaseinstallations.googleapis.com wss:",
+              "connect-src 'self' https://saegim-api.aicc-project.com https://saegim-api.seongjunlee.dev https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://fcmregistrations.googleapis.com https://firebaseinstallations.googleapis.com wss:",
               "frame-src 'none'",
               "object-src 'none'",
               "base-uri 'self'",

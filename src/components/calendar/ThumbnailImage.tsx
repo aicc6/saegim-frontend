@@ -31,8 +31,14 @@ export const ThumbnailImage = ({
     }
   };
 
-  const baseUrl =
-    process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000';
+  const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 
+    (process.env.NODE_ENV === 'development' ? 'http://localhost:8000' : '');
+  
+  if (!baseUrl) {
+    logger.error('NEXT_PUBLIC_API_BASE_URL 환경변수가 설정되지 않았습니다.');
+    return null;
+  }
+  
   const imageUrl = `${baseUrl}/api/public/image-proxy?url=${encodeURIComponent(allImages[currentImageIndex])}`;
 
   return (
