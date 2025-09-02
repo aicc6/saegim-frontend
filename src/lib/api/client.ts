@@ -22,18 +22,22 @@ const logger = getLogger('api-client');
 // 환경변수 검증 - 개발/배포 환경 모두 지원
 const getApiBaseUrl = (): string => {
   const apiUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
-  
+
   if (!apiUrl) {
     // 개발 환경에서는 localhost 사용, 배포 환경에서는 경고
     if (process.env.NODE_ENV === 'development') {
-      logger.warn('NEXT_PUBLIC_API_BASE_URL이 설정되지 않아 localhost:8000을 사용합니다.');
+      logger.warn(
+        'NEXT_PUBLIC_API_BASE_URL이 설정되지 않아 localhost:8000을 사용합니다.',
+      );
       return 'http://localhost:8000';
     } else {
       logger.error('NEXT_PUBLIC_API_BASE_URL 환경변수가 설정되지 않았습니다.');
-      throw new Error('NEXT_PUBLIC_API_BASE_URL 환경변수가 설정되지 않았습니다.');
+      throw new Error(
+        'NEXT_PUBLIC_API_BASE_URL 환경변수가 설정되지 않았습니다.',
+      );
     }
   }
-  
+
   return apiUrl;
 };
 

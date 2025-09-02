@@ -1,7 +1,7 @@
 'use client';
 
 import { Trash2 } from 'lucide-react';
-import { ConfirmModal } from '@/components/ui/modal';
+import { ConfirmModal } from '@/components/ui/enhanced-modal';
 
 interface DeleteConfirmModalProps {
   isOpen: boolean;

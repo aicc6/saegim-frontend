@@ -1,7 +1,7 @@
 'use client';
 
 import { useModal } from '@/hooks/use-modal';
-import { AlertModal, ConfirmModal } from '@/components/ui/modal';
+import { AlertModal, ConfirmModal } from '@/components/ui/enhanced-modal';
 
 export function ModalProvider() {
   const { alertModal, confirmModal, closeAlert, closeConfirm } = useModal();
