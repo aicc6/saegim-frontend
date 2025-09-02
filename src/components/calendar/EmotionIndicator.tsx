@@ -57,14 +57,14 @@ export const EmotionIndicator = ({
               <span
                 key={index}
                 className={cn(
-                  'text-[8px] px-1 py-0.5 rounded text-text-primary font-medium',
+                  'text-[8px] px-1 py-0.5 rounded font-medium',
                   isCurrentMonth ? 'font-medium' : 'font-normal',
                 )}
                 style={{
                   fontSize: '8px',
                   lineHeight: '1.1',
                   backgroundColor: getKeywordBackgroundColor(emotion),
-                  ...(isSelected ? { color: '#000000' } : {}),
+                  color: '#000000', // 다크모드에서도 잘 보이도록 검은색으로 고정
                 }}
               >
                 #{keyword}
