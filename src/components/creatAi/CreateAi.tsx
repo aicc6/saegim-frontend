@@ -15,6 +15,7 @@ import { useStreaming } from '@/hooks/use-streaming';
 import { useClipboard } from '@/hooks/use-clipboard';
 import { diaryApi } from '@/lib/api/diary';
 import { useSimpleToast } from '@/hooks/use-simple-toast';
+import { enhancedToast } from '@/lib/enhanced-toast';
 import { useTempOptions } from '@/hooks/use-temp-options';
 import { useChatUi } from '@/hooks/use-chat-ui';
 import { ChatInput } from '@/components/chat/ChatInput';
@@ -202,8 +203,8 @@ function CreateAi() {
   );
 
   const { showToastMessage } = useSimpleToast();
-  const { copyToClipboard } = useClipboard(() =>
-    showToastMessage('클립보드에 복사되었습니다!', 'success'),
+  const { copyToClipboard } = useClipboard((text: string) =>
+    enhancedToast.clipboardCopied({ text }),
   );
 
   useErrorManagement({ error: error || streamError, clearError });
@@ -511,6 +512,9 @@ function CreateAi() {
       }
 
       try {
+        // 저장 중 로딩 토스트 표시
+        const loadingToast = enhancedToast.diarySaving();
+
         const result = await diaryApi.createDiary({
           title:
             textToSave.slice(0, 50) + (textToSave.length > 50 ? '...' : ''),
@@ -534,28 +538,42 @@ function CreateAi() {
         });
 
         if (result.success) {
-          showToastMessage('다이어리가 성공적으로 저장되었습니다!', 'success');
+          const diaryId = (result.data as { id: string }).id;
 
-          const { showConfirm } = await import('@/hooks/use-modal');
-          const viewDiary = await showConfirm(
-            '저장된 다이어리를 보시겠습니까?',
-            '다이어리 저장 완료',
+          // 로딩 토스트를 성공 토스트로 업데이트 (액션 버튼 포함)
+          enhancedToast.update(
+            loadingToast,
+            '다이어리가 저장되었습니다! 🎉',
+            'success',
+            {
+              description: '생성된 글이 성공적으로 저장되었습니다.',
+              action: {
+                label: '다이어리 보기',
+                onClick: () =>
+                  router.push(
+                    `/viewPost/${diaryId}?from=${encodeURIComponent('/create')}`,
+                  ),
+              },
+              duration: 5000,
+            },
           );
-
-          if (viewDiary) {
-            router.push(
-              `/viewPost/${(result.data as { id: string }).id}?from=${encodeURIComponent('/create')}`,
-            );
-          }
         } else {
-          throw new Error(result.message || '다이어리 저장에 실패했습니다.');
+          // 로딩 토스트를 에러 토스트로 업데이트
+          enhancedToast.update(
+            loadingToast,
+            '다이어리 저장에 실패했습니다',
+            'error',
+            {
+              description: result.message || '다시 시도해주세요.',
+              duration: 4000,
+            },
+          );
         }
       } catch (error) {
         logger.error('다이어리 저장 실패', { error });
-        showToastMessage(
-          '다이어리 저장에 실패했습니다. 다시 시도해주세요.',
-          'error',
-        );
+        enhancedToast.error('다이어리 저장에 실패했습니다', {
+          description: '다시 시도해주세요.',
+        });
       }
     },
     [generatedCards, showToastMessage, router],
