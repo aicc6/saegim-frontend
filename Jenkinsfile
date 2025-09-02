@@ -212,8 +212,9 @@ pipeline {
             set -e
 
             echo "== Ensure docker network =="
-            if ! docker network ls | grep -qE '(^| )${DOCKER_NETWORK}( |$)'; then
-              docker network create ${DOCKER_NETWORK} || echo "network create failed or exists"
+            # 네트워크 존재 여부를 docker network inspect 로 확인 (성능/안정성↑)
+            if ! docker network inspect "$DOCKER_NETWORK" >/dev/null 2>&1; then
+              docker network create "$DOCKER_NETWORK"
             fi
 
             echo "== Pull if registry is configured =="
@@ -225,7 +226,7 @@ pipeline {
             docker stop "${containerName}" || true
             docker rm   "${containerName}" || true
 
-            echo "== Run new container (NO host port), network: ${DOCKER_NETWORK} =="
+            echo "== Run new container (NO host port), network: $DOCKER_NETWORK =="
             docker run -d \\
               --name "${containerName}" \\
               --network "${DOCKER_NETWORK}" \\
