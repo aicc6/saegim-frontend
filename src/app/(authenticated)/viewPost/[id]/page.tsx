@@ -133,9 +133,13 @@ export default function ViewPostPage({
 
     if (foundEntry) {
       // 같은 날짜의 다른 엔트리들 찾기 (목록용 데이터)
-      const sameDateEntries = diaries.filter(
-        (e: DiaryListEntry) => e.created_at === foundEntry.created_at,
-      );
+      // diary_date가 있으면 해당 날짜로 비교, 없으면 created_at으로 비교
+      const foundEntryDate =
+        foundEntry.diary_date || foundEntry.created_at.split('T')[0];
+      const sameDateEntries = diaries.filter((e: DiaryListEntry) => {
+        const entryDate = e.diary_date || e.created_at.split('T')[0];
+        return entryDate === foundEntryDate;
+      });
       setSameDateEntries(sameDateEntries);
 
       // 현재 엔트리의 인덱스 찾기
@@ -725,7 +729,7 @@ export default function ViewPostPage({
             entry?.title || '제목 없음'
           )
         }
-        subtitle={`${new Date(entry.created_at).getMonth() + 1}월 ${new Date(entry.created_at).getDate()}일`}
+        subtitle={`${new Date(entry.diary_date || entry.created_at).getMonth() + 1}월 ${new Date(entry.diary_date || entry.created_at).getDate()}일`}
         actions={
           <Button
             variant="ghost"

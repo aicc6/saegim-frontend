@@ -5,8 +5,9 @@ export class DateUtils {
     const startDate = new Date(year, month, 1);
     const endDate = new Date(year, month + 1, 0);
 
-    const startDateStr = startDate.toISOString().split('T')[0];
-    const endDateStr = endDate.toISOString().split('T')[0];
+    // Use local date parts to avoid UTC timezone shift from toISOString()
+    const startDateStr = DateUtils.formatDateString(startDate);
+    const endDateStr = DateUtils.formatDateString(endDate);
 
     return { startDate: startDateStr, endDate: endDateStr };
   }

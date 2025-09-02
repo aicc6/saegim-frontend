@@ -101,6 +101,7 @@ function CreateAi() {
   const [regeneratingCardId, setRegeneratingCardId] = useState<string | null>(
     null,
   );
+  const [selectedDate, setSelectedDate] = useState<string>(''); // 선택된 날짜 상태
 
   const {
     config,
@@ -529,6 +530,7 @@ function CreateAi() {
             currentVersion.keywords.length > 0
               ? currentVersion.keywords
               : undefined,
+          diary_date: selectedDate || undefined, // 선택된 날짜 포함
           is_public: false,
           // AI 생성 시 사용된 이미지 포함 (이미 서버에 업로드됨)
           uploaded_images:
@@ -576,7 +578,7 @@ function CreateAi() {
         });
       }
     },
-    [generatedCards, showToastMessage, router],
+    [generatedCards, showToastMessage, router, selectedDate],
   );
 
   const handleCardRegenerate = useCallback(
@@ -1178,6 +1180,34 @@ function CreateAi() {
                 ? emotionConfigs.find((e) => e.value === emotion)?.label ||
                   emotion
                 : '감정 선택 안함'}
+            </span>
+          </p>
+        </div>
+
+        {/* 날짜 선택 */}
+        <div>
+          <div className="mb-3 block text-xs sm:text-sm text-text-secondary text-center">
+            다이어리 작성 날짜를 선택해주세요 📅 (선택 사항)
+          </div>
+          <div className="flex justify-center">
+            <input
+              type="date"
+              value={selectedDate}
+              onChange={(e) => setSelectedDate(e.target.value)}
+              className="px-3 py-2 border border-border-subtle rounded-lg bg-white text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-border-focus"
+              max={new Date().toISOString().split('T')[0]} // 오늘까지만 선택 가능
+            />
+          </div>
+          <p className="mt-2 text-center text-xs sm:text-sm text-text-secondary">
+            선택된 날짜:{' '}
+            <span className="font-medium text-sage-100">
+              {selectedDate
+                ? new Date(selectedDate).toLocaleDateString('ko-KR', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric',
+                  })
+                : '날짜 선택 안함 (오늘 날짜로 저장)'}
             </span>
           </p>
         </div>
