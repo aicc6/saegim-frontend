@@ -1,70 +1,67 @@
-# ============================================================================
-# Saegim Frontend - Next.js 15 / Node 20 (Production, standalone)
-# 공유 서버 안전성 고려: 포트 바인딩은 컨테이너 외부에서 하지 않습니다.
-# Nginx Proxy Manager(NPM)에서 컨테이너명:3000 으로 라우팅하세요.
-# ============================================================================
+# Saegim Frontend (Next.js 15) - Multi-stage
 
-# -------------------------
-# 1) deps: install deps
-# -------------------------
+# ---- Stage 1: deps ----
   FROM node:20-alpine AS deps
   WORKDIR /app
-  
-  # alpine 필수 라이브러리
   RUN apk add --no-cache libc6-compat
-  
-  # 패키지 파일만 먼저 복사 (캐시 최적화)
   COPY package.json package-lock.json* ./
-  
-  # devDependencies 포함하여 설치 (빌드 필요)
   RUN npm ci
   
-  # -------------------------
-  # 2) builder: build app
-  # -------------------------
+  # ---- Stage 2: builder ----
   FROM node:20-alpine AS builder
   WORKDIR /app
-  RUN apk add --no-cache libc6-compat
   
-  ENV NODE_ENV=production
-  ENV NEXT_TELEMETRY_DISABLED=1
+  # 빌드 인자 (Jenkins에서 전달)
+  ARG NEXT_PUBLIC_API_BASE_URL
+  ARG GOOGLE_REDIRECT_URI
+  ARG NEXT_PUBLIC_FIREBASE_API_KEY
+  ARG NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
+  ARG NEXT_PUBLIC_FIREBASE_PROJECT_ID
+  ARG NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
+  ARG NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID
+  ARG NEXT_PUBLIC_FIREBASE_APP_ID
+  ARG NEXT_PUBLIC_FIREBASE_VAPID_KEY
   
-  # node_modules 준비
+  # 유틸
+  RUN apk add --no-cache dumb-init curl
+  
+  # 의존성/소스
   COPY --from=deps /app/node_modules ./node_modules
-  
-  # 앱 소스 복사
+  COPY package.json package-lock.json* ./
   COPY . .
   
-  # .env.local 파일은 빌드 시 필요(NEXT_PUBLIC_* 변수). 최종 이미지에는 포함되지 않습니다.
-  # .dockerignore에서 .env.local이 제외되지 않도록 확인하세요.
+  # 빌드 전에 코드 포맷 & ESLint 자동 수정
+  ENV NEXT_TELEMETRY_DISABLED=1
+  # 1) Prettier 자동 포맷 (scripts 존재 시 우선)
+  RUN npm run format:fix || npx --yes prettier --write --ignore-unknown .
+  # 2) ESLint 자동 수정 (가능한 범위)
+  RUN npm run lint:fix || npm run lint -- --fix || true
+  # 3) Next 실제 빌드
   RUN npm run build
   
-  # -------------------------
-  # 3) runner: minimal runtime
-  # -------------------------
+  # ---- Stage 3: runner ----
   FROM node:20-alpine AS runner
   WORKDIR /app
+  RUN apk add --no-cache dumb-init curl
   
-  RUN apk add --no-cache libc6-compat dumb-init curl
+  # node 유저는 base image에 이미 존재 → 재생성 금지
+  RUN mkdir -p /app && chown -R node:node /app
+  
+  # 배포 산출물/필요 파일만 복사
+  COPY --from=builder --chown=node:node /app/.next ./.next
+  COPY --from=builder --chown=node:node /app/public ./public
+  COPY --from=builder --chown=node:node /app/package.json ./package.json
+  COPY --from=builder --chown=node:node /app/node_modules ./node_modules
+  # next.config.(js|mjs|ts) 중 하나를 복사
+  COPY --from=builder --chown=node:node /app/next.config.* ./
   
   ENV NODE_ENV=production
-  ENV NEXT_TELEMETRY_DISABLED=1
-  ENV PORT=3000
-  
-  # 비루트 유저 (node 이미지에 내장)
   USER node
   
-  # Next.js standalone 산출물 복사
-  # - server.js가 루트에 위치하도록 복사
-  COPY --chown=node:node --from=builder /app/public ./public
-  COPY --chown=node:node --from=builder /app/.next/standalone ./
-  COPY --chown=node:node --from=builder /app/.next/static ./.next/static
-  
   EXPOSE 3000
+  HEALTHCHECK --interval=30s --timeout=10s --retries=3 \
+    CMD curl -f http://localhost:3000/ || exit 1
   
-  # 간단 헬스체크: 루트 200 여부
-  HEALTHCHECK --interval=30s --timeout=5s --retries=5 \
-    CMD node -e "require('http').get('http://localhost:3000/', res => process.exit(res.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))"
-  
-  CMD ["dumb-init", "node", "server.js"]
+  ENTRYPOINT ["dumb-init", "--"]
+  CMD ["npm", "start"]
   
