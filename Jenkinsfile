@@ -20,8 +20,8 @@ pipeline {
     DOCKER_REGISTRY    = "${env.CUSTOM_DOCKER_REGISTRY}"      // 예: nexus.example.com
     DOCKER_CREDENTIALS = "${env.CUSTOM_DOCKER_CREDENTIALS}"   // Jenkins Credentials ID
 
-    // 런타임 환경 변수 파일(.env.local과 동일 스키마). Jenkins Secret file 추천
-    FRONT_ENV_FILE_CRED_ID = 'saegim-frontend-env'
+    // 런타임/빌드 공용 .env 파일 (Jenkins의 "Secret file")
+    FRONT_ENV_FILE_CRED_ID = 'saegim-frontend' // ← 현재 자격증명 ID와 정확히 일치
   }
 
   options {
@@ -32,16 +32,19 @@ pipeline {
   }
 
   stages {
+
     stage('Checkout') {
       steps {
         script {
           def branchName = params.BRANCH_TO_BUILD ?: (env.BRANCH_NAME ?: 'develop')
           branchName = branchName.replace('refs/heads/','').replace('origin/','')
           echo "🔍 브랜치: ${branchName}"
+
           checkout([$class: 'GitSCM',
             branches: [[name: "*/${branchName}"]],
             userRemoteConfigs: [[url: env.GIT_REPOSITORY_URL]]
           ])
+
           env.GIT_COMMIT_SHORT = sh(script: "git rev-parse --short HEAD", returnStdout: true).trim()
           echo "✅ commit: ${env.GIT_COMMIT_SHORT}"
         }
@@ -52,11 +55,14 @@ pipeline {
       steps {
         script {
           try {
+            // Secret file → .env.runtime
             withCredentials([file(credentialsId: env.FRONT_ENV_FILE_CRED_ID, variable: 'ENV_FILE')]) {
               sh '''
                 cp "$ENV_FILE" .env.runtime
                 chmod 600 .env.runtime
                 echo "[OK] .env.runtime prepared"
+                # 민감정보 노출 위험이 있으니 주석 해두고 정말 필요할 때만 활성화
+                # echo "[DEBUG] .env.runtime head:" && head -n 5 .env.runtime || true
               '''
             }
           } catch (e) {
@@ -71,7 +77,33 @@ pipeline {
       steps {
         script {
           echo "🐳 building ${DOCKER_IMAGE}:${BUILD_NUMBER}"
-          docker.build("${DOCKER_IMAGE}:${BUILD_NUMBER}", "--label app=saegim-frontend .")
+          sh '''
+            set -e
+
+            # .env.runtime 로드 (NEXT_PUBLIC_* / GOOGLE_REDIRECT_URI 등만 포함되어야 함)
+            set -a
+            . ./.env.runtime || true
+            set +a
+
+            # 필수값 검증(없으면 즉시 실패시켜 원인 명확화)
+            : "${NEXT_PUBLIC_API_BASE_URL:?NEXT_PUBLIC_API_BASE_URL is required}"
+
+            # BuildKit 사용 권장 (속도/캐시 향상)
+            export DOCKER_BUILDKIT=1
+
+            docker build -t "${DOCKER_IMAGE}:${BUILD_NUMBER}" \
+              --label app=saegim-frontend \
+              --build-arg NEXT_PUBLIC_API_BASE_URL="$NEXT_PUBLIC_API_BASE_URL" \
+              --build-arg GOOGLE_REDIRECT_URI="$GOOGLE_REDIRECT_URI" \
+              --build-arg NEXT_PUBLIC_FIREBASE_API_KEY="$NEXT_PUBLIC_FIREBASE_API_KEY" \
+              --build-arg NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN="$NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN" \
+              --build-arg NEXT_PUBLIC_FIREBASE_PROJECT_ID="$NEXT_PUBLIC_FIREBASE_PROJECT_ID" \
+              --build-arg NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET="$NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET" \
+              --build-arg NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID="$NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID" \
+              --build-arg NEXT_PUBLIC_FIREBASE_APP_ID="$NEXT_PUBLIC_FIREBASE_APP_ID" \
+              --build-arg NEXT_PUBLIC_FIREBASE_VAPID_KEY="$NEXT_PUBLIC_FIREBASE_VAPID_KEY" \
+              .
+          '''
           env.DOCKER_BUILD_SUCCESS = 'true'
         }
       }
