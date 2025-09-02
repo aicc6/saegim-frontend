@@ -54,8 +54,8 @@
   COPY --from=builder --chown=node:node /app/node_modules ./node_modules
   # next.config.(js|mjs|ts) 중 하나를 복사
   COPY --from=builder --chown=node:node /app/next.config.* ./
-  # 환경 설정 파일 복사
-  COPY --from=builder --chown=node:node /app/.env.local ./.env.local
+  # 환경 설정 파일 복사 (존재하지 않으면 빈 파일 생성)
+  RUN if [ -f /app/.env.local ]; then cp /app/.env.local ./.env.local; else touch .env.local; fi
   
   ENV NODE_ENV=production
   USER node

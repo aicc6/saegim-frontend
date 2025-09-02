@@ -19,6 +19,11 @@ pipeline {
       defaultValue: false,
       description: 'npm test 실행 여부'
     )
+    booleanParam(
+      name: 'PRUNE_OLD_DANGLING',
+      defaultValue: false,
+      description: '이 저장소 라벨의 오래된(dangling) 레이어까지 추가 정리(48h 이상)'
+    )
   }
 
   triggers { githubPush() }
@@ -27,12 +32,16 @@ pipeline {
     // Git
     GIT_REPOSITORY_URL = 'https://github.com/aicc6/saegim-frontend.git'
 
-    // Docker Registry(필요 시 설정). 예: nexus.aicc-project.com:8083
+    // Docker Registry(옵션)
     DOCKER_REGISTRY    = "${env.DOCKER_REGISTRY ?: env.CUSTOM_DOCKER_REGISTRY}"
     DOCKER_CREDENTIALS = "${env.DOCKER_CREDENTIALS ?: env.CUSTOM_DOCKER_CREDENTIALS}"
 
     // 이미지 네이밍
     IMAGE_NAME = 'saegim-frontend'
+
+    // 이미지/레이어 식별용 레이블 키
+    IMAGE_LABEL_SOURCE = 'org.opencontainers.image.source'
+    IMAGE_LABEL_OWNER  = 'org.aicc.owner'
   }
 
   stages {
@@ -40,7 +49,6 @@ pipeline {
     stage('Resolve Branch') {
       steps {
         script {
-          // GitHub Webhook payload 환경변수에서 브랜치 추출 (없으면 파라미터 기본값)
           def ref = env.GIT_BRANCH ?: env.CHANGE_BRANCH ?: env.BRANCH_NAME ?: ''
           def autoBranch = ref ? ref.replaceFirst(/^origin\//, '') : ''
           env.TARGET_BRANCH = autoBranch ? autoBranch : (params.BRANCH_TO_BUILD ?: 'develop')
@@ -55,12 +63,10 @@ pipeline {
           $class: 'GitSCM',
           userRemoteConfigs: [[url: "${env.GIT_REPOSITORY_URL}"]],
           branches: [[name: "*/${env.TARGET_BRANCH}"]],
-          extensions: [[$class: 'CloneOption', shallow: true, depth: 10, noTags: false, reference: '']]
+          extensions: [[$class: 'CloneOption', shallow: true, depth: 10, noTags: false]]
         ])
 
         script {
-          sh 'git rev-parse HEAD'
-          sh 'git rev-parse --short HEAD'
           env.GIT_SHORT_SHA = sh(script: "git rev-parse --short HEAD", returnStdout: true).trim()
         }
       }
@@ -79,7 +85,7 @@ pipeline {
             env.CONTEXT_DIR     = '.'
             env.DOCKERFILE_PATH = 'Dockerfile'
           } else {
-            error "No Dockerfile found in repo (checked: ./frontend/Dockerfile, ./Dockerfile)"
+            error "No Dockerfile found (checked: ./frontend/Dockerfile, ./Dockerfile)"
           }
 
           echo "Build Context: ${env.CONTEXT_DIR}"
@@ -121,8 +127,6 @@ pipeline {
     stage('Prepare .env.local') {
       steps {
         script {
-          // Jenkins Credentials(예: Secret file/text)로 주입했다면 여기에 파일 생성 로직 추가 가능
-          // 없으면 스킵. Next.js 빌드가 꼭 필요하지 않다면 통과.
           if (fileExists('.env.local')) {
             echo '.env.local already exists — using it.'
           } else {
@@ -152,22 +156,38 @@ pipeline {
       steps {
         script {
           def registryPrefix = env.DOCKER_REGISTRY?.trim() ? "${env.DOCKER_REGISTRY}/" : ""
-          def imageTagLatest = "${registryPrefix}${env.IMAGE_NAME}:latest"
-          def imageTagSha    = "${registryPrefix}${env.IMAGE_NAME}:${env.GIT_SHORT_SHA}"
+          env.IMAGE_TAG_LATEST = "${registryPrefix}${env.IMAGE_NAME}:latest"
+          env.IMAGE_TAG_SHA    = "${registryPrefix}${env.IMAGE_NAME}:${env.GIT_SHORT_SHA}"
+
+          // 환경변수 ARG 전달 추가
+          def buildArgs = [
+            "--build-arg", "NEXT_PUBLIC_API_BASE_URL=${env.NEXT_PUBLIC_API_BASE_URL ?: ''}",
+            "--build-arg", "GOOGLE_REDIRECT_URI=${env.GOOGLE_REDIRECT_URI ?: ''}",
+            "--build-arg", "NEXT_PUBLIC_FIREBASE_API_KEY=${env.NEXT_PUBLIC_FIREBASE_API_KEY ?: ''}",
+            "--build-arg", "NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=${env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN ?: ''}",
+            "--build-arg", "NEXT_PUBLIC_FIREBASE_PROJECT_ID=${env.NEXT_PUBLIC_FIREBASE_PROJECT_ID ?: ''}",
+            "--build-arg", "NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=${env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET ?: ''}",
+            "--build-arg", "NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=${env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID ?: ''}",
+            "--build-arg", "NEXT_PUBLIC_FIREBASE_APP_ID=${env.NEXT_PUBLIC_FIREBASE_APP_ID ?: ''}",
+            "--build-arg", "NEXT_PUBLIC_FIREBASE_VAPID_KEY=${env.NEXT_PUBLIC_FIREBASE_VAPID_KEY ?: ''}"
+          ].join(' ')
 
           sh """
             docker build \\
               --file ${env.DOCKERFILE_PATH} \\
-              --tag ${imageTagLatest} \\
-              --tag ${imageTagSha} \\
+              --label ${IMAGE_LABEL_SOURCE}=${GIT_REPOSITORY_URL} \\
+              --label ${IMAGE_LABEL_OWNER}=${IMAGE_NAME} \\
+              --label org.opencontainers.image.revision=${GIT_SHORT_SHA} \\
+              --tag ${IMAGE_TAG_LATEST} \\
+              --tag ${IMAGE_TAG_SHA} \\
+              ${buildArgs} \\
               ${env.CONTEXT_DIR}
           """
 
-          // 레지스트리 설정이 있으면 푸시, 없으면 로컬 테스트용으로만 빌드
           if (env.DOCKER_REGISTRY?.trim()) {
             sh """
-              docker push ${imageTagLatest}
-              docker push ${imageTagSha}
+              docker push ${IMAGE_TAG_LATEST}
+              docker push ${IMAGE_TAG_SHA}
             """
           } else {
             echo "DOCKER_REGISTRY not set — skipping push (built locally only)."
@@ -182,16 +202,36 @@ pipeline {
       echo "✅ 성공 — 이미지 빌드(및 필요 시 푸시) 완료"
     }
     failure {
-      echo "❌ 실패 — 콘솔 로그에서 Detect Build Context 단계 및 변수 설정 확인"
+      echo "❌ 실패 — Detect Build Context · 변수 설정 · 빌드 로그 확인"
     }
     always {
-      sh '''
-        set -e
-        # 필요 시 docker logout 처리 (레지스트리 사용했을 때만)
-        if [ -n "${DOCKER_REGISTRY}" ]; then
-          docker logout "${DOCKER_REGISTRY}" || true
-        fi
-      '''
+      // 🔒 공유 서버 안전 정리: '이번 Job이 만든 태그'와 '이 저장소 레이블의 dangling 레이어'만 정리
+      script {
+        sh '''
+          set -e
+
+          # 1) 이번 빌드에서 만든 태그 이미지를 로컬에서만 제거 (타 팀 영향 없음)
+          if [ -n "${IMAGE_TAG_SHA}" ]; then
+            docker image rm -f "${IMAGE_TAG_SHA}" || true
+          fi
+          if [ -n "${IMAGE_TAG_LATEST}" ]; then
+            docker image rm -f "${IMAGE_TAG_LATEST}" || true
+          fi
+
+          # 2) 이 저장소 레이블로 표시된(dangling) 레이어만 정리 (전역 prune 금지)
+          docker image prune -f --filter "label=${IMAGE_LABEL_SOURCE}=${GIT_REPOSITORY_URL}" || true
+
+          # 3) 옵션: 48시간 이상 지난 '이 저장소 레이블의 dangling'만 추가 정리
+          if [ "${PRUNE_OLD_DANGLING:-0}" = "true" ] || [ "${PRUNE_OLD_DANGLING:-0}" = "1" ]; then
+            docker image prune -f --filter "label=${IMAGE_LABEL_SOURCE}=${GIT_REPOSITORY_URL}" --filter "until=48h" || true
+          fi
+
+          # 4) (로그인했을 때만) 레지스트리 로그아웃
+          if [ -n "${DOCKER_REGISTRY}" ]; then
+            docker logout "${DOCKER_REGISTRY}" || true
+          fi
+        '''
+      }
     }
   }
 }
