@@ -420,10 +420,10 @@ export const useStreaming = () => {
                       setState((prev) => ({
                         ...prev,
                         isStreaming: false,
-                        error: getFriendlyErrorMessage(parsedData.error),
+                        error: getFriendlyErrorMessage(parsedData.error ?? 'UNKNOWN_STREAM_ERROR'),
                       }));
                       logger.error('스트리밍 오류', {
-                        error: parsedData.error,
+                        error: parsedData.error ?? 'UNKNOWN_STREAM_ERROR',
                       });
                       break;
                     }
