@@ -1,15 +1,15 @@
 pipeline {
   agent any
 
-  /* ===== 공통 옵션 ===== */
+  // ===== 공통 옵션 =====
   options {
     skipDefaultCheckout(true)          // SCM 중복 체크아웃 방지
     timestamps()                       // 콘솔 타임스탬프
     buildDiscarder(logRotator(numToKeepStr: '30'))
-    disableConcurrentBuilds()
+    disableConcurrentBuilds()          // 동시 빌드 차단
   }
 
-  /* ===== 수동 파라미터 ===== */
+  // ===== 수동 파라미터 =====
   parameters {
     choice(
       name: 'BRANCH_TO_BUILD',
@@ -23,12 +23,10 @@ pipeline {
     )
   }
 
-  /* ===== 트리거 ===== */
-  triggers {
-    githubPush()
-  }
+  // ===== 트리거 =====
+  triggers { githubPush() }
 
-  /* ===== 환경 변수 ===== */
+  // ===== 환경 변수 =====
   environment {
     DOCKER_REGISTRY    = "${env.DOCKER_REGISTRY ?: env.CUSTOM_DOCKER_REGISTRY}"
     DOCKER_CREDENTIALS = "${env.DOCKER_CREDENTIALS ?: env.CUSTOM_DOCKER_CREDENTIALS}"
@@ -41,19 +39,19 @@ pipeline {
 
   stages {
 
-    /* ===== 브랜치 결정(웹훅/수동) ===== */
+    // ===== 브랜치 결정(웹훅/수동) =====
     stage('Resolve Branch') {
       steps {
         script {
           def ref = (env.BRANCH_NAME ?: env.GIT_BRANCH ?: "").trim()
-          ref = ref.replaceAll(/^origin\//, '')
-          env.EFFECTIVE_BRANCH = (ref ?: (params.BRANCH_TO_BUILD ?: 'develop')).trim()
+          ref = ref.replaceAll(/^origin\//, '') // origin/origin/* 방지
+          env['EFFECTIVE_BRANCH'] = (ref ?: (params.BRANCH_TO_BUILD ?: 'develop')).trim()
           echo "Using branch: ${env.EFFECTIVE_BRANCH}"
         }
       }
     }
 
-    /* ===== 체크아웃 ===== */
+    // ===== 체크아웃 =====
     stage('Checkout') {
       steps {
         checkout([$class: 'GitSCM',
@@ -65,31 +63,31 @@ pipeline {
           ]
         ])
         script {
-          env.GIT_COMMIT_SHA = sh(script: "git rev-parse HEAD", returnStdout: true).trim()
-          env.GIT_SHORT_SHA  = sh(script: "git rev-parse --short HEAD", returnStdout: true).trim()
+          env['GIT_COMMIT_SHA'] = sh(script: "git rev-parse HEAD", returnStdout: true).trim()
+          env['GIT_SHORT_SHA']  = sh(script: "git rev-parse --short HEAD", returnStdout: true).trim()
         }
       }
     }
 
-    /* ===== 빌드 컨텍스트/도커파일 자동 감지 ===== */
+    // ===== 빌드 컨텍스트/도커파일 자동 감지 =====
     stage('Detect Build Context') {
       steps {
         script {
           def hasFrontendDockerfile = sh(script: 'test -f ./frontend/Dockerfile && echo yes || echo no', returnStdout: true).trim() == 'yes'
-          def hasRootDockerfile     = sh(script: 'test -f ./Dockerfile && echo yes || echo no', returnStdout: true).trim() == 'yes'
+          def hasRootDockerfile     = sh(script: 'test -f ./Dockerfile && echo yes || echo no',       returnStdout: true).trim() == 'yes'
 
           if (hasFrontendDockerfile) {
-            env.CONTEXT_DIR     = './frontend'
-            env.DOCKERFILE_PATH = './frontend/Dockerfile'
+            env['CONTEXT_DIR']     = 'frontend'
+            env['DOCKERFILE_PATH'] = 'frontend/Dockerfile'
           } else if (hasRootDockerfile) {
-            env.CONTEXT_DIR     = '.'
-            env.DOCKERFILE_PATH = './Dockerfile'
+            env['CONTEXT_DIR']     = '.'
+            env['DOCKERFILE_PATH'] = 'Dockerfile'
           } else {
-            error "[ERROR] Dockerfile 을 찾을 수 없습니다. ./frontend/Dockerfile 또는 ./Dockerfile 이 필요합니다."
+            error "[ERROR] Dockerfile 을 찾을 수 없습니다. frontend/Dockerfile 또는 Dockerfile 이 필요합니다."
           }
 
-          echo "Build Context: ${env.CONTEXT_DIR}"
-          echo "Dockerfile   : ${env.DOCKERFILE_PATH}"
+          echo "Build Context: ${env.CONTEXT_DIR ?: '(unset)'}"
+          echo "Dockerfile   : ${env.DOCKERFILE_PATH ?: '(unset)'}"
 
           if (!env.CONTEXT_DIR?.trim() || !env.DOCKERFILE_PATH?.trim()) {
             error "[ERROR] 빌드 컨텍스트 감지 실패: CONTEXT_DIR=${env.CONTEXT_DIR}, DOCKERFILE_PATH=${env.DOCKERFILE_PATH}"
@@ -98,7 +96,7 @@ pipeline {
       }
     }
 
-    /* ===== 환경 표시 ===== */
+    // ===== 환경 표시 =====
     stage('Show Env') {
       steps {
         sh '''
@@ -116,7 +114,7 @@ pipeline {
       }
     }
 
-    /* ===== (옵션) 레지스트리 로그인 ===== */
+    // ===== (옵션) 레지스트리 로그인 =====
     stage('Nexus Login') {
       when { expression { return env.DOCKER_REGISTRY?.trim() && env.DOCKER_CREDENTIALS?.trim() } }
       steps {
@@ -130,7 +128,7 @@ pipeline {
       }
     }
 
-    /* ===== Secret file → ${CONTEXT_DIR}/.env.local 준비 ===== */
+    // ===== Secret file → ${CONTEXT_DIR}/.env.local 준비 =====
     stage('Prepare .env.local') {
       steps {
         withCredentials([file(credentialsId: 'saegim-frontend', variable: 'ENVFILE')]) { // 실제 credentialsId 확인
@@ -152,8 +150,8 @@ pipeline {
             # .dockerignore에 .env.local 제외 여부 경고
             # - 제외 라인이 있고(! .env.local 예외가 없을 때)만 경고
             if [ -f "${CONTEXT_DIR}/.dockerignore" ]; then
-              if grep -Eq '^[[:space:]]*\\.env\\.local([[:space:]]|$)' "${CONTEXT_DIR}/.dockerignore" && \
-                 ! grep -Eq '^[[:space:]]*![[:space:]]*\\.env\\.local([[:space:]]|$)' "${CONTEXT_DIR}/.dockerignore"; then
+              if grep -Eq '^[[:space:]]*\.env\.local([[:space:]]|$)' "${CONTEXT_DIR}/.dockerignore" && \
+                 ! grep -Eq '^[[:space:]]*![[:space:]]*\.env\.local([[:space:]]|$)' "${CONTEXT_DIR}/.dockerignore"; then
                 echo "[WARN] ${CONTEXT_DIR}/.dockerignore 에 .env.local 제외 규칙이 있어 이미지에 포함되지 않을 수 있습니다."
               fi
             fi
@@ -162,7 +160,7 @@ pipeline {
       }
     }
 
-    /* ===== (옵션) 테스트 ===== */
+    // ===== (옵션) 테스트 =====
     stage('Test (optional)') {
       when { expression { return params.RUN_TESTS } }
       steps {
@@ -180,7 +178,7 @@ pipeline {
       }
     }
 
-    /* ===== Docker Build & Push ===== */
+    // ===== Docker Build & Push =====
     stage('Docker Build & Push') {
       steps {
         script {
@@ -188,12 +186,12 @@ pipeline {
           if (!env.DOCKERFILE_PATH?.trim()) { error "[ERROR] DOCKERFILE_PATH 미설정"; }
 
           def branchSafe = env.EFFECTIVE_BRANCH.replaceAll(/[^a-zA-Z0-9._-]/, '-').toLowerCase()
-          env.IMAGE_BASE = (env.DOCKER_REGISTRY?.trim() ? "${env.DOCKER_REGISTRY}/${env.DOCKER_IMAGE_PATH}" : "${env.DOCKER_IMAGE_PATH}")
+          env['IMAGE_BASE'] = (env.DOCKER_REGISTRY?.trim() ? "${env.DOCKER_REGISTRY}/${env.DOCKER_IMAGE_PATH}" : "${env.DOCKER_IMAGE_PATH}")
 
-          env.TAG_BUILD   = "${env.IMAGE_BASE}:${env.BUILD_NUMBER}"
-          env.TAG_SHA     = "${env.IMAGE_BASE}:${env.GIT_SHORT_SHA}"
-          env.TAG_BRANCH  = "${env.IMAGE_BASE}:${branchSafe}-latest"
-          env.TAG_LATEST  = (branchSafe == 'main' ? "${env.IMAGE_BASE}:latest" : "")
+          env['TAG_BUILD']  = "${env.IMAGE_BASE}:${env.BUILD_NUMBER}"
+          env['TAG_SHA']    = "${env.IMAGE_BASE}:${env.GIT_SHORT_SHA}"
+          env['TAG_BRANCH'] = "${env.IMAGE_BASE}:${branchSafe}-latest"
+          env['TAG_LATEST'] = (branchSafe == 'main' ? "${env.IMAGE_BASE}:latest" : "")
 
           echo "Build Context: ${env.CONTEXT_DIR}"
           echo "Dockerfile   : ${env.DOCKERFILE_PATH}"
@@ -235,7 +233,7 @@ pipeline {
     }
   }
 
-  /* ===== 사후 처리 ===== */
+  // ===== 사후 처리 =====
   post {
     success {
       echo "✅ 성공 — 이미지 푸시 완료"
@@ -255,10 +253,13 @@ pipeline {
     always {
       // 공유 서버 안전: 우리 태그만 정리 (전역 캐시/이미지 건드리지 않음)
       sh '''
-        docker rmi -f "${TAG_BUILD}" "${TAG_SHA}" "${TAG_BRANCH}" 2>/dev/null || true
+        set -e
+        if [ -n "${TAG_BUILD}"  ]; then docker rmi -f "${TAG_BUILD}"  2>/dev/null || true; fi
+        if [ -n "${TAG_SHA}"    ]; then docker rmi -f "${TAG_SHA}"    2>/dev/null || true; fi
+        if [ -n "${TAG_BRANCH}" ]; then docker rmi -f "${TAG_BRANCH}" 2>/dev/null || true; fi
         if [ -n "${TAG_LATEST}" ]; then docker rmi -f "${TAG_LATEST}" 2>/dev/null || true; fi
       '''
-      // 전역 캐시 삭제 명령(docker builder prune)은 사용하지 않습니다.
+      // 전역 캐시 삭제 명령(docker builder/system prune)은 사용하지 않습니다.
     }
   }
 }
