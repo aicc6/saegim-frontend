@@ -85,10 +85,13 @@ export const useAuthStore = create<AuthState>()(
           const state = get();
           if (state.isAuthenticated) {
             const now = Date.now();
-            set({
-              lastActivity: now,
-              sessionExpiry: now + SESSION_TIMEOUT,
-            });
+            // 마지막 활동 시간과 1초 이상 차이가 날 때만 업데이트 (중복 호출 방지)
+            if (now - state.lastActivity > 1000) {
+              set({
+                lastActivity: now,
+                sessionExpiry: now + SESSION_TIMEOUT,
+              });
+            }
           }
         },
 
@@ -235,12 +238,19 @@ if (typeof window !== 'undefined') {
   window.addEventListener('auth-update', handleAuthUpdate);
   window.addEventListener('auth-expired', handleAuthExpired);
 
-  // 활동 추적 핸들러
+  // 활동 추적 핸들러 (디바운싱 적용)
+  let activityTimeout: NodeJS.Timeout | null = null;
   const activityHandler = () => {
-    const state = useAuthStore.getState();
-    if (state.isAuthenticated && !state.checkSessionExpiry()) {
-      state.updateActivity();
+    if (activityTimeout) {
+      clearTimeout(activityTimeout);
     }
+
+    activityTimeout = setTimeout(() => {
+      const state = useAuthStore.getState();
+      if (state.isAuthenticated && !state.checkSessionExpiry()) {
+        state.updateActivity();
+      }
+    }, 100); // 100ms 디바운싱
   };
 
   // 사용자 활동 추적을 위한 이벤트 리스너
@@ -275,6 +285,11 @@ if (typeof window !== 'undefined') {
       (event) => () => window.removeEventListener(event, activityHandler),
     ),
     () => clearInterval(sessionCheckInterval),
+    () => {
+      if (activityTimeout) {
+        clearTimeout(activityTimeout);
+      }
+    },
   ];
 }
 

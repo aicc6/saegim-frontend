@@ -639,14 +639,28 @@ export default function ViewPostPage({
   };
 
   const handleBack = () => {
-    // 1. URL 파라미터로 전달된 from 경로가 있는 경우 해당 경로로 이동
+    // 1. URL 파라미터로 전달된 from 경로와 년도/월 정보 확인
     const urlParams = new URLSearchParams(window.location.search);
     const fromParam = urlParams.get('from');
+    const yearParam = urlParams.get('year');
+    const monthParam = urlParams.get('month');
 
     if (fromParam) {
       const targetPath = decodeURIComponent(fromParam);
-      logger.debug('URL 파라미터의 from 경로로 이동:', targetPath);
-      router.push(targetPath);
+
+      // 년도와 월 정보가 있으면 쿼리 파라미터로 추가
+      if (yearParam && monthParam) {
+        const separator = targetPath.includes('?') ? '&' : '?';
+        const targetPathWithDate = `${targetPath}${separator}year=${yearParam}&month=${monthParam}`;
+        logger.debug(
+          'URL 파라미터의 from 경로로 이동 (년도/월 포함):',
+          targetPathWithDate,
+        );
+        router.push(targetPathWithDate);
+      } else {
+        logger.debug('URL 파라미터의 from 경로로 이동:', targetPath);
+        router.push(targetPath);
+      }
       return;
     }
 

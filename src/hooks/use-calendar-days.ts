@@ -73,8 +73,8 @@ function calculateDominantEmotion(
   };
 
   entries.forEach((entry) => {
-    if (entry.user_emotion && entry.user_emotion in emotionCounts) {
-      emotionCounts[entry.user_emotion as EmotionType]++;
+    if (entry.ai_emotion && entry.ai_emotion in emotionCounts) {
+      emotionCounts[entry.ai_emotion as EmotionType]++;
     }
   });
 

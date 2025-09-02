@@ -64,11 +64,12 @@ export default function CalendarPage() {
       return;
     }
 
-    // 이미 로딩 중이면 중복 호출 방지 (데이터가 있어도 날짜 변경 시에는 로드)
-    if (isLoading) {
+    // 이미 로딩 중이면 중복 호출 방지
+    const currentState = useDiaryStore.getState();
+    if (currentState.isLoading) {
       logger.debug('이미 로딩 중이어서 중복 호출 방지', {
-        isLoading,
-        diariesCount: diaries.length,
+        isLoading: currentState.isLoading,
+        diariesCount: currentState.diaries.length,
       });
       return;
     }
@@ -133,7 +134,7 @@ export default function CalendarPage() {
         isLoading: false,
       });
     }
-  }, [isAuthenticated, viewDate, dateRange, router, isLoading, diaries.length]);
+  }, [isAuthenticated, viewDate, dateRange, router]);
 
   // 현재 보고 있는 월의 데이터
   const currentMonthData = useMemo(() => {
@@ -161,9 +162,9 @@ export default function CalendarPage() {
     const keywordCounts: Record<string, number> = {};
 
     currentMonthDiaries.forEach((diary) => {
-      // 감정 카운트
-      if (diary.user_emotion && diary.user_emotion in emotionCounts) {
-        emotionCounts[diary.user_emotion as EmotionType]++;
+      // 감정 카운트 (AI 감정 사용)
+      if (diary.ai_emotion && diary.ai_emotion in emotionCounts) {
+        emotionCounts[diary.ai_emotion as EmotionType]++;
       }
 
       // 키워드 카운트
@@ -251,6 +252,27 @@ export default function CalendarPage() {
       );
     });
   }, [selectedDate, filteredDiaries]);
+
+  // URL 쿼리 파라미터에서 년도와 월 정보 확인
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const yearParam = urlParams.get('year');
+    const monthParam = urlParams.get('month');
+
+    if (yearParam && monthParam) {
+      const year = parseInt(yearParam);
+      const month = parseInt(monthParam) - 1; // getMonth()는 0부터 시작하므로 -1
+      if (!isNaN(year) && !isNaN(month) && month >= 0 && month <= 11) {
+        const targetDate = new Date(year, month, 1);
+        logger.debug('URL 파라미터에서 년도/월 정보 확인:', {
+          year,
+          month: month + 1,
+          targetDate,
+        });
+        setViewDate(targetDate);
+      }
+    }
+  }, []);
 
   // 인증 상태 확인 - 메인 페이지와 동일한 로직
   useEffect(() => {
@@ -359,22 +381,72 @@ export default function CalendarPage() {
     const handleFocus = () => {
       logger.debug('페이지 포커스 감지, 데이터 새로고침');
       // 포커스 시에만 데이터 새로고침 (중복 방지)
-      if (isAuthenticated && !isLoading) {
+      if (isAuthenticated) {
         loadMonthData();
       }
     };
 
     window.addEventListener('focus', handleFocus);
     return () => window.removeEventListener('focus', handleFocus);
-  }, [loadMonthData, isAuthenticated, isLoading]);
+  }, [isAuthenticated, loadMonthData]);
 
-  // 월 변경 시 데이터 로드 (한 번만 실행)
+  // 월 변경 시 데이터 로드
   useEffect(() => {
-    if (isAuthenticated && !hasChecked && !isLoading) {
-      logger.debug('초기 데이터 로드 (한 번만)');
+    if (isAuthenticated && hasChecked) {
+      logger.debug('월 변경 감지, 데이터 로드');
       loadMonthData();
     }
-  }, [isAuthenticated, hasChecked, isLoading, loadMonthData]);
+  }, [isAuthenticated, hasChecked, viewDate, loadMonthData]);
+
+  const handleDateSelect = (date: string) => {
+    setSelectedDate(date);
+  };
+
+  const handleDateChange = useCallback(
+    (date: Date) => {
+      // 월과 년도만 정확하게 비교 (시간은 무시)
+      const isSameMonth =
+        viewDate.getMonth() === date.getMonth() &&
+        viewDate.getFullYear() === date.getFullYear();
+
+      if (isSameMonth) {
+        logger.debug('같은 월이므로 데이터 로드 스킵', {
+          oldMonth: viewDate.getMonth() + 1,
+          newMonth: date.getMonth() + 1,
+          oldYear: viewDate.getFullYear(),
+          newYear: date.getFullYear(),
+        });
+        return;
+      }
+
+      logger.debug('다른 월이므로 viewDate 업데이트', {
+        oldDate: viewDate,
+        newDate: date,
+        oldMonth: viewDate.getMonth() + 1,
+        newMonth: date.getMonth() + 1,
+        oldYear: viewDate.getFullYear(),
+        newYear: date.getFullYear(),
+      });
+
+      setViewDate(date);
+      // useEffect에서 viewDate 변경을 감지하여 자동으로 데이터 로드됨
+    },
+    [viewDate],
+  );
+
+  const clearSelection = () => {
+    setSelectedDate(null);
+  };
+
+  const handleEntryClick = (entryId: string) => {
+    // 현재 페이지 경로와 현재 보고 있는 달 정보를 쿼리 파라미터로 전달
+    const currentPath = window.location.pathname;
+    const currentYear = viewDate.getFullYear();
+    const currentMonth = viewDate.getMonth() + 1; // getMonth()는 0부터 시작하므로 +1
+    router.push(
+      `/viewPost/${entryId}?from=${encodeURIComponent(currentPath)}&year=${currentYear}&month=${currentMonth}`,
+    );
+  };
 
   // 인증 확인 완료 후 인증되지 않았을 때만 리다이렉트
   if (!isAuthenticated || !user) {
@@ -404,53 +476,6 @@ export default function CalendarPage() {
       </div>
     );
   }
-
-  const handleDateSelect = (date: string) => {
-    setSelectedDate(date);
-  };
-
-  const handleDateChange = (date: Date) => {
-    logger.debug('Calendar에서 날짜 변경 감지', {
-      oldDate: viewDate,
-      newDate: date,
-      oldMonth: viewDate.getMonth() + 1,
-      newMonth: date.getMonth() + 1,
-      oldYear: viewDate.getFullYear(),
-      newYear: date.getFullYear(),
-    });
-
-    // 월과 년도만 정확하게 비교 (시간은 무시)
-    const isSameMonth =
-      viewDate.getMonth() === date.getMonth() &&
-      viewDate.getFullYear() === date.getFullYear();
-
-    if (isSameMonth) {
-      logger.debug('같은 월이므로 데이터 로드 스킵');
-      return;
-    }
-
-    logger.debug('다른 월이므로 데이터 로드 시작');
-    setViewDate(date);
-
-    // 날짜가 변경되면 데이터를 새로 로드
-    // 기존 데이터를 초기화하여 중복 호출 방지 로직을 우회
-    useDiaryStore.setState({ diaries: [], isLoading: false, error: null });
-
-    // 새로운 날짜로 데이터 로드
-    setTimeout(() => {
-      loadMonthData();
-    }, 100);
-  };
-
-  const clearSelection = () => {
-    setSelectedDate(null);
-  };
-
-  const handleEntryClick = (entryId: string) => {
-    // 현재 페이지 경로를 쿼리 파라미터로 전달
-    const currentPath = window.location.pathname;
-    router.push(`/viewPost/${entryId}?from=${encodeURIComponent(currentPath)}`);
-  };
 
   return (
     <div className="h-full bg-background-primary flex flex-col">
@@ -527,33 +552,33 @@ export default function CalendarPage() {
                             <h4 className="text-body font-medium text-text-primary">
                               {entry.title}
                             </h4>
-                            {entry.user_emotion && (
+                            {entry.ai_emotion && (
                               <span
                                 className={cn(
                                   'text-lg px-2 py-1 rounded-full',
                                   EMOTION_COLORS[
-                                    entry.user_emotion as EmotionType
+                                    entry.ai_emotion as EmotionType
                                   ] || 'bg-gray-100 text-gray-800',
                                 )}
                               >
                                 {EMOTION_EMOJIS[
-                                  entry.user_emotion as EmotionType
+                                  entry.ai_emotion as EmotionType
                                 ] || '😐'}
                               </span>
                             )}
                           </div>
 
-                          {/* 수정된 본문 내용 표시 (content) - 우선 표시 */}
-                          {entry.content && (
+                          {/* AI 생성 텍스트 표시 (ai_generated_text) - 우선 표시 */}
+                          {entry.ai_generated_text && (
                             <p className="text-body-small text-text-primary mb-3 line-clamp-3 font-medium">
-                              {entry.content}
+                              {entry.ai_generated_text}
                             </p>
                           )}
 
-                          {/* AI 생성 텍스트 표시 (content가 없을 때만) */}
-                          {!entry.content && entry.ai_generated_text && (
+                          {/* 수정된 본문 내용 표시 (ai_generated_text가 없을 때만) */}
+                          {!entry.ai_generated_text && entry.content && (
                             <p className="text-body-small text-text-secondary mb-3 line-clamp-2">
-                              {entry.ai_generated_text}
+                              {entry.content}
                             </p>
                           )}
 
@@ -573,12 +598,13 @@ export default function CalendarPage() {
                             </div>
                           )}
 
-                          {/* 썸네일 이미지 표시 */}
+                          {/* 썸네일 이미지 표시 (최대 3개만 표시) */}
                           {entry.images && entry.images.length > 0 && (
                             <div className="mb-3">
                               <div className="flex flex-wrap gap-1.5 justify-center">
                                 {entry.images
                                   .filter((img) => img.thumbnail_path)
+                                  .slice(0, 3) // 최대 3개만 표시
                                   .map((image, index) => (
                                     <div
                                       key={index}
@@ -603,6 +629,7 @@ export default function CalendarPage() {
                                         style={{
                                           objectFit: 'cover',
                                         }}
+                                        loading="lazy" // 지연 로딩 추가
                                         onError={(e) => {
                                           // 이미지 로드 실패 시 처리
                                           logger.warn(
@@ -621,6 +648,14 @@ export default function CalendarPage() {
                                         )}
                                     </div>
                                   ))}
+                                {/* 더 많은 이미지가 있을 때 표시 */}
+                                {entry.images.length > 3 && (
+                                  <div className="flex items-center justify-center w-[70px] h-[70px] bg-gray-100 rounded-md border border-border-subtle">
+                                    <span className="text-xs text-gray-600">
+                                      +{entry.images.length - 3}
+                                    </span>
+                                  </div>
+                                )}
                               </div>
                             </div>
                           )}
