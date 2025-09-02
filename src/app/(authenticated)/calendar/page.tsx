@@ -161,9 +161,9 @@ export default function CalendarPage() {
     const keywordCounts: Record<string, number> = {};
 
     currentMonthDiaries.forEach((diary) => {
-      // 감정 카운트
-      if (diary.user_emotion && diary.user_emotion in emotionCounts) {
-        emotionCounts[diary.user_emotion as EmotionType]++;
+      // 감정 카운트 (AI 감정 사용)
+      if (diary.ai_emotion && diary.ai_emotion in emotionCounts) {
+        emotionCounts[diary.ai_emotion as EmotionType]++;
       }
 
       // 키워드 카운트
@@ -251,6 +251,27 @@ export default function CalendarPage() {
       );
     });
   }, [selectedDate, filteredDiaries]);
+
+  // URL 쿼리 파라미터에서 년도와 월 정보 확인
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const yearParam = urlParams.get('year');
+    const monthParam = urlParams.get('month');
+
+    if (yearParam && monthParam) {
+      const year = parseInt(yearParam);
+      const month = parseInt(monthParam) - 1; // getMonth()는 0부터 시작하므로 -1
+      if (!isNaN(year) && !isNaN(month) && month >= 0 && month <= 11) {
+        const targetDate = new Date(year, month, 1);
+        logger.debug('URL 파라미터에서 년도/월 정보 확인:', {
+          year,
+          month: month + 1,
+          targetDate,
+        });
+        setViewDate(targetDate);
+      }
+    }
+  }, []);
 
   // 인증 상태 확인 - 메인 페이지와 동일한 로직
   useEffect(() => {
@@ -447,9 +468,13 @@ export default function CalendarPage() {
   };
 
   const handleEntryClick = (entryId: string) => {
-    // 현재 페이지 경로를 쿼리 파라미터로 전달
+    // 현재 페이지 경로와 현재 보고 있는 달 정보를 쿼리 파라미터로 전달
     const currentPath = window.location.pathname;
-    router.push(`/viewPost/${entryId}?from=${encodeURIComponent(currentPath)}`);
+    const currentYear = viewDate.getFullYear();
+    const currentMonth = viewDate.getMonth() + 1; // getMonth()는 0부터 시작하므로 +1
+    router.push(
+      `/viewPost/${entryId}?from=${encodeURIComponent(currentPath)}&year=${currentYear}&month=${currentMonth}`,
+    );
   };
 
   return (
@@ -527,33 +552,33 @@ export default function CalendarPage() {
                             <h4 className="text-body font-medium text-text-primary">
                               {entry.title}
                             </h4>
-                            {entry.user_emotion && (
+                            {entry.ai_emotion && (
                               <span
                                 className={cn(
                                   'text-lg px-2 py-1 rounded-full',
                                   EMOTION_COLORS[
-                                    entry.user_emotion as EmotionType
+                                    entry.ai_emotion as EmotionType
                                   ] || 'bg-gray-100 text-gray-800',
                                 )}
                               >
                                 {EMOTION_EMOJIS[
-                                  entry.user_emotion as EmotionType
+                                  entry.ai_emotion as EmotionType
                                 ] || '😐'}
                               </span>
                             )}
                           </div>
 
-                          {/* 수정된 본문 내용 표시 (content) - 우선 표시 */}
-                          {entry.content && (
+                          {/* AI 생성 텍스트 표시 (ai_generated_text) - 우선 표시 */}
+                          {entry.ai_generated_text && (
                             <p className="text-body-small text-text-primary mb-3 line-clamp-3 font-medium">
-                              {entry.content}
+                              {entry.ai_generated_text}
                             </p>
                           )}
 
-                          {/* AI 생성 텍스트 표시 (content가 없을 때만) */}
-                          {!entry.content && entry.ai_generated_text && (
+                          {/* 수정된 본문 내용 표시 (ai_generated_text가 없을 때만) */}
+                          {!entry.ai_generated_text && entry.content && (
                             <p className="text-body-small text-text-secondary mb-3 line-clamp-2">
-                              {entry.ai_generated_text}
+                              {entry.content}
                             </p>
                           )}
 
