@@ -82,25 +82,29 @@ const nextConfig: NextConfig = {
         hostname: '**',
       },
       // 개발 환경 지원 (localhost)
-      ...(process.env.NODE_ENV === 'development' ? [
-        {
-          protocol: 'http' as const,
-          hostname: 'localhost',
-          port: '8000',
-        },
-        {
-          protocol: 'http' as const,
-          hostname: '127.0.0.1',
-          port: '8000',
-        },
-      ] : []),
+      ...(process.env.NODE_ENV === 'development'
+        ? [
+            {
+              protocol: 'http' as const,
+              hostname: 'localhost',
+              port: '8000',
+            },
+            {
+              protocol: 'http' as const,
+              hostname: '127.0.0.1',
+              port: '8000',
+            },
+          ]
+        : []),
       // 배포 환경 지원 (실제 도메인)
-      ...(process.env.NEXT_PUBLIC_API_BASE_URL ? [
-        {
-          protocol: 'https' as const,
-          hostname: new URL(process.env.NEXT_PUBLIC_API_BASE_URL).hostname,
-        },
-      ] : []),
+      ...(process.env.NEXT_PUBLIC_API_BASE_URL
+        ? [
+            {
+              protocol: 'https' as const,
+              hostname: new URL(process.env.NEXT_PUBLIC_API_BASE_URL).hostname,
+            },
+          ]
+        : []),
     ],
   },
 
@@ -140,7 +144,7 @@ const nextConfig: NextConfig = {
               "font-src 'self' https://fonts.gstatic.com",
               "img-src 'self' data: https: blob:",
               "media-src 'self' https:",
-              "connect-src 'self' https://saegim-api.aicc-project.com https://saegim-api.seongjunlee.dev https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://fcmregistrations.googleapis.com https://firebaseinstallations.googleapis.com wss:",
+              `connect-src 'self' ${process.env.NODE_ENV === 'development' ? 'http://localhost:8000' : ''} https://saegim-api.aicc-project.com https://saegim-api.seongjunlee.dev https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://fcmregistrations.googleapis.com https://firebaseinstallations.googleapis.com wss:`,
               "frame-src 'none'",
               "object-src 'none'",
               "base-uri 'self'",
