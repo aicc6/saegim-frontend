@@ -245,6 +245,7 @@ export default function ViewPostPage({
         await updateDiary(entry.id, {
           title: editedTitle,
           content: editedContent,
+          ai_generated_text: editedContent, // AI 생성 텍스트도 함께 업데이트
           user_emotion: editedEmotion || undefined,
           keywords: editedKeywords,
         });
@@ -262,6 +263,7 @@ export default function ViewPostPage({
           ...entry,
           title: editedTitle,
           content: editedContent,
+          ai_generated_text: editedContent, // AI 생성 텍스트도 함께 업데이트
           user_emotion: editedEmotion,
           keywords: editedKeywords,
           // 이미지는 현재 상태 유지 (삭제된 이미지 상태 보존)
