@@ -150,6 +150,31 @@ export default function ViewPostPage({
     // 페이지 로드 시 항상 해당 다이어리를 API에서 직접 조회
     if (!entry || entry.id !== entryId) {
       logger.debug('다이어리 직접 조회 시작:', entryId);
+
+      // 글목록에서 선택된 글의 기본 정보로 tempEntry 설정 (깜박임 방지)
+      const foundEntry = diaries.find((e: DiaryListEntry) => e.id === entryId);
+      if (foundEntry && !tempEntry) {
+        const basicTempEntry = {
+          id: foundEntry.id,
+          title: foundEntry.title || '제목 없음',
+          content: foundEntry.content || '',
+          ai_generated_text: foundEntry.ai_generated_text || '',
+          user_emotion: foundEntry.user_emotion || '',
+          ai_emotion: foundEntry.ai_emotion || '',
+          keywords: foundEntry.keywords || [],
+          images: foundEntry.images || [],
+          diary_date: foundEntry.diary_date || foundEntry.created_at,
+          created_at: foundEntry.created_at,
+          // DiaryEntry 타입에 필요한 기본값들
+          user_id: '',
+          is_public: false,
+          updated_at: foundEntry.created_at,
+          ai_emotion_confidence: 0,
+        } as DiaryEntry;
+        setTempEntry(basicTempEntry);
+        logger.debug('tempEntry 설정 완료:', basicTempEntry.id);
+      }
+
       fetchDiary(entryId);
     }
 
@@ -761,7 +786,7 @@ export default function ViewPostPage({
                   <div className="text-center">
                     <div className="inline-block h-8 w-8 animate-spin rounded-full border-2 border-sage-30 border-t-sage-70 mb-4"></div>
                     <p className="text-sage-100 font-medium">
-                      다음 다이어리를 불러오는 중...
+                      다이어리를 불러오는 중...
                     </p>
                   </div>
                 </div>
