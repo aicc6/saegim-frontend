@@ -469,3 +469,13 @@ body {
   border-color: #dc2626;
   color: #fecaca;
 }
+
+/* 날짜 입력 필드 달력 아이콘 색상 */
+input[type='date']::-webkit-calendar-picker-indicator {
+  filter: invert(0.4) sepia(1) saturate(0) hue-rotate(0deg) brightness(0.7);
+  cursor: pointer;
+}
+
+.dark input[type='date']::-webkit-calendar-picker-indicator {
+  filter: invert(0.4) sepia(1) saturate(0) hue-rotate(0deg) brightness(0.7);
+}

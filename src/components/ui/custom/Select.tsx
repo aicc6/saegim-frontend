@@ -101,13 +101,13 @@ export default function Select({
         aria-label={ariaLabel}
         onClick={() => setIsOpen((o) => !o)}
         onKeyDown={onKeyDown}
-        className={`w-full rounded-2xl border border-border-subtle bg-white p-3.5 text-left text-body text-text-primary focus:outline-none focus:ring-2 focus:ring-border-focus shadow-card flex items-center justify-between ${
+        className={`w-full rounded-2xl border border-border-subtle bg-white p-3.5 text-left text-body text-gray-900 focus:outline-none focus:ring-2 focus:ring-border-focus shadow-card flex items-center justify-between ${
           buttonClassName ?? ''
         }`}
       >
         <span>{selected?.label ?? placeholder ?? '선택'}</span>
         <svg
-          className="h-5 w-5 text-text-secondary"
+          className="h-5 w-5 text-gray-600"
           viewBox="0 0 24 24"
           fill="none"
           stroke="currentColor"
@@ -154,7 +154,7 @@ export default function Select({
                     : isSelected
                       ? 'bg-background-secondary'
                       : 'bg-white'
-                } text-text-primary hover:bg-background-hover ${optionClassName ?? ''}`}
+                } text-gray-900 hover:bg-background-hover ${optionClassName ?? ''}`}
               >
                 {opt.label}
               </li>
