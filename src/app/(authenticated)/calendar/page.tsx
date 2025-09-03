@@ -604,7 +604,7 @@ export default function CalendarPage() {
                           aria-label={`${entry.title} 기록 보기`}
                         >
                           <div className="flex items-center justify-between mb-2">
-                            <h4 className="text-body font-medium text-text-primary">
+                            <h4 className="text-h4 font-bold text-text-primary">
                               {entry.title}
                             </h4>
                             {entry.ai_emotion && (
