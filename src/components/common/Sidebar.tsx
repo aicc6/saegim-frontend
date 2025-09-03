@@ -45,7 +45,7 @@ export function Sidebar() {
   const { resolvedTheme } = useTheme();
   const pathname = usePathname();
   const router = useRouter();
-  const { logout } = useAuthStore();
+  const { logout, user: authUser } = useAuthStore();
   const { toast } = useToast();
 
   // 알림 관련 상태
@@ -165,7 +165,17 @@ export function Sidebar() {
                           : 'text-sage-70 hover:text-sage-100'
                     }`}
                   >
-                    <User className="h-5 w-5" />
+                    {authUser?.profileImage ? (
+                      <Image
+                        src={authUser.profileImage}
+                        alt="프로필 이미지"
+                        width={20}
+                        height={20}
+                        className="h-5 w-5 rounded-full object-cover"
+                      />
+                    ) : (
+                      <User className="h-5 w-5" />
+                    )}
                   </Button>
                 </Link>
                 <Button
@@ -196,7 +206,17 @@ export function Sidebar() {
                           : 'text-sage-70 hover:text-sage-100'
                     }`}
                   >
-                    <User className="mr-3 h-5 w-5" />
+                    {authUser?.profileImage ? (
+                      <Image
+                        src={authUser.profileImage}
+                        alt="프로필 이미지"
+                        width={20}
+                        height={20}
+                        className="mr-3 h-5 w-5 rounded-full object-cover"
+                      />
+                    ) : (
+                      <User className="mr-3 h-5 w-5" />
+                    )}
                     {!isLoading && displayName}
                   </Button>
                 </Link>
@@ -339,7 +359,17 @@ export function Sidebar() {
                 }`}
                 onClick={() => setIsMobileMenuOpen(false)}
               >
-                <User className="mr-4 h-6 w-6" />
+                {authUser?.profileImage ? (
+                  <Image
+                    src={authUser.profileImage}
+                    alt="프로필 이미지"
+                    width={24}
+                    height={24}
+                    className="mr-4 h-6 w-6 rounded-full object-cover"
+                  />
+                ) : (
+                  <User className="mr-4 h-6 w-6" />
+                )}
                 {!isLoading && displayName}
               </Link>
 

@@ -8,6 +8,8 @@ import { FormInput } from '@/components/ui/form-input';
 import { authApi } from '@/lib/api/auth';
 import { useToast } from '@/hooks/use-toast';
 import { getLogger } from '@/lib/logger';
+import { useAuthStore } from '@/stores/auth';
+import { apiClient } from '@/lib/api/client';
 
 const logger = getLogger('ProfileForm');
 
@@ -15,6 +17,7 @@ export default function ProfileForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { toast } = useToast();
+  const { updateUser, user: authUser } = useAuthStore();
   const [profileData, setProfileData] = useState({
     nickname: '',
     email: '',
@@ -23,8 +26,10 @@ export default function ProfileForm() {
     provider: '',
   });
   const [originalNickname, setOriginalNickname] = useState('');
+  const [originalProfileImage, setOriginalProfileImage] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [isUpdating, setIsUpdating] = useState(false);
+  const [isImageUploading, setIsImageUploading] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isEmailChangeModalOpen, setIsEmailChangeModalOpen] = useState(false);
   const [isNicknameCheckModalOpen, setIsNicknameCheckModalOpen] =
@@ -83,11 +88,14 @@ export default function ProfileForm() {
       setProfileData({
         nickname: profile.nickname,
         email: profile.email,
-        profileImage: '',
+        profileImage: profile.profile_image || authUser?.profileImage || '',
         accountType: profile.account_type,
         provider: profile.provider || '',
       });
       setOriginalNickname(profile.nickname);
+      setOriginalProfileImage(
+        profile.profile_image || authUser?.profileImage || '',
+      );
     } catch (error) {
       logger.error('프로필 로드 실패', { error });
       toast({
@@ -98,7 +106,7 @@ export default function ProfileForm() {
     } finally {
       setIsLoading(false);
     }
-  }, [toast]);
+  }, [toast, authUser?.profileImage]);
 
   // 프로필 정보 로드
   useEffect(() => {
@@ -124,8 +132,120 @@ export default function ProfileForm() {
     }));
   };
 
+  const handleProfileImageUpload = async (file: File) => {
+    try {
+      setIsImageUploading(true);
+
+      // 파일 크기 검증 (5MB 제한)
+      if (file.size > 5 * 1024 * 1024) {
+        toast({
+          title: '오류',
+          description: '파일 크기는 5MB 이하여야 합니다.',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      // 파일 형식 검증
+      if (!file.type.startsWith('image/')) {
+        toast({
+          title: '오류',
+          description: '이미지 파일만 업로드 가능합니다.',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      // 다이어리 이미지 업로드 API를 사용하여 프로필 사진 업로드
+      const formData = new FormData();
+      formData.append('images', file);
+
+      const response = await apiClient.upload(
+        '/api/diary/images/upload',
+        formData,
+      );
+
+      if (
+        response.data &&
+        Array.isArray(response.data) &&
+        response.data.length > 0
+      ) {
+        const uploadedImage = response.data[0] as {
+          file_id: string;
+          original_url: string;
+          thumbnail_url: string;
+          mime_type: string;
+          file_size: number;
+          filename: string;
+        };
+        const imageUrl =
+          uploadedImage.thumbnail_url || uploadedImage.original_url;
+
+        // 로컬 상태 업데이트
+        setProfileData((prev) => ({
+          ...prev,
+          profileImage: imageUrl,
+        }));
+
+        // 전역 상태 즉시 업데이트 (네비게이션에 즉시 반영)
+        updateUser({ profileImage: imageUrl });
+
+        // 프로필 사진 URL을 DB에 즉시 저장
+        try {
+          await authApi.updateProfile({
+            nickname: profileData.nickname,
+            profile_image_url: imageUrl,
+          });
+
+          // 원본 프로필 이미지 업데이트
+          setOriginalProfileImage(imageUrl);
+
+          // 로컬 상태도 전역 상태와 동기화
+          setProfileData((prev) => ({
+            ...prev,
+            profileImage: imageUrl,
+          }));
+
+          logger.info('프로필 사진 DB 저장 완료');
+
+          // 성공 안내 모달 표시
+          toast({
+            title: '✅ 프로필 이미지 업데이트 완료',
+            description: '프로필 이미지가 성공적으로 업데이트되었습니다.',
+            duration: 3000,
+          });
+        } catch (error) {
+          logger.error('프로필 사진 DB 저장 실패:', error);
+          toast({
+            title: '⚠️ 저장 실패',
+            description:
+              '프로필 이미지 업로드는 완료되었지만 저장에 실패했습니다. 다시 시도해주세요.',
+            variant: 'destructive',
+            duration: 5000,
+          });
+        }
+
+        logger.info('프로필 사진 업로드 성공:', imageUrl);
+      } else {
+        throw new Error('업로드 응답 형식이 올바르지 않습니다.');
+      }
+    } catch (error) {
+      logger.error('프로필 사진 업로드 실패:', error);
+      toast({
+        title: '오류',
+        description: '프로필 사진 업로드에 실패했습니다.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsImageUploading(false);
+    }
+  };
+
   const handleProfileUpdate = async () => {
-    if (profileData.nickname === originalNickname) {
+    if (
+      profileData.nickname === originalNickname &&
+      profileData.profileImage === originalProfileImage
+    ) {
       toast({
         title: '알림',
         description: '변경된 내용이 없습니다.',
@@ -135,17 +255,38 @@ export default function ProfileForm() {
 
     try {
       setIsUpdating(true);
+
+      // 프로필 업데이트 API 호출
       await authApi.updateProfile({
         nickname: profileData.nickname,
+        profile_image_url: profileData.profileImage,
       });
 
+      // 로컬 상태 업데이트
       setOriginalNickname(profileData.nickname);
-      toast({
-        title: '성공',
-        description: '프로필이 성공적으로 업데이트되었습니다.',
+      setOriginalProfileImage(profileData.profileImage);
+
+      // 전역 상태 즉시 업데이트 (네비게이션에 즉시 반영)
+      updateUser({
+        nickname: profileData.nickname,
+        profileImage: profileData.profileImage,
       });
+
+      toast({
+        title:
+          profileData.nickname !== originalNickname
+            ? `✅ 닉네임 변경 완료`
+            : '✅ 프로필 업데이트 완료',
+        description:
+          profileData.nickname !== originalNickname
+            ? `닉네임이 "${originalNickname}"에서 "${profileData.nickname}"으로 변경되었습니다.`
+            : '프로필이 성공적으로 업데이트되었습니다.',
+        duration: 4000,
+      });
+
+      logger.info('프로필 업데이트 완료');
     } catch (error) {
-      logger.error('프로필 업데이트 실패', { error });
+      logger.error('프로필 업데이트 실패:', error);
       toast({
         title: '오류',
         description: '프로필 업데이트에 실패했습니다.',
@@ -429,6 +570,19 @@ export default function ProfileForm() {
     router.push('/support');
   };
 
+  // 이메일 마스킹 함수
+  const maskEmail = (email: string): string => {
+    if (!email || !email.includes('@')) return email;
+
+    const [localPart, domain] = email.split('@');
+    const maskedLocal =
+      localPart.length > 2
+        ? localPart.substring(0, 2) + '*'.repeat(localPart.length - 2)
+        : localPart;
+
+    return `${maskedLocal}@${domain}`;
+  };
+
   if (isLoading) {
     return (
       <div className="space-y-8">
@@ -462,17 +616,7 @@ export default function ProfileForm() {
                 className="hidden"
                 onChange={(e) => {
                   if (e.target.files && e.target.files[0]) {
-                    const reader = new FileReader();
-                    reader.onload = (event: ProgressEvent<FileReader>) => {
-                      const result = event.target?.result;
-                      if (result && typeof result === 'string') {
-                        setProfileData((prev) => ({
-                          ...prev,
-                          profileImage: result,
-                        }));
-                      }
-                    };
-                    reader.readAsDataURL(e.target.files[0]);
+                    handleProfileImageUpload(e.target.files[0]);
                   }
                 }}
               />
@@ -481,18 +625,35 @@ export default function ProfileForm() {
                 className="cursor-pointer block w-full h-full"
               >
                 <div className="w-full h-full bg-background-secondary dark:bg-background-dark-tertiary rounded-xl shadow-md flex items-center justify-center overflow-hidden">
-                  {profileData.profileImage ? (
+                  {profileData.profileImage || authUser?.profileImage ? (
                     <Image
-                      src={profileData.profileImage}
+                      src={
+                        profileData.profileImage || authUser?.profileImage || ''
+                      }
                       alt="프로필 이미지"
                       className="w-full h-full object-cover"
                       width={192}
                       height={192}
+                      unoptimized={(
+                        profileData.profileImage ||
+                        authUser?.profileImage ||
+                        ''
+                      ).startsWith('data:')}
                     />
                   ) : (
                     <span className="text-6xl" role="img" aria-label="카메라">
                       📷
                     </span>
+                  )}
+
+                  {/* 업로드 중 표시 */}
+                  {isImageUploading && (
+                    <div className="absolute inset-0 bg-black/50 flex items-center justify-center rounded-xl">
+                      <div className="text-white text-center">
+                        <div className="inline-block h-8 w-8 animate-spin rounded-full border-2 border-white border-t-transparent mb-2"></div>
+                        <p className="text-sm">업로드 중...</p>
+                      </div>
+                    </div>
                   )}
                 </div>
                 <div className="absolute inset-0 bg-black/40 flex items-center justify-center rounded-xl opacity-0 group-hover:opacity-100 transition-opacity">
@@ -579,7 +740,7 @@ export default function ProfileForm() {
                   type="email"
                   id="email"
                   name="email"
-                  value={profileData.email}
+                  value={maskEmail(profileData.email)}
                   readOnly
                   className="flex-1 px-4 py-3 bg-gray-100 dark:bg-background-dark-secondary border border-gray-300 dark:border-border-dark-subtle rounded-lg text-gray-600 dark:text-text-dark-secondary cursor-not-allowed"
                   placeholder="현재 이메일"
@@ -608,13 +769,19 @@ export default function ProfileForm() {
 
         {/* 프로필 업데이트 버튼 */}
         <div className="mt-8 pt-6 border-t border-border-subtle dark:border-border-dark flex justify-center">
-          <button
-            onClick={handleProfileUpdate}
-            className="saegim-button saegim-button-medium"
-            disabled={isUpdating || profileData.nickname === originalNickname}
-          >
-            {isUpdating ? '업데이트 중...' : '프로필 업데이트'}
-          </button>
+          <div className="text-center">
+            <button
+              onClick={handleProfileUpdate}
+              className="saegim-button saegim-button-medium"
+              disabled={isUpdating || profileData.nickname === originalNickname}
+            >
+              {isUpdating ? '업데이트 중...' : '프로필 업데이트'}
+            </button>
+            <p className="text-xs text-text-secondary dark:text-text-dark-secondary mt-2">
+              프로필 이미지는 업로드 시 자동으로 저장됩니다. 이 버튼은 닉네임
+              변경 시에만 사용됩니다.
+            </p>
+          </div>
         </div>
       </div>
 

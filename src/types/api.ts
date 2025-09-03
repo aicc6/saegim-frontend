@@ -39,6 +39,7 @@ export interface UserProfileResponse {
   account_type: string;
   provider?: string;
   is_active: boolean;
+  profile_image?: string;
 }
 
 export interface AuthUserResponse {
@@ -46,6 +47,7 @@ export interface AuthUserResponse {
   email: string;
   nickname?: string;
   account_type?: string;
+  profile_image?: string;
 }
 
 export interface EmailTokenVerificationResponse {
@@ -80,4 +82,10 @@ export interface NotificationResponse {
   fcm_response?: Record<string, unknown>;
   isRead?: boolean;
   actionUrl?: string;
+}
+
+export interface ProfileImageUploadResponse {
+  success: boolean;
+  profile_image_url: string;
+  message: string;
 }

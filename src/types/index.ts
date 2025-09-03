@@ -5,6 +5,7 @@ export interface User {
   id: string;
   email: string;
   name: string;
+  nickname?: string;
   profileImage?: string;
   provider: 'google' | 'kakao' | 'naver' | 'email';
   createdAt: string;

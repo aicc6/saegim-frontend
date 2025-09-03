@@ -96,7 +96,10 @@ export const authApi = {
   },
 
   // 프로필 업데이트
-  updateProfile: async (data: { nickname: string }) => {
+  updateProfile: async (data: {
+    nickname: string;
+    profile_image_url?: string;
+  }) => {
     return apiClient.put('/api/auth/profile', data);
   },
 
