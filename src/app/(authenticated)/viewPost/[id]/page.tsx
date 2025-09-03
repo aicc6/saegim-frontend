@@ -173,7 +173,9 @@ export default function ViewPostPage({
       // 편집 모드가 아닐 때만 초기값으로 설정
       if (!isEditing) {
         setEditedTitle(currentDiary.title || '');
-        setEditedContent(currentDiary.content);
+        setEditedContent(
+          currentDiary.ai_generated_text || currentDiary.content,
+        );
         setEditedEmotion(currentDiary.user_emotion || '');
         setEditedKeywords(currentDiary.keywords || []);
       }
@@ -184,7 +186,7 @@ export default function ViewPostPage({
   useEffect(() => {
     if (isEditing && entry) {
       setEditedTitle(entry.title || '');
-      setEditedContent(entry.content);
+      setEditedContent(entry.ai_generated_text || entry.content);
       setEditedEmotion(entry.user_emotion || '');
       setEditedKeywords(entry.keywords || []);
     }
@@ -267,7 +269,7 @@ export default function ViewPostPage({
       setIsEditing(true);
       // 수정 모드 시작 시 현재 상태를 편집 상태로 복사
       setEditedTitle(entry.title || '');
-      setEditedContent(entry.content);
+      setEditedContent(entry.ai_generated_text || entry.content);
       setEditedEmotion(entry.user_emotion || '');
       setEditedKeywords(entry.keywords || []);
       setEditedImages(entry.images || []);
@@ -331,7 +333,7 @@ export default function ViewPostPage({
     // 원래 값으로 복원
     if (entry) {
       setEditedTitle(entry.title || '');
-      setEditedContent(entry.content);
+      setEditedContent(entry.ai_generated_text || entry.content);
       setEditedEmotion(entry.user_emotion || '');
       setEditedKeywords(entry.keywords || []);
       setEditedImages(entry.images || []);
