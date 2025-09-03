@@ -244,8 +244,20 @@ export function NotificationPage() {
     }
   };
 
-  const deleteNotification = (id: string) => {
-    setNotifications((prev) => prev.filter((n) => n.id !== id));
+  const deleteNotification = async (id: string) => {
+    try {
+      setError(null);
+      const { notificationApi } = await import('@/lib/api/notification');
+      const res = await notificationApi.deleteNotification(id);
+      if (res.success) {
+        setNotifications((prev) => prev.filter((n) => n.id !== id));
+      } else {
+        setError('알림 삭제에 실패했습니다.');
+      }
+    } catch (err) {
+      logger.error('알림 삭제 실패', { error: err });
+      setError('알림 삭제 중 문제가 발생했습니다.');
+    }
   };
 
   // 수동 재시도 함수
@@ -442,7 +454,10 @@ export function NotificationPage() {
                           className="relative bg-background-primary dark:bg-background-dark-secondary rounded-xl border-2 border-border-subtle dark:border-border-dark p-5 shadow-lg overflow-hidden"
                           style={{
                             animationDelay: `${i * 150}ms`,
-                            animation: 'fadeInUp 0.6s ease-out forwards',
+                            animationName: 'fadeInUp',
+                            animationDuration: '0.6s',
+                            animationTimingFunction: 'ease-out',
+                            animationFillMode: 'forwards',
                           }}
                         >
                           {/* Shimmer 효과 */}
@@ -498,23 +513,7 @@ export function NotificationPage() {
                             : '다이어리 작성이나 AI 분석 등의 알림을 받으시려면 알림 설정에서 활성화해주세요.'}
                         </p>
 
-                        {filter !== 'unread' && (
-                          <div className="pt-4">
-                            <button
-                              className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-sage-60 to-sage-70 dark:from-sage-60 dark:to-sage-70 text-white rounded-full font-medium hover:scale-105 transform transition-all duration-200 shadow-lg hover:shadow-xl"
-                              onClick={() => {
-                                // 알림 설정 탭으로 이동하는 로직 추가할 수 있음
-                                const settingsTab = document.querySelector(
-                                  '[value="settings"]',
-                                ) as HTMLElement;
-                                settingsTab?.click();
-                              }}
-                            >
-                              <Bell className="w-4 h-4 mr-2" />
-                              알림 설정하기
-                            </button>
-                          </div>
-                        )}
+                        {/* 버튼 제거 요청에 따라 알림 설정 버튼 제거 */}
                       </div>
                     </div>
                   ) : (
@@ -526,9 +525,10 @@ export function NotificationPage() {
                         const isUnread = !notification.isRead;
 
                         return (
-                          <button
+                          <div
                             key={notification.id}
-                            type="button"
+                            role="button"
+                            tabIndex={0}
                             className={`group relative w-full text-left rounded-xl border-2 transition-all duration-300 cursor-pointer overflow-hidden ${
                               isUnread
                                 ? 'bg-blue-100 dark:bg-blue-950/40 border-blue-400 dark:border-blue-600 shadow-lg hover:shadow-xl hover:border-blue-500 dark:hover:border-blue-500 hover:bg-blue-150 dark:hover:bg-blue-900/50'
@@ -536,9 +536,14 @@ export function NotificationPage() {
                             } hover:scale-[1.02] hover:-translate-y-1`}
                             style={{
                               animationDelay: `${index * 100}ms`,
-                              animation: isLoading
-                                ? 'none'
-                                : 'fadeInUp 0.5s ease-out forwards',
+                              animationName: isLoading ? 'none' : 'fadeInUp',
+                              animationDuration: isLoading ? undefined : '0.5s',
+                              animationTimingFunction: isLoading
+                                ? undefined
+                                : 'ease-out',
+                              animationFillMode: isLoading
+                                ? undefined
+                                : 'forwards',
                             }}
                             onClick={() =>
                               !notification.isRead &&
@@ -678,7 +683,7 @@ export function NotificationPage() {
                                 </div>
                               </div>
                             </div>
-                          </button>
+                          </div>
                         );
                       })}
                     </div>

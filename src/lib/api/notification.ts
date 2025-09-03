@@ -187,4 +187,12 @@ export const notificationApi = {
       {},
     );
   },
+
+  // 알림 삭제
+  deleteNotification: (notificationId: string) => {
+    return apiClient.delete<{
+      success: boolean;
+      data: Record<string, unknown>;
+    }>(`/api/notifications/${notificationId}`);
+  },
 };

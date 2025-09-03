@@ -87,7 +87,7 @@ export function KeywordBarChart({ data, className }: KeywordBarChartProps) {
 
               {/* 값 표시 */}
               <div className="absolute right-2 top-1/2 transform -translate-y-1/2">
-                <span className="text-caption text-text-secondary">
+                <span className="text-caption font-medium text-sage-100">
                   {item.count}개
                 </span>
               </div>
