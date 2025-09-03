@@ -41,14 +41,22 @@ export default function FCMTestPanel() {
     tokenRegistration: boolean | null;
     settingsSync: boolean | null;
     notificationSend: boolean | null;
+    historyLoad: boolean | null;
+    markAllRead: boolean | null;
   }>({
     health: null,
     tokenRegistration: null,
     settingsSync: null,
     notificationSend: null,
+    historyLoad: null,
+    markAllRead: null,
   });
 
   const [isInitialized, setIsInitialized] = useState(false);
+  const [notificationHistory, setNotificationHistory] = useState<
+    Record<string, unknown>[]
+  >([]);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
 
   // 컴포넌트 마운트 시 FCM 초기화
   useEffect(() => {
@@ -67,8 +75,10 @@ export default function FCMTestPanel() {
   const testFCMHealth = async () => {
     try {
       const response = await notificationApi.checkHealth();
-      setTestResults((prev) => ({ ...prev, health: response.success }));
-      return response.success;
+      // 헬스 체크 응답에서 success 확인
+      const isHealthy = response.success && !!response.data;
+      setTestResults((prev) => ({ ...prev, health: isHealthy }));
+      return isHealthy;
     } catch (error) {
       logger.error('FCM 헬스 체크 실패', { error });
       setTestResults((prev) => ({ ...prev, health: false }));
@@ -126,14 +136,54 @@ export default function FCMTestPanel() {
     try {
       // 다이어리 알림 테스트 - 현재 인증된 사용자에게 전송
       const response = await notificationApi.sendDiaryReminder();
+      // API 응답 구조에 맞게 수정
+      const isSuccess = response.success && !!response.data;
       setTestResults((prev) => ({
         ...prev,
-        notificationSend: response.success,
+        notificationSend: isSuccess,
       }));
-      return response.success;
+      return isSuccess;
     } catch (error) {
       logger.error('테스트 알림 전송 실패', { error });
       setTestResults((prev) => ({ ...prev, notificationSend: false }));
+      return false;
+    }
+  };
+
+  // 알림 히스토리 로드 테스트
+  const testHistoryLoad = async () => {
+    try {
+      setIsLoadingHistory(true);
+      const response = await notificationApi.getNotificationHistory(10, 0);
+      const success = response.success && Array.isArray(response.data);
+
+      if (success) {
+        setNotificationHistory(
+          response.data as unknown as Record<string, unknown>[],
+        );
+      }
+
+      setTestResults((prev) => ({ ...prev, historyLoad: success }));
+      return success;
+    } catch (error) {
+      logger.error('알림 히스토리 로드 테스트 실패', { error });
+      setTestResults((prev) => ({ ...prev, historyLoad: false }));
+      return false;
+    } finally {
+      setIsLoadingHistory(false);
+    }
+  };
+
+  // 모든 알림 읽음 처리 테스트
+  const testMarkAllAsRead = async () => {
+    try {
+      const response = await notificationApi.markAllNotificationsAsRead();
+      const success = response.success;
+      setTestResults((prev) => ({ ...prev, markAllRead: success }));
+      return success;
+    } catch (error) {
+      logger.error('모든 알림 읽음 처리 테스트 실패', { error });
+      setTestResults((prev) => ({ ...prev, markAllRead: false }));
       return false;
     }
   };
@@ -145,15 +195,19 @@ export default function FCMTestPanel() {
       tokenRegistration: null,
       settingsSync: null,
       notificationSend: null,
+      historyLoad: null,
+      markAllRead: null,
     });
 
     const health = await testFCMHealth();
     if (health && permission === 'granted') {
       await testTokenRegistration();
       await testSettingsSync();
-      // 토큰이 있을 때만 알림 전송 테스트
+      await testHistoryLoad();
+      // 토큰이 있을 때만 알림 전송 및 읽음 처리 테스트
       if (isTokenRegistered) {
         await testNotificationSend();
+        await testMarkAllAsRead();
       }
     }
   };
@@ -338,8 +392,90 @@ export default function FCMTestPanel() {
                   </Button>
                 </div>
               </div>
+
+              <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                <span className="font-medium">알림 히스토리 로드</span>
+                <div className="flex items-center gap-2">
+                  {getStatusBadge(testResults.historyLoad)}
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={testHistoryLoad}
+                    disabled={!isTokenRegistered || isLoadingHistory}
+                  >
+                    {isLoadingHistory ? '로딩...' : '테스트'}
+                  </Button>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                <span className="font-medium">모든 알림 읽음 처리</span>
+                <div className="flex items-center gap-2">
+                  {getStatusBadge(testResults.markAllRead)}
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={testMarkAllAsRead}
+                    disabled={!isTokenRegistered}
+                  >
+                    테스트
+                  </Button>
+                </div>
+              </div>
             </div>
           </div>
+
+          {/* 알림 히스토리 표시 섹션 */}
+          {notificationHistory.length > 0 && (
+            <>
+              <Separator />
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold">알림 히스토리</h3>
+                <div className="space-y-2 max-h-64 overflow-y-auto">
+                  {notificationHistory.map((notification, index) => (
+                    <div
+                      key={`${notification.id || index}`}
+                      className="p-3 bg-muted/30 rounded-lg"
+                    >
+                      <div className="flex justify-between items-start">
+                        <div className="flex-1">
+                          <h4 className="font-medium text-sm">
+                            {(notification.title as string) || '제목 없음'}
+                          </h4>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            {(notification.body as string) || '내용 없음'}
+                          </p>
+                          <div className="flex gap-2 mt-2">
+                            <Badge variant="outline" className="text-xs">
+                              {(notification.notification_type as string) ||
+                                '일반'}
+                            </Badge>
+                            <Badge
+                              variant={
+                                (notification.status as string) === 'sent'
+                                  ? 'default'
+                                  : 'destructive'
+                              }
+                              className="text-xs"
+                            >
+                              {(notification.status as string) || '알 수 없음'}
+                            </Badge>
+                          </div>
+                        </div>
+                        <span className="text-xs text-muted-foreground">
+                          {notification.created_at
+                            ? new Date(
+                                notification.created_at as string,
+                              ).toLocaleString('ko-KR')
+                            : '시간 미상'}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </>
+          )}
 
           {/* 오류 메시지 */}
           {error && (

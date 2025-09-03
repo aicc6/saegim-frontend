@@ -75,6 +75,7 @@ export function NotificationPage() {
   const [error, setError] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState(0);
   const [isRetrying, setIsRetrying] = useState(false);
+  const [isMarkingAll, setIsMarkingAll] = useState(false);
 
   // FCM store에서 데이터 가져오기
   const {
@@ -219,13 +220,28 @@ export function NotificationPage() {
     }
   };
 
-  const markAllAsRead = () => {
-    // FCM 알림 전체 읽기
-    if (fcmUnreadCount > 0) {
-      fcmMarkAllAsRead();
+  const markAllAsRead = async () => {
+    try {
+      setIsMarkingAll(true);
+      setError(null);
+
+      // 백엔드 API 호출로 모든 알림 읽음 처리
+      const { notificationApi } = await import('@/lib/api/notification');
+      await notificationApi.markAllNotificationsAsRead();
+
+      // FCM 알림 전체 읽기 (스토어)
+      if (fcmUnreadCount > 0) {
+        fcmMarkAllAsRead();
+      }
+
+      // 로컬 상태 업데이트
+      setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
+    } catch (err) {
+      logger.error('모든 알림 읽음 처리 실패', { error: err });
+      setError('모든 알림을 읽음 처리하는 중 문제가 발생했습니다.');
+    } finally {
+      setIsMarkingAll(false);
     }
-    // 로컬 알림 전체 읽기
-    setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
   };
 
   const deleteNotification = (id: string) => {
@@ -272,10 +288,11 @@ export function NotificationPage() {
                 variant="outline"
                 size="sm"
                 onClick={markAllAsRead}
+                disabled={isMarkingAll}
                 className="border-border-subtle bg-transparent hover:bg-background-primary dark:border-border-dark dark:hover:bg-background-dark-secondary"
               >
                 <Check className="w-4 h-4 mr-2" />
-                모두 읽음
+                {isMarkingAll ? '처리 중...' : '모두 읽음'}
               </Button>
             )}
           </div>
