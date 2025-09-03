@@ -117,8 +117,8 @@ export default function DiaryListView() {
     }
   }, [isLoading, currentPage, buildFilters, fetchDiaries]);
 
-  // hasNextPage 로직을 간단하게 계산
-  const hasNextPage = diaries.length > 0 && diaries.length % 20 === 0;
+  // hasNextPage 로직을 올바르게 계산
+  const hasNextPage = diaries.length < totalCount;
 
   const lastDiaryElementRef = useCallback(
     (node: HTMLDivElement) => {

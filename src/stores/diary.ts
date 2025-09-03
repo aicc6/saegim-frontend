@@ -71,9 +71,13 @@ export const useDiaryStore = create<DiaryState>((set, get) => ({
     try {
       set({ isLoading: true, error: null });
 
+      const currentState = get();
+      const page = filters?.page || currentState.currentPage;
+      const isFirstPage = page === 1;
+
       const params: Record<string, string> = {
-        page: (filters?.page || get().currentPage).toString(),
-        page_size: (filters?.page_size || get().pageSize).toString(),
+        page: page.toString(),
+        page_size: (filters?.page_size || currentState.pageSize).toString(),
       };
 
       if (filters?.searchTerm) params.searchTerm = filters.searchTerm;
@@ -87,11 +91,24 @@ export const useDiaryStore = create<DiaryState>((set, get) => ({
       const response = await diaryApi.getDiaries(params);
 
       // 타입 안전성을 보장하는 API 응답 처리
-      const diaries = validateApiResponse(response.data, isValidDiaryList);
+      const newDiaries = validateApiResponse(response.data, isValidDiaryList);
+
+      // 첫 페이지인 경우 기존 데이터를 교체, 그렇지 않으면 추가
+      const updatedDiaries = isFirstPage
+        ? newDiaries
+        : [...currentState.diaries, ...newDiaries];
+
+      // 더 이상 데이터가 없는지 확인 (페이지 크기보다 적은 데이터가 오면 마지막 페이지)
+      const isLastPage =
+        newDiaries.length < (filters?.page_size || currentState.pageSize);
+      const calculatedTotalCount = isLastPage
+        ? updatedDiaries.length
+        : updatedDiaries.length + 1; // 아직 더 있을 가능성이 있음을 표시
 
       set({
-        diaries,
-        totalCount: diaries.length,
+        diaries: updatedDiaries,
+        totalCount: calculatedTotalCount,
+        currentPage: page,
         isLoading: false,
         error: null,
       });
