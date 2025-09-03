@@ -13,6 +13,7 @@
     "start": "next start",
     "lint": "next lint",
     "lint:fix": "next lint --fix",
+    "typecheck": "tsc --noEmit",
     "format": "prettier --check --ignore-unknown .",
     "format:fix": "prettier --write --ignore-unknown .",
     "test": "jest",

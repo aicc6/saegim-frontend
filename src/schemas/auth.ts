@@ -37,7 +37,7 @@ export const nicknameSchema = z
     VALIDATION.NICKNAME_MAX_LENGTH,
     `닉네임은 ${VALIDATION.NICKNAME_MAX_LENGTH}자 이하여야 합니다.`,
   )
-  .regex(/^[가-힣a-zA-Z\s]+$/, '닉네임은 한글과 영문만 사용 가능합니다.');
+  .regex(/^[가-힣a-zA-Z]+$/, '닉네임은 한글과 영문만 사용 가능합니다.');
 
 export const verificationCodeSchema = z
   .string()
@@ -65,7 +65,7 @@ export const signupSchema = z
     email: emailSchema,
     password: passwordSchema,
     passwordConfirm: z.string().min(1, '비밀번호 확인을 입력해주세요.'),
-    verificationCode: verificationCodeSchema,
+    verificationCode: verificationCodeSchema.optional(),
   })
   .refine((data) => data.password === data.passwordConfirm, {
     message: '입력한 비밀번호가 일치하지 않습니다.',

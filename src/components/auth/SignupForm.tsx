@@ -11,9 +11,11 @@ import { authApi } from '@/lib/api/auth';
 import { BRAND_COLORS, VALIDATION, TEXT_STYLES } from '@/constants';
 import { signupSchema, type SignupFormData } from '@/schemas/auth';
 import { NicknameAvailabilityResponse } from '@/types/api';
+import { getLogger } from '@/lib/logger';
 
 export default function SignupForm() {
   const router = useRouter();
+  const logger = getLogger('SignupForm');
   const { handleApiError, showSuccess } = useApiError({
     loggerName: 'SignupForm',
   });
@@ -62,16 +64,21 @@ export default function SignupForm() {
       return;
     }
 
+    // 디버깅을 위한 데이터 로깅
+    const signupData = {
+      email: data.email,
+      password: data.password,
+      nickname: data.nickname,
+    };
+    logger.debug('📤 회원가입 데이터 전송', signupData);
+
     try {
-      await authApi.signup({
-        email: data.email,
-        password: data.password,
-        nickname: data.nickname,
-      });
+      await authApi.signup(signupData);
 
       showSuccess('회원가입 성공', '새김에 가입해주셔서 감사합니다!');
       router.push('/login');
     } catch (error: unknown) {
+      logger.error('🚨 회원가입 에러 발생', { error });
       handleApiError(
         error,
         '회원가입 실패',
@@ -181,8 +188,23 @@ export default function SignupForm() {
   // 회원가입 버튼 활성화 조건
   const isFormValid = () => {
     const hasRequiredFields = email && password && nickname;
-    const hasNoErrors = Object.keys(errors).length === 0;
-    return hasRequiredFields && hasNoErrors && emailVerified && nicknameChecked;
+
+    // verificationCode 에러를 제외한 다른 에러들만 체크
+    const relevantErrors = Object.keys(errors).filter((key) => {
+      // 이메일이 인증된 상태라면 verificationCode 에러는 무시
+      if (emailVerified && key === 'verificationCode') {
+        return false;
+      }
+      return true;
+    });
+
+    const hasNoRelevantErrors = relevantErrors.length === 0;
+    return (
+      hasRequiredFields &&
+      hasNoRelevantErrors &&
+      emailVerified &&
+      nicknameChecked
+    );
   };
 
   return (
