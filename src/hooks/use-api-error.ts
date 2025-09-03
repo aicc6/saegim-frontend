@@ -1,8 +1,10 @@
 import { useRouter } from 'next/navigation';
+import { UseFormSetError, FieldValues, Path } from 'react-hook-form';
 
 import { useToast } from '@/hooks/use-toast';
 import { getLogger } from '@/lib/logger';
 import type { ApiError } from '@/types/api';
+import { parse422Error, is422Error } from '@/utils/form-error-handler';
 
 interface UseApiErrorOptions {
   /** 로거 이름 (컴포넌트명) */
@@ -18,10 +20,11 @@ export function useApiError(options: UseApiErrorOptions) {
   const router = useRouter();
   const logger = getLogger(options.loggerName);
 
-  const handleApiError = (
+  const handleApiError = <T extends FieldValues = FieldValues>(
     error: unknown,
     defaultTitle: string = '오류',
     defaultMessage?: string,
+    setError?: UseFormSetError<T>,
   ) => {
     const apiError = error as ApiError;
     const errorDetail = apiError.response?.data?.detail;
@@ -32,6 +35,31 @@ export function useApiError(options: UseApiErrorOptions) {
       '알 수 없는 오류가 발생했습니다.';
 
     logger.error(`${defaultTitle} 발생`, { error });
+
+    // 422 Unprocessable Entity 에러 처리 (서버 검증 실패)
+    if (is422Error(error) && setError) {
+      const validationErrors = parse422Error(error);
+
+      if (validationErrors.length > 0) {
+        logger.debug('422 에러를 필드별로 설정', validationErrors);
+
+        // 각 검증 에러를 해당 필드에 설정
+        validationErrors.forEach(({ field, message }) => {
+          setError(field as Path<T>, {
+            type: 'server',
+            message,
+          });
+        });
+
+        // 필드별 에러가 설정된 경우 토스트는 간단하게 표시
+        toast({
+          title: defaultTitle,
+          description: '입력하신 정보를 확인해주세요.',
+          variant: 'destructive',
+        });
+        return;
+      }
+    }
 
     // 소셜 계정 관련 에러 처리
     if (
