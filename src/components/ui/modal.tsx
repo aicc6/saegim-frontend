@@ -299,10 +299,10 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
     danger: 'bg-emotion-angry-bg',
   };
 
-  const buttonColorMap = {
-    warning: 'bg-warning hover:bg-warning/90 text-text-on-color',
-    danger: 'bg-error hover:bg-error/90 text-text-on-color',
-  };
+  // const buttonColorMap = {
+  //   warning: 'bg-warning hover:bg-warning/90 text-text-on-color',
+  //   danger: 'bg-error hover:bg-error/90 text-text-on-color',
+  // };
 
   const handleConfirm = () => {
     onConfirm();

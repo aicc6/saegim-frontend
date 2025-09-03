@@ -586,10 +586,125 @@ export default function ProfileForm() {
   if (isLoading) {
     return (
       <div className="space-y-8">
+        {/* 프로필 정보 섹션 - 로딩 중에도 기본 구조 표시 */}
         <div className="bg-background-primary dark:bg-background-dark rounded-lg shadow-sm border border-border-subtle dark:border-border-dark p-6">
-          <div className="flex items-center justify-center h-64">
-            <div className="text-text-secondary dark:text-text-dark-secondary">
-              로딩 중...
+          {/* 로딩 오버레이 */}
+          <div className="absolute inset-0 bg-white/80 dark:bg-background-dark/80 backdrop-blur-sm rounded-lg flex items-center justify-center z-10">
+            <div className="text-center">
+              <div className="inline-block h-8 w-8 animate-spin rounded-full border-2 border-sage-30 border-t-sage-70 mb-4"></div>
+              <p className="text-sage-100 font-medium">
+                프로필 정보를 불러오는 중...
+              </p>
+            </div>
+          </div>
+
+          {/* 기본 프로필 폼 구조 (로딩 중에도 표시) */}
+          <div className="opacity-50">
+            <h2 className="text-xl font-medium text-text-primary dark:text-text-dark mb-6">
+              프로필 정보
+            </h2>
+
+            <div className="flex space-x-6">
+              {/* 프로필 이미지 */}
+              <div className="flex flex-col items-center min-w-[240px]">
+                <div className="relative w-48 h-48 group">
+                  <div className="w-full h-full bg-background-secondary dark:bg-background-dark-tertiary rounded-xl shadow-md flex items-center justify-center overflow-hidden">
+                    <span className="text-6xl" role="img" aria-label="카메라">
+                      📷
+                    </span>
+                  </div>
+                </div>
+                {/* 프로필 이미지 업로드 힌트 */}
+                <div className="mt-3 text-center">
+                  <div className="text-sm text-text-secondary dark:text-text-dark-secondary">
+                    클릭하여 이미지 변경
+                  </div>
+                </div>
+              </div>
+
+              {/* 프로필 정보 입력 */}
+              <div className="flex-1 space-y-6">
+                <div>
+                  <div className="block text-sm font-medium text-text-primary dark:text-text-dark mb-2">
+                    닉네임
+                  </div>
+                  <div className="h-12 bg-gray-100 dark:bg-background-dark-secondary rounded-lg border border-border-subtle dark:border-border-dark"></div>
+                </div>
+
+                <div>
+                  <div className="block text-sm font-medium text-text-primary dark:text-text-dark mb-2">
+                    이메일
+                  </div>
+                  <div className="h-12 bg-gray-100 dark:bg-background-dark-secondary rounded-lg border border-border-subtle dark:border-border-dark"></div>
+                </div>
+
+                <div>
+                  <div className="block text-sm font-medium text-text-primary dark:text-text-dark mb-2">
+                    생년월일
+                  </div>
+                  <div className="h-12 bg-gray-100 dark:bg-background-dark-secondary rounded-lg border border-border-subtle dark:border-border-dark"></div>
+                </div>
+
+                <div>
+                  <div className="block text-sm font-medium text-text-primary dark:text-text-dark mb-2">
+                    성별
+                  </div>
+                  <div className="h-12 bg-gray-100 dark:bg-background-dark-secondary rounded-lg border border-border-subtle dark:border-border-dark"></div>
+                </div>
+              </div>
+            </div>
+
+            {/* 프로필 업데이트 버튼 */}
+            <div className="mt-8 pt-6 border-t border-border-subtle dark:border-border-dark flex justify-center">
+              <div className="h-12 w-32 bg-gray-100 dark:bg-background-dark-secondary rounded-lg"></div>
+            </div>
+          </div>
+        </div>
+
+        {/* 보안 설정 섹션 */}
+        <div className="bg-background-primary dark:bg-background-dark rounded-lg shadow-sm border border-border-subtle dark:border-border-dark p-6">
+          <h2 className="text-xl font-medium text-text-primary dark:text-text-dark mb-6">
+            보안 설정
+          </h2>
+          <div className="space-y-6">
+            <div>
+              <div className="block text-sm font-medium text-text-primary dark:text-text-dark mb-2">
+                현재 비밀번호
+              </div>
+              <div className="h-12 bg-gray-100 dark:bg-background-dark-secondary rounded-lg border border-border-subtle dark:border-border-dark"></div>
+            </div>
+            <div>
+              <div className="block text-sm font-medium text-text-primary dark:text-text-dark mb-2">
+                새 비밀번호
+              </div>
+              <div className="h-12 bg-gray-100 dark:bg-background-dark-secondary rounded-lg border border-border-subtle dark:border-border-dark"></div>
+            </div>
+            <div>
+              <div className="block text-sm font-medium text-text-primary dark:text-text-dark mb-2">
+                새 비밀번호 확인
+              </div>
+              <div className="h-12 bg-gray-100 dark:bg-background-dark-secondary rounded-lg border border-border-subtle dark:border-border-dark"></div>
+            </div>
+          </div>
+        </div>
+
+        {/* 계정 설정 섹션 */}
+        <div className="bg-background-primary dark:bg-background-dark rounded-lg shadow-sm border border-border-subtle dark:border-border-dark p-6">
+          <h2 className="text-xl font-medium text-text-primary dark:text-text-dark mb-6">
+            계정 설정
+          </h2>
+          <div className="space-y-6">
+            <div>
+              <div className="block text-sm font-medium text-text-primary dark:text-text-dark mb-2">
+                알림 설정
+              </div>
+              <div className="h-12 bg-gray-100 dark:bg-background-dark-secondary rounded-lg border border-border-subtle dark:border-border-dark"></div>
+            </div>
+            <div>
+              <div className="block text-sm font-medium text-text-primary dark:text-text-dark mb-2">
+                개인정보 설정
+              </div>
+              <div className="h-12 bg-gray-100 dark:bg-background-dark-secondary rounded-lg border border-border-subtle dark:border-border-dark"></div>
             </div>
           </div>
         </div>
