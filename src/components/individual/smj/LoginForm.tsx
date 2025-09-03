@@ -171,46 +171,18 @@ export default function LoginForm({ redirectTo }: LoginFormProps) {
 
             // 복구 가능한 경우 복구 페이지로 이동 옵션 제공
             toast({
-              title: (
-                <div className="flex items-center gap-2">
-                  <span className="text-yellow-600 dark:text-yellow-400">
-                    ⚠️
-                  </span>
-                  <span>{errorTitle}</span>
-                </div>
+              title: `⚠️ ${errorTitle}`,
+              description: `ℹ️ ${errorDescription}\n\n🔄 계정을 복구하시겠습니까?\n복구 후에도 모든 데이터가 그대로 유지됩니다.`,
+              variant: 'default',
+              duration: 10000,
+              action: (
+                <button
+                  onClick={() => router.push('/restore-account')}
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md transition-colors text-sm font-medium"
+                >
+                  🔄 지금 복구하기
+                </button>
               ),
-              description: (
-                <div className="space-y-3 pt-1">
-                  <div className="flex items-start gap-2">
-                    <span className="text-blue-500 text-sm mt-0.5">ℹ️</span>
-                    <span className="text-sm">{errorDescription}</span>
-                  </div>
-                  <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
-                    <div className="flex items-start gap-2 mb-2">
-                      <span className="text-blue-600 dark:text-blue-400 text-sm">
-                        🔄
-                      </span>
-                      <span className="text-sm font-medium text-blue-800 dark:text-blue-300">
-                        계정을 복구하시겠습니까?
-                      </span>
-                    </div>
-                    <p className="text-xs text-blue-700 dark:text-blue-400 mb-3">
-                      복구 후에도 모든 데이터가 그대로 유지됩니다.
-                    </p>
-                    <button
-                      onClick={() => router.push('/restore-account')}
-                      className="w-full px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-all duration-200 transform hover:scale-[1.02] focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 font-medium text-sm shadow-md hover:shadow-lg"
-                    >
-                      <span className="flex items-center justify-center gap-2">
-                        <span>🔄</span>
-                        <span>지금 복구하기</span>
-                      </span>
-                    </button>
-                  </div>
-                </div>
-              ),
-              variant: 'default', // destructive에서 default로 변경하여 더 중성적인 색상 사용
-              duration: 10000, // 10초로 연장하여 사용자가 충분히 읽을 수 있도록
             });
             return; // 다른 에러 처리 중단
           } else if (accountError.error === 'ACCOUNT_PERMANENTLY_DELETED') {
@@ -219,44 +191,18 @@ export default function LoginForm({ redirectTo }: LoginFormProps) {
 
             // 영구 삭제된 계정에 대한 특별한 토스트 표시
             toast({
-              title: (
-                <div className="flex items-center gap-2">
-                  <span className="text-red-600 dark:text-red-400">🚫</span>
-                  <span>{errorTitle}</span>
-                </div>
-              ),
-              description: (
-                <div className="space-y-3 pt-1">
-                  <div className="flex items-start gap-2">
-                    <span className="text-red-500 text-sm mt-0.5">❌</span>
-                    <span className="text-sm">{errorDescription}</span>
-                  </div>
-                  <div className="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-3">
-                    <div className="flex items-start gap-2 mb-2">
-                      <span className="text-gray-600 dark:text-gray-400 text-sm">
-                        💡
-                      </span>
-                      <span className="text-sm font-medium text-gray-800 dark:text-gray-300">
-                        새로운 계정을 만드시겠습니까?
-                      </span>
-                    </div>
-                    <p className="text-xs text-gray-700 dark:text-gray-400 mb-3">
-                      동일한 이메일로 새 계정을 생성할 수 있습니다.
-                    </p>
-                    <button
-                      onClick={() => router.push('/register')}
-                      className="w-full px-4 py-2.5 bg-sage-50 hover:bg-sage-60 text-white rounded-lg transition-all duration-200 transform hover:scale-[1.02] focus:ring-2 focus:ring-sage-40 focus:ring-offset-2 font-medium text-sm shadow-md hover:shadow-lg"
-                    >
-                      <span className="flex items-center justify-center gap-2">
-                        <span>✨</span>
-                        <span>새 계정 만들기</span>
-                      </span>
-                    </button>
-                  </div>
-                </div>
-              ),
+              title: `🚫 ${errorTitle}`,
+              description: `❌ ${errorDescription}\n\n💡 새로운 계정을 만드시겠습니까?\n동일한 이메일로 새 계정을 생성할 수 있습니다.`,
               variant: 'default',
               duration: 10000,
+              action: (
+                <button
+                  onClick={() => router.push('/register')}
+                  className="px-4 py-2 bg-sage-50 hover:bg-sage-60 text-white rounded-md transition-colors text-sm font-medium"
+                >
+                  ✨ 새 계정 만들기
+                </button>
+              ),
             });
             return; // 다른 에러 처리 중단
           }
