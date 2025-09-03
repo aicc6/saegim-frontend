@@ -285,15 +285,25 @@ export default function NotificationSettings() {
                           </p>
                         </div>
                       </div>
-                      <Switch
-                        id="push-enabled"
-                        checked={settings?.push_enabled ?? true}
-                        onCheckedChange={(checked) =>
-                          handleSettingsUpdate({ push_enabled: checked })
-                        }
-                        disabled={isLoading}
-                        className="bg-gray-100 dark:bg-gray-700 data-[state=checked]:bg-sage-500 dark:data-[state=checked]:bg-sage-400 border-2 border-gray-400 dark:border-gray-300 data-[state=checked]:border-sage-500 dark:data-[state=checked]:border-sage-400 shadow-sm hover:shadow-md transition-all duration-200"
-                      />
+                      <div className="flex items-center space-x-3">
+                        <Switch
+                          id="push-enabled"
+                          checked={settings?.push_enabled ?? true}
+                          onCheckedChange={(checked) =>
+                            handleSettingsUpdate({ push_enabled: checked })
+                          }
+                          disabled={isLoading}
+                        />
+                        <span
+                          className={`text-sm font-semibold transition-colors duration-200 ${
+                            (settings?.push_enabled ?? true)
+                              ? 'text-green-600 dark:text-green-400'
+                              : 'text-gray-500 dark:text-gray-400'
+                          }`}
+                        >
+                          {(settings?.push_enabled ?? true) ? 'ON' : 'OFF'}
+                        </span>
+                      </div>
                     </div>
                   </div>
 
@@ -316,17 +326,29 @@ export default function NotificationSettings() {
                           </p>
                         </div>
                       </div>
-                      <Switch
-                        id="diary-reminder"
-                        checked={settings?.diary_reminder_enabled ?? true}
-                        onCheckedChange={(checked) =>
-                          handleSettingsUpdate({
-                            diary_reminder_enabled: checked,
-                          })
-                        }
-                        disabled={isLoading}
-                        className="bg-gray-100 dark:bg-gray-700 data-[state=checked]:bg-sage-500 dark:data-[state=checked]:bg-sage-400 border-2 border-gray-400 dark:border-gray-300 data-[state=checked]:border-sage-500 dark:data-[state=checked]:border-sage-400 shadow-sm hover:shadow-md transition-all duration-200"
-                      />
+                      <div className="flex items-center space-x-3">
+                        <Switch
+                          id="diary-reminder"
+                          checked={settings?.diary_reminder_enabled ?? true}
+                          onCheckedChange={(checked) =>
+                            handleSettingsUpdate({
+                              diary_reminder_enabled: checked,
+                            })
+                          }
+                          disabled={isLoading}
+                        />
+                        <span
+                          className={`text-sm font-semibold transition-colors duration-200 ${
+                            (settings?.diary_reminder_enabled ?? true)
+                              ? 'text-green-600 dark:text-green-400'
+                              : 'text-gray-500 dark:text-gray-400'
+                          }`}
+                        >
+                          {(settings?.diary_reminder_enabled ?? true)
+                            ? 'ON'
+                            : 'OFF'}
+                        </span>
+                      </div>
                     </div>
 
                     {/* 리마인더 시간 설정 */}
@@ -426,17 +448,29 @@ export default function NotificationSettings() {
                           </p>
                         </div>
                       </div>
-                      <Switch
-                        id="ai-processing"
-                        checked={settings?.ai_processing_enabled ?? true}
-                        onCheckedChange={(checked) =>
-                          handleSettingsUpdate({
-                            ai_processing_enabled: checked,
-                          })
-                        }
-                        disabled={isLoading}
-                        className="bg-gray-100 dark:bg-gray-700 data-[state=checked]:bg-sage-500 dark:data-[state=checked]:bg-sage-400 border-2 border-gray-400 dark:border-gray-300 data-[state=checked]:border-sage-500 dark:data-[state=checked]:border-sage-400 shadow-sm hover:shadow-md transition-all duration-200"
-                      />
+                      <div className="flex items-center space-x-3">
+                        <Switch
+                          id="ai-processing"
+                          checked={settings?.ai_processing_enabled ?? true}
+                          onCheckedChange={(checked) =>
+                            handleSettingsUpdate({
+                              ai_processing_enabled: checked,
+                            })
+                          }
+                          disabled={isLoading}
+                        />
+                        <span
+                          className={`text-sm font-semibold transition-colors duration-200 ${
+                            (settings?.ai_processing_enabled ?? true)
+                              ? 'text-green-600 dark:text-green-400'
+                              : 'text-gray-500 dark:text-gray-400'
+                          }`}
+                        >
+                          {(settings?.ai_processing_enabled ?? true)
+                            ? 'ON'
+                            : 'OFF'}
+                        </span>
+                      </div>
                     </div>
                   </div>
 
@@ -459,17 +493,31 @@ export default function NotificationSettings() {
                           </p>
                         </div>
                       </div>
-                      <Switch
-                        id="report-notification"
-                        checked={settings?.report_notification_enabled ?? true}
-                        onCheckedChange={(checked) =>
-                          handleSettingsUpdate({
-                            report_notification_enabled: checked,
-                          })
-                        }
-                        disabled={isLoading}
-                        className="bg-gray-100 dark:bg-gray-700 data-[state=checked]:bg-sage-500 dark:data-[state=checked]:bg-sage-400 border-2 border-gray-400 dark:border-gray-300 data-[state=checked]:border-sage-500 dark:data-[state=checked]:border-sage-400 shadow-sm hover:shadow-md transition-all duration-200"
-                      />
+                      <div className="flex items-center space-x-3">
+                        <Switch
+                          id="report-notification"
+                          checked={
+                            settings?.report_notification_enabled ?? true
+                          }
+                          onCheckedChange={(checked) =>
+                            handleSettingsUpdate({
+                              report_notification_enabled: checked,
+                            })
+                          }
+                          disabled={isLoading}
+                        />
+                        <span
+                          className={`text-sm font-semibold transition-colors duration-200 ${
+                            (settings?.report_notification_enabled ?? true)
+                              ? 'text-green-600 dark:text-green-400'
+                              : 'text-gray-500 dark:text-gray-400'
+                          }`}
+                        >
+                          {(settings?.report_notification_enabled ?? true)
+                            ? 'ON'
+                            : 'OFF'}
+                        </span>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -517,17 +565,29 @@ export default function NotificationSettings() {
                               </p>
                             </div>
                           </div>
-                          <Switch
-                            id="browser-push"
-                            checked={settings?.browser_push_enabled ?? false}
-                            onCheckedChange={(checked) =>
-                              handleSettingsUpdate({
-                                browser_push_enabled: checked,
-                              })
-                            }
-                            disabled={isLoading}
-                            className="bg-gray-100 dark:bg-gray-700 data-[state=checked]:bg-sage-500 dark:data-[state=checked]:bg-sage-400 border-2 border-gray-400 dark:border-gray-300 data-[state=checked]:border-sage-500 dark:data-[state=checked]:border-sage-400 shadow-sm hover:shadow-md transition-all duration-200"
-                          />
+                          <div className="flex items-center space-x-3">
+                            <Switch
+                              id="browser-push"
+                              checked={settings?.browser_push_enabled ?? false}
+                              onCheckedChange={(checked) =>
+                                handleSettingsUpdate({
+                                  browser_push_enabled: checked,
+                                })
+                              }
+                              disabled={isLoading}
+                            />
+                            <span
+                              className={`text-sm font-semibold transition-colors duration-200 ${
+                                (settings?.browser_push_enabled ?? false)
+                                  ? 'text-green-600 dark:text-green-400'
+                                  : 'text-gray-500 dark:text-gray-400'
+                              }`}
+                            >
+                              {(settings?.browser_push_enabled ?? false)
+                                ? 'ON'
+                                : 'OFF'}
+                            </span>
+                          </div>
                         </div>
                       </div>
                     </div>
