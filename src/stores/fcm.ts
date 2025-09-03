@@ -194,7 +194,7 @@ export const useFCMStore = create<FCMState>()(
         if (response.success && response.data) {
           // 서버 응답 데이터로 전체 설정 업데이트
           set((state) => {
-            state.settings = response.data;
+            state.settings = response.data as unknown as NotificationSettings;
             state.isLoading = false;
           });
 
@@ -295,7 +295,7 @@ const syncSettingsFromServer =
 
       if (response.success && response.data) {
         // NotificationSettingsResponse 타입이 NotificationSettings와 일치하므로 직접 반환
-        return response.data;
+        return response.data as unknown as NotificationSettings;
       }
 
       return null;
@@ -527,7 +527,7 @@ useFCMStore.setState((state) => ({
   checkFCMHealth: async () => {
     try {
       const response = await notificationApi.checkHealth();
-      return response.success;
+      return response.success && !!response.data;
     } catch (error) {
       logger.error('FCM 서비스 상태 확인 실패:', error);
       return false;
