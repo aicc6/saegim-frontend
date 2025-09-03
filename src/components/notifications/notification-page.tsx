@@ -513,23 +513,7 @@ export function NotificationPage() {
                             : '다이어리 작성이나 AI 분석 등의 알림을 받으시려면 알림 설정에서 활성화해주세요.'}
                         </p>
 
-                        {filter !== 'unread' && (
-                          <div className="pt-4">
-                            <button
-                              className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-sage-60 to-sage-70 dark:from-sage-60 dark:to-sage-70 text-white rounded-full font-medium hover:scale-105 transform transition-all duration-200 shadow-lg hover:shadow-xl"
-                              onClick={() => {
-                                // 알림 설정 탭으로 이동하는 로직 추가할 수 있음
-                                const settingsTab = document.querySelector(
-                                  '[value="settings"]',
-                                ) as HTMLElement;
-                                settingsTab?.click();
-                              }}
-                            >
-                              <Bell className="w-4 h-4 mr-2" />
-                              알림 설정하기
-                            </button>
-                          </div>
-                        )}
+                        {/* 버튼 제거 요청에 따라 알림 설정 버튼 제거 */}
                       </div>
                     </div>
                   ) : (
