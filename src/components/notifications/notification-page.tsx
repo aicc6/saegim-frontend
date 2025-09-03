@@ -244,8 +244,20 @@ export function NotificationPage() {
     }
   };
 
-  const deleteNotification = (id: string) => {
-    setNotifications((prev) => prev.filter((n) => n.id !== id));
+  const deleteNotification = async (id: string) => {
+    try {
+      setError(null);
+      const { notificationApi } = await import('@/lib/api/notification');
+      const res = await notificationApi.deleteNotification(id);
+      if (res.success) {
+        setNotifications((prev) => prev.filter((n) => n.id !== id));
+      } else {
+        setError('알림 삭제에 실패했습니다.');
+      }
+    } catch (err) {
+      logger.error('알림 삭제 실패', { error: err });
+      setError('알림 삭제 중 문제가 발생했습니다.');
+    }
   };
 
   // 수동 재시도 함수
@@ -442,7 +454,10 @@ export function NotificationPage() {
                           className="relative bg-background-primary dark:bg-background-dark-secondary rounded-xl border-2 border-border-subtle dark:border-border-dark p-5 shadow-lg overflow-hidden"
                           style={{
                             animationDelay: `${i * 150}ms`,
-                            animation: 'fadeInUp 0.6s ease-out forwards',
+                            animationName: 'fadeInUp',
+                            animationDuration: '0.6s',
+                            animationTimingFunction: 'ease-out',
+                            animationFillMode: 'forwards',
                           }}
                         >
                           {/* Shimmer 효과 */}
@@ -526,9 +541,10 @@ export function NotificationPage() {
                         const isUnread = !notification.isRead;
 
                         return (
-                          <button
+                          <div
                             key={notification.id}
-                            type="button"
+                            role="button"
+                            tabIndex={0}
                             className={`group relative w-full text-left rounded-xl border-2 transition-all duration-300 cursor-pointer overflow-hidden ${
                               isUnread
                                 ? 'bg-blue-100 dark:bg-blue-950/40 border-blue-400 dark:border-blue-600 shadow-lg hover:shadow-xl hover:border-blue-500 dark:hover:border-blue-500 hover:bg-blue-150 dark:hover:bg-blue-900/50'
@@ -536,9 +552,14 @@ export function NotificationPage() {
                             } hover:scale-[1.02] hover:-translate-y-1`}
                             style={{
                               animationDelay: `${index * 100}ms`,
-                              animation: isLoading
-                                ? 'none'
-                                : 'fadeInUp 0.5s ease-out forwards',
+                              animationName: isLoading ? 'none' : 'fadeInUp',
+                              animationDuration: isLoading ? undefined : '0.5s',
+                              animationTimingFunction: isLoading
+                                ? undefined
+                                : 'ease-out',
+                              animationFillMode: isLoading
+                                ? undefined
+                                : 'forwards',
                             }}
                             onClick={() =>
                               !notification.isRead &&
@@ -678,7 +699,7 @@ export function NotificationPage() {
                                 </div>
                               </div>
                             </div>
-                          </button>
+                          </div>
                         );
                       })}
                     </div>
