@@ -330,6 +330,7 @@ function LandingWithSearchParams() {
           </div>
         </div>
       </section>
+
       <Toaster />
     </>
   );

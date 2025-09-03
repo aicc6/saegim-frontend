@@ -21,8 +21,14 @@ export default function Footer() {
         isDark ? 'bg-gray-800 text-gray-300' : 'bg-sage-100 text-white'
       }`}
     >
-      <div className="text-center">
-        <p>&copy; 2025 새김. All rights reserved.</p>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="text-center">
+          <h3 className="text-lg font-semibold mb-4">연락처</h3>
+          <p className="text-sm mb-2">이메일: alswlalswl58@naver.com</p>
+          <p className="text-xs opacity-80">
+            * 직접 이메일로 문의하시면 빠른 답변을 받으실 수 있습니다.
+          </p>
+        </div>
       </div>
     </footer>
   );
