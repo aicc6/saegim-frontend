@@ -178,7 +178,7 @@ export default function NotificationSettings() {
                 className={`w-full py-4 text-base font-semibold rounded-xl transition-all duration-300 ${
                   permission === 'denied'
                     ? 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed'
-                    : 'bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white shadow-lg hover:shadow-xl hover:scale-105'
+                    : 'saegim-button shadow-lg hover:shadow-xl hover:scale-105'
                 }`}
               >
                 {isLoading ? (
