@@ -284,7 +284,7 @@ export function NotificationPage() {
   };
 
   return (
-    <div className="h-full bg-background-secondary dark:bg-background-dark transition-colors flex flex-col">
+    <div className="h-full bg-background-primary dark:bg-background-dark transition-colors flex flex-col">
       {/* PageHeader 사용 */}
       <PageHeader
         title="알림"
