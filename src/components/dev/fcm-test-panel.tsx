@@ -95,7 +95,7 @@ export default function FCMTestPanel() {
     try {
       await updateSettings({
         ...settings,
-        diaryReminder: !settings.diaryReminder, // 값을 토글하여 변경 확인
+        diary_reminder_enabled: !settings?.diary_reminder_enabled, // 값을 토글하여 변경 확인
       });
       setTestResults((prev) => ({ ...prev, settingsSync: true }));
 
@@ -103,7 +103,7 @@ export default function FCMTestPanel() {
       setTimeout(() => {
         updateSettings({
           ...settings,
-          diaryReminder: !settings.diaryReminder,
+          diary_reminder_enabled: !settings?.diary_reminder_enabled,
         });
       }, 1000);
 
@@ -249,9 +249,9 @@ export default function FCMTestPanel() {
               <div className="grid grid-cols-2 gap-3">
                 <div className="flex items-center space-x-2">
                   <Switch
-                    checked={settings.diaryReminder}
+                    checked={settings?.diary_reminder_enabled ?? false}
                     onCheckedChange={(checked) =>
-                      updateSettings({ ...settings, diaryReminder: checked })
+                      updateSettings({ diary_reminder_enabled: checked })
                     }
                     disabled={isLoading}
                   />
@@ -260,9 +260,9 @@ export default function FCMTestPanel() {
 
                 <div className="flex items-center space-x-2">
                   <Switch
-                    checked={settings.aiContentReady}
+                    checked={settings?.ai_processing_enabled ?? false}
                     onCheckedChange={(checked) =>
-                      updateSettings({ ...settings, aiContentReady: checked })
+                      updateSettings({ ai_processing_enabled: checked })
                     }
                     disabled={isLoading}
                   />

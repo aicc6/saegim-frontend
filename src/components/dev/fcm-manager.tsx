@@ -243,16 +243,18 @@ export default function FCMManager() {
 
             {/* 알림 설정 토글 */}
             <Button
-              onClick={() => updateSettings({ enabled: !settings.enabled })}
-              variant={settings.enabled ? 'default' : 'secondary'}
+              onClick={() =>
+                updateSettings({ push_enabled: !settings?.push_enabled })
+              }
+              variant={settings?.push_enabled ? 'default' : 'secondary'}
               className="w-full"
             >
-              {settings.enabled ? (
+              {settings?.push_enabled ? (
                 <Bell className="h-4 w-4 mr-2" />
               ) : (
                 <BellOff className="h-4 w-4 mr-2" />
               )}
-              알림 {settings.enabled ? '켜짐' : '꺼짐'}
+              알림 {settings?.push_enabled ? '켜짐' : '꺼짐'}
             </Button>
           </div>
         </CardContent>
