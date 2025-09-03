@@ -144,17 +144,15 @@ export default function UnifiedFCMPanel() {
   // 설정 동기화 테스트
   const testSettingsSync = async () => {
     try {
-      const originalValue = settings.diaryReminder;
+      const originalValue = settings?.diary_reminder_enabled;
       await updateSettings({
-        ...settings,
-        diaryReminder: !originalValue,
+        diary_reminder_enabled: !originalValue,
       });
 
       // 1초 후 원래 값으로 복원
       setTimeout(() => {
         updateSettings({
-          ...settings,
-          diaryReminder: originalValue,
+          diary_reminder_enabled: originalValue,
         });
       }, 1000);
 
@@ -389,9 +387,9 @@ export default function UnifiedFCMPanel() {
                   <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
                     <span className="font-medium">전체 알림</span>
                     <Switch
-                      checked={settings.enabled}
+                      checked={settings?.push_enabled ?? false}
                       onCheckedChange={(checked) =>
-                        updateSettings({ ...settings, enabled: checked })
+                        updateSettings({ push_enabled: checked })
                       }
                       disabled={isLoading}
                     />
@@ -400,9 +398,9 @@ export default function UnifiedFCMPanel() {
                   <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
                     <span className="font-medium">다이어리 알림</span>
                     <Switch
-                      checked={settings.diaryReminder}
+                      checked={settings?.diary_reminder_enabled ?? false}
                       onCheckedChange={(checked) =>
-                        updateSettings({ ...settings, diaryReminder: checked })
+                        updateSettings({ diary_reminder_enabled: checked })
                       }
                       disabled={isLoading}
                     />
@@ -411,9 +409,9 @@ export default function UnifiedFCMPanel() {
                   <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
                     <span className="font-medium">AI 콘텐츠 알림</span>
                     <Switch
-                      checked={settings.aiContentReady}
+                      checked={settings?.ai_processing_enabled ?? false}
                       onCheckedChange={(checked) =>
-                        updateSettings({ ...settings, aiContentReady: checked })
+                        updateSettings({ ai_processing_enabled: checked })
                       }
                       disabled={isLoading}
                     />
@@ -422,9 +420,9 @@ export default function UnifiedFCMPanel() {
                   <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
                     <span className="font-medium">감정 트렌드 알림</span>
                     <Switch
-                      checked={settings.emotionTrend}
+                      checked={settings?.report_notification_enabled ?? false}
                       onCheckedChange={(checked) =>
-                        updateSettings({ ...settings, emotionTrend: checked })
+                        updateSettings({ report_notification_enabled: checked })
                       }
                       disabled={isLoading}
                     />

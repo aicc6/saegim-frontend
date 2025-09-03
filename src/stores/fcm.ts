@@ -8,7 +8,6 @@ import { VALIDATION } from '@/constants/timeouts';
 import {
   notificationApi,
   type FCMTokenRegisterRequest,
-  type NotificationSettingsUpdate,
 } from '@/lib/api/notification';
 import { requestFCMToken, onMessageListener } from '../lib/firebase';
 import { getLogger } from '../lib/logger';
@@ -23,20 +22,19 @@ import type { EmotionType } from '../types/diary';
 
 const logger = getLogger('fcm');
 
-// 기본 알림 설정
+// 기본 알림 설정 - notification_settings 테이블 구조와 일치
 const DEFAULT_SETTINGS: NotificationSettings = {
-  enabled: true,
-  diaryReminder: true,
-  aiContentReady: true,
-  emotionTrend: true,
-  anniversary: true,
-  friendShare: true,
-  quietHours: {
-    enabled: false,
-    startTime: '22:00',
-    endTime: '08:00',
-  },
-  frequency: 'immediate',
+  id: '',
+  user_id: '',
+  push_enabled: true,
+  diary_reminder_enabled: true,
+  diary_reminder_time: '21:00', // DB 기본값과 동일
+  diary_reminder_days: ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'], // 주중 기본값
+  report_notification_enabled: true,
+  ai_processing_enabled: true,
+  browser_push_enabled: false, // DB 기본값과 동일
+  created_at: '',
+  updated_at: '',
 };
 
 // FCM 스토어 생성
@@ -189,26 +187,14 @@ export const useFCMStore = create<FCMState>()(
       });
 
       try {
-        // 백엔드 API 스키마에 맞게 설정 변환
-        const backendSettings: NotificationSettingsUpdate = {
-          diary_reminder: newSettings.diaryReminder,
-          ai_content_ready: newSettings.aiContentReady,
-          weekly_report: newSettings.emotionTrend, // 임시 매핑
-          marketing: newSettings.friendShare, // 임시 매핑
-          quiet_hours_start: newSettings.quietHours?.enabled
-            ? newSettings.quietHours.startTime
-            : null,
-          quiet_hours_end: newSettings.quietHours?.enabled
-            ? newSettings.quietHours.endTime
-            : null,
-        };
-
+        // NotificationSettingsUpdate 타입이 백엔드와 일치하므로 직접 전달
         const response =
-          await notificationApi.updateNotificationSettings(backendSettings);
+          await notificationApi.updateNotificationSettings(newSettings);
 
-        if (response.success) {
+        if (response.success && response.data) {
+          // 서버 응답 데이터로 전체 설정 업데이트
           set((state) => {
-            state.settings = { ...state.settings, ...newSettings };
+            state.settings = response.data;
             state.isLoading = false;
           });
 
@@ -225,6 +211,40 @@ export const useFCMStore = create<FCMState>()(
             error instanceof Error
               ? error.message
               : '알림 설정 업데이트에 실패했습니다.';
+          state.isLoading = false;
+        });
+      }
+    },
+
+    // 알림 설정 로드
+    loadSettings: async () => {
+      set((state) => {
+        state.isLoading = true;
+        state.error = null;
+      });
+
+      try {
+        const serverSettings = await syncSettingsFromServer();
+
+        if (serverSettings) {
+          set((state) => {
+            state.settings = serverSettings;
+            state.isLoading = false;
+          });
+
+          logger.info('알림 설정 로드 성공:', serverSettings);
+        } else {
+          set((state) => {
+            state.isLoading = false;
+          });
+        }
+      } catch (error) {
+        logger.error('알림 설정 로드 실패:', error);
+        set((state) => {
+          state.error =
+            error instanceof Error
+              ? error.message
+              : '알림 설정 로드에 실패했습니다.';
           state.isLoading = false;
         });
       }
@@ -267,34 +287,15 @@ export const useFCMStore = create<FCMState>()(
   })),
 );
 
-// 백엔드에서 알림 설정을 가져와 프론트엔드 설정과 동기화하는 함수
+// 백엔드에서 알림 설정을 가져와 동기화하는 함수
 const syncSettingsFromServer =
   async (): Promise<NotificationSettings | null> => {
     try {
       const response = await notificationApi.getNotificationSettings();
 
       if (response.success && response.data) {
-        const serverSettings = response.data;
-
-        // 백엔드 스키마를 프론트엔드 스키마로 변환
-        const frontendSettings: NotificationSettings = {
-          enabled: true, // 기본적으로 활성화
-          diaryReminder: serverSettings.diary_reminder,
-          aiContentReady: serverSettings.ai_content_ready,
-          emotionTrend: serverSettings.weekly_report, // 임시 매핑
-          anniversary: true, // 백엔드에 없는 필드, 기본값
-          friendShare: serverSettings.marketing, // 임시 매핑
-          quietHours: {
-            enabled: !!(
-              serverSettings.quiet_hours_start && serverSettings.quiet_hours_end
-            ),
-            startTime: serverSettings.quiet_hours_start || '22:00',
-            endTime: serverSettings.quiet_hours_end || '08:00',
-          },
-          frequency: 'immediate', // 백엔드에 없는 필드, 기본값
-        };
-
-        return frontendSettings;
+        // NotificationSettingsResponse 타입이 NotificationSettings와 일치하므로 직접 반환
+        return response.data;
       }
 
       return null;

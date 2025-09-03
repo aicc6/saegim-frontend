@@ -26,21 +26,27 @@ export interface FCMTokenResponse {
 }
 
 export interface NotificationSettingsUpdate {
-  diary_reminder?: boolean;
-  ai_content_ready?: boolean;
-  weekly_report?: boolean;
-  marketing?: boolean;
-  quiet_hours_start?: string | null;
-  quiet_hours_end?: string | null;
+  push_enabled?: boolean;
+  diary_reminder_enabled?: boolean;
+  diary_reminder_time?: string | null; // HH:MM 형식
+  diary_reminder_days?: string[] | null; // ['monday', 'tuesday', ...] 형식
+  report_notification_enabled?: boolean;
+  ai_processing_enabled?: boolean;
+  browser_push_enabled?: boolean;
 }
 
 export interface NotificationSettingsResponse {
-  diary_reminder: boolean;
-  ai_content_ready: boolean;
-  weekly_report: boolean;
-  marketing: boolean;
-  quiet_hours_start: string | null;
-  quiet_hours_end: string | null;
+  id: string;
+  user_id: string;
+  push_enabled: boolean;
+  diary_reminder_enabled: boolean;
+  diary_reminder_time: string | null;
+  diary_reminder_days: string[] | null;
+  report_notification_enabled: boolean;
+  ai_processing_enabled: boolean;
+  browser_push_enabled: boolean;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface NotificationSendRequest {
