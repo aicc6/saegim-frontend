@@ -1006,7 +1006,7 @@ function CreateAi() {
         </span>
       </h1>
 
-      <p className="mt-2 text-sm sm:text-base text-body text-text-primary text-center px-2">
+      <p className="mt-2 text-sm sm:text-base text-body text-gray-600 text-center px-2">
         키워드나 짧은 글을 입력하면 AI가 감정적인 글을 생성해 드립니다
       </p>
 
@@ -1090,7 +1090,7 @@ function CreateAi() {
           onChange={(e) => setPrompt(e.target.value)}
           rows={3}
           placeholder="예: 바람, 초록빛 오후, 천천히 걷는 길"
-          className="w-full rounded-xl border border-border-subtle bg-white p-3 sm:p-4 pr-12 text-sm sm:text-base text-text-primary placeholder:text-text-placeholder focus:outline-none focus:ring-2 focus:ring-border-focus shadow-card resize-none"
+          className="w-full rounded-xl border border-border-subtle bg-white p-3 sm:p-4 pr-12 text-sm sm:text-base text-gray-900 placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-border-focus shadow-card resize-none"
         />
 
         {/* 이미지 추가 버튼 - textarea 내부 오른쪽 위 */}
@@ -1134,7 +1134,7 @@ function CreateAi() {
           <div>
             <div
               id="style-label"
-              className="mb-2 block text-xs sm:text-sm text-text-secondary"
+              className="mb-2 block text-xs sm:text-sm text-gray-600"
             >
               문체 선택
             </div>
@@ -1148,7 +1148,7 @@ function CreateAi() {
           <div>
             <div
               id="length-label"
-              className="mb-2 block text-xs sm:text-sm text-text-secondary"
+              className="mb-2 block text-xs sm:text-sm text-gray-600"
             >
               길이 선택
             </div>
@@ -1163,7 +1163,7 @@ function CreateAi() {
 
         {/* 감정 선택 */}
         <div>
-          <div className="mb-3 block text-xs sm:text-sm text-text-secondary text-center">
+          <div className="mb-3 block text-xs sm:text-sm text-gray-600 text-center">
             감정을 선택해주세요 😊 (선택 사항)
           </div>
           <div
@@ -1187,7 +1187,7 @@ function CreateAi() {
               </button>
             ))}
           </div>
-          <p className="mt-2 text-center text-xs sm:text-sm text-text-secondary">
+          <p className="mt-2 text-center text-xs sm:text-sm text-gray-600">
             선택된 감정:{' '}
             <span className="font-medium text-sage-100">
               {emotion
@@ -1205,11 +1205,11 @@ function CreateAi() {
               type="date"
               value={selectedDate}
               onChange={(e) => setSelectedDate(e.target.value)}
-              className="px-3 py-2 border border-border-subtle rounded-lg bg-white text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-border-focus"
+              className="px-3 py-2 border border-border-subtle rounded-lg bg-white text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-border-focus"
               max={new Date().toISOString().split('T')[0]} // 오늘까지만 선택 가능
             />
           </div>
-          <p className="mt-2 text-center text-xs sm:text-sm text-text-secondary">
+          <p className="mt-2 text-center text-xs sm:text-sm text-gray-600">
             선택된 날짜:{' '}
             <span className="font-medium text-sage-100">
               {selectedDate
