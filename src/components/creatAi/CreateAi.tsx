@@ -522,7 +522,7 @@ function CreateAi() {
           currentGeneratingPromptRef.current = ''; // ref도 초기화
         }, 100);
 
-        return [...prev, newCard];
+        return [newCard, ...prev];
       }
 
       // 신규 생성도 재생성도 아닌 경우 (예: 직접 sessionId가 전달된 경우)
