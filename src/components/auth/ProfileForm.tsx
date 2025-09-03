@@ -682,15 +682,59 @@ export default function ProfileForm() {
       <ConfirmModal
         isOpen={isDeleteModalOpen}
         title="계정 탈퇴"
-        message={`정말로 계정을 탈퇴하시겠습니까? 
-        
-${
-  profileData.accountType === 'email'
-    ? '• 비밀번호 확인이 완료되었습니다.\n• 계정과 모든 데이터가 30일간 보관됩니다.\n• 30일 이내에 복구할 수 있습니다.'
-    : '• 소셜 계정 탈퇴는 즉시 처리됩니다.\n• 계정과 모든 데이터가 30일간 보관됩니다.\n• 30일 이내에 복구할 수 있습니다.'
-}
+        message={
+          <div className="space-y-4">
+            <p className="text-sm text-gray-700 dark:text-gray-300 font-medium">
+              정말로 계정을 탈퇴하시겠습니까?
+            </p>
 
-• 30일 경과 후 모든 데이터가 영구적으로 삭제됩니다.`}
+            <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 space-y-2">
+              <h4 className="font-semibold text-sm text-gray-800 dark:text-gray-200 mb-2">
+                탈퇴 안내 사항
+              </h4>
+              <ul className="space-y-1 text-sm text-gray-600 dark:text-gray-400">
+                {profileData.accountType === 'email' ? (
+                  <li className="flex items-start gap-2">
+                    <span className="text-green-600 dark:text-green-400 mt-0.5">
+                      ✓
+                    </span>
+                    <span>비밀번호 확인이 완료되었습니다</span>
+                  </li>
+                ) : (
+                  <li className="flex items-start gap-2">
+                    <span className="text-blue-600 dark:text-blue-400 mt-0.5">
+                      •
+                    </span>
+                    <span>소셜 계정 탈퇴는 즉시 처리됩니다</span>
+                  </li>
+                )}
+                <li className="flex items-start gap-2">
+                  <span className="text-blue-600 dark:text-blue-400 mt-0.5">
+                    •
+                  </span>
+                  <span>계정과 모든 데이터가 30일간 보관됩니다</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-blue-600 dark:text-blue-400 mt-0.5">
+                    •
+                  </span>
+                  <span>30일 이내에 복구할 수 있습니다</span>
+                </li>
+              </ul>
+            </div>
+
+            <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3">
+              <div className="flex items-start gap-2">
+                <span className="text-red-600 dark:text-red-400 text-sm mt-0.5">
+                  ⚠️
+                </span>
+                <span className="text-sm text-red-700 dark:text-red-300 font-medium">
+                  30일 경과 후 모든 데이터가 영구적으로 삭제됩니다
+                </span>
+              </div>
+            </div>
+          </div>
+        }
         confirmText="예, 탈퇴하겠습니다"
         cancelText="아니오"
         onConfirm={handleConfirmDelete}
