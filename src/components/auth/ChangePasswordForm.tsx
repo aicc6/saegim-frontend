@@ -3,7 +3,6 @@
 import { useForm } from 'react-hook-form';
 import { useRouter } from 'next/navigation';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Button } from '@/components/ui/button';
 import { apiClient } from '@/lib/api/client';
 import { useApiError } from '@/hooks/use-api-error';
 import { FormInput } from '@/components/ui/form-input';
@@ -41,7 +40,6 @@ export default function ChangePasswordForm() {
         current_password: data.currentPassword,
         new_password: data.newPassword,
       };
-
       await apiClient.post('/api/auth/change-password', requestData);
 
       // 성공 처리
@@ -105,7 +103,7 @@ export default function ChangePasswordForm() {
             disabled={isSubmitting}
           />
           <p className={`mt-1 ${TEXT_STYLES.help}`}>
-            8자 이상, 소문자, 숫자, 특수문자를 포함해야 합니다.
+            9자 이상, 영문, 숫자, 특수문자를 포함해야 합니다.
           </p>
         </div>
 
@@ -125,14 +123,13 @@ export default function ChangePasswordForm() {
         </div>
 
         {/* 비밀번호 변경 버튼 */}
-        <Button
+        <button
           type="submit"
-          className="w-full"
-          size="lg"
           disabled={isSubmitting}
+          className="w-full saegim-button saegim-button-large disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {isSubmitting ? '변경 중...' : '비밀번호 변경'}
-        </Button>
+        </button>
       </form>
     </div>
   );

@@ -138,8 +138,8 @@ export default function ResetPasswordForm() {
             비밀번호 요구사항
           </h3>
           <ul className={`text-xs ${TEXT_STYLES.info.blueSecondary} space-y-1`}>
-            <li>• 8자 이상</li>
-            <li>• 소문자, 숫자, 특수문자 포함</li>
+            <li>• 9자 이상</li>
+            <li>• 영문, 숫자, 특수문자 포함</li>
           </ul>
         </div>
 

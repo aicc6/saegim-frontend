@@ -282,7 +282,7 @@ export default function SignupForm() {
           type="password"
           id="password"
           {...register('password')}
-          placeholder={`비밀번호 입력 (영문, 숫자, 특수문자 포함 8자 이상)`}
+          placeholder={`비밀번호 입력 (영문, 숫자, 특수문자 포함 9자 이상)`}
           error={errors.password?.message}
           required
           disabled={isSubmitting}
