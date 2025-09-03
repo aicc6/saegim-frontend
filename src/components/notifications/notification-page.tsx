@@ -311,7 +311,7 @@ export function NotificationPage() {
                     className={`relative px-4 py-2 rounded-lg transition-all duration-300 font-medium border-2 ${
                       filter === 'all'
                         ? 'bg-background-primary dark:bg-background-dark-secondary text-text-primary dark:text-text-primary-dark shadow-md border-border-subtle dark:border-border-dark hover:shadow-lg'
-                        : 'text-text-secondary dark:text-text-secondary-dark hover:text-text-primary dark:hover:text-text-primary-dark hover:bg-background-primary dark:hover:bg-background-dark-secondary border-transparent hover:border-border-subtle dark:hover:border-border-dark hover:shadow-md'
+                        : 'text-sage-80 dark:text-sage-40 hover:text-text-primary dark:hover:text-text-primary-dark hover:bg-background-primary dark:hover:bg-background-dark-secondary border-transparent hover:border-border-subtle dark:hover:border-border-dark hover:shadow-md'
                     }`}
                   >
                     <div className="flex items-center space-x-2">
@@ -319,8 +319,8 @@ export function NotificationPage() {
                       <span
                         className={`px-2 py-0.5 text-xs rounded-full font-semibold ${
                           filter === 'all'
-                            ? 'bg-sage-20 dark:bg-sage-80 text-sage-70 dark:text-sage-30'
-                            : 'bg-sage-15 dark:bg-sage-90 text-sage-60 dark:text-sage-40'
+                            ? 'bg-sage-30 dark:bg-sage-70 text-sage-90 dark:text-sage-20'
+                            : 'bg-sage-25 dark:bg-sage-80 text-sage-80 dark:text-sage-30'
                         }`}
                       >
                         {isLoading ? '...' : notifications.length}
@@ -335,7 +335,7 @@ export function NotificationPage() {
                     className={`relative px-4 py-2 rounded-lg transition-all duration-300 font-medium border-2 ${
                       filter === 'unread'
                         ? 'bg-background-primary dark:bg-background-dark-secondary text-text-primary dark:text-text-primary-dark shadow-md border-border-subtle dark:border-border-dark hover:shadow-lg'
-                        : 'text-text-secondary dark:text-text-secondary-dark hover:text-text-primary dark:hover:text-text-primary-dark hover:bg-background-primary dark:hover:bg-background-dark-secondary border-transparent hover:border-border-subtle dark:hover:border-border-dark hover:shadow-md'
+                        : 'text-sage-80 dark:text-sage-40 hover:text-text-primary dark:hover:text-text-primary-dark hover:bg-background-primary dark:hover:bg-background-dark-secondary border-transparent hover:border-border-subtle dark:hover:border-border-dark hover:shadow-md'
                     }`}
                   >
                     <div className="flex items-center space-x-2">
@@ -349,11 +349,11 @@ export function NotificationPage() {
                         className={`px-2 py-0.5 text-xs rounded-full font-semibold ${
                           filter === 'unread'
                             ? unreadCount > 0
-                              ? 'bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300'
-                              : 'bg-sage-20 dark:bg-sage-80 text-sage-70 dark:text-sage-30'
+                              ? 'bg-blue-200 dark:bg-blue-800/60 text-blue-800 dark:text-blue-200'
+                              : 'bg-sage-30 dark:bg-sage-70 text-sage-90 dark:text-sage-20'
                             : unreadCount > 0
-                              ? 'bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-400'
-                              : 'bg-sage-15 dark:bg-sage-90 text-sage-60 dark:text-sage-40'
+                              ? 'bg-blue-200 dark:bg-blue-800/60 text-blue-700 dark:text-blue-300'
+                              : 'bg-sage-25 dark:bg-sage-80 text-sage-80 dark:text-sage-30'
                         }`}
                       >
                         {isLoading ? '...' : unreadCount}
@@ -407,12 +407,12 @@ export function NotificationPage() {
                           <div className="animate-spin rounded-full h-12 w-12 border-4 border-transparent border-t-sage-60 dark:border-t-sage-40 absolute top-0 left-0 animate-pulse"></div>
                         </div>
                         <div className="ml-4 space-y-1">
-                          <p className="text-sage-80 dark:text-gray-300 font-medium">
+                          <p className="text-sage-90 dark:text-gray-200 font-medium">
                             {isRetrying
                               ? '재시도 중...'
                               : '알림을 불러오는 중...'}
                           </p>
-                          <p className="text-sage-60 dark:text-gray-400 text-sm">
+                          <p className="text-sage-70 dark:text-gray-300 text-sm">
                             잠시만 기다려 주세요
                           </p>
                         </div>
@@ -433,20 +433,20 @@ export function NotificationPage() {
 
                           <div className="flex items-start space-x-4">
                             <div className="relative">
-                              <div className="w-12 h-12 bg-gradient-to-br from-sage-30 to-sage-40 dark:from-sage-70 dark:to-sage-80 rounded-full animate-pulse"></div>
-                              <div className="absolute -top-1 -right-1 w-4 h-4 bg-sage-50 dark:bg-sage-60 rounded-full animate-pulse"></div>
+                              <div className="w-12 h-12 bg-gradient-to-br from-sage-40 to-sage-50 dark:from-sage-60 dark:to-sage-70 rounded-full animate-pulse"></div>
+                              <div className="absolute -top-1 -right-1 w-4 h-4 bg-sage-60 dark:bg-sage-50 rounded-full animate-pulse"></div>
                             </div>
                             <div className="flex-1 space-y-3">
                               <div className="space-y-2">
-                                <div className="h-5 bg-gradient-to-r from-sage-30 to-sage-20 dark:from-sage-80 dark:to-sage-90 rounded-lg animate-pulse w-3/4"></div>
-                                <div className="h-4 bg-gradient-to-r from-sage-20 to-sage-15 dark:from-sage-90 dark:to-sage-80 rounded animate-pulse w-full"></div>
+                                <div className="h-5 bg-gradient-to-r from-sage-40 to-sage-30 dark:from-sage-70 dark:to-sage-80 rounded-lg animate-pulse w-3/4"></div>
+                                <div className="h-4 bg-gradient-to-r from-sage-30 to-sage-25 dark:from-sage-80 dark:to-sage-70 rounded animate-pulse w-full"></div>
                               </div>
                               <div className="flex items-center justify-between">
-                                <div className="h-3 bg-sage-15 dark:bg-sage-90 rounded-full animate-pulse w-2/3"></div>
-                                <div className="h-6 bg-sage-25 dark:bg-sage-80 rounded-full animate-pulse w-16"></div>
+                                <div className="h-3 bg-sage-25 dark:bg-sage-80 rounded-full animate-pulse w-2/3"></div>
+                                <div className="h-6 bg-sage-35 dark:bg-sage-70 rounded-full animate-pulse w-16"></div>
                               </div>
                             </div>
-                            <div className="w-20 h-4 bg-sage-15 dark:bg-sage-90 rounded animate-pulse"></div>
+                            <div className="w-20 h-4 bg-sage-25 dark:bg-sage-80 rounded animate-pulse"></div>
                           </div>
                         </div>
                       ))}
@@ -455,9 +455,9 @@ export function NotificationPage() {
                     <div className="text-center py-20">
                       <div className="relative inline-block mb-8">
                         {/* 배경 그라데이션 원 */}
-                        <div className="w-32 h-32 bg-gradient-to-br from-sage-10 via-sage-20 to-sage-30 dark:from-sage-90 dark:via-sage-80 dark:to-sage-70 rounded-full flex items-center justify-center shadow-lg">
+                        <div className="w-32 h-32 bg-gradient-to-br from-sage-20 via-sage-30 to-sage-40 dark:from-sage-80 dark:via-sage-70 dark:to-sage-60 rounded-full flex items-center justify-center shadow-lg">
                           <div className="w-24 h-24 bg-background-primary dark:bg-background-dark-secondary rounded-full flex items-center justify-center shadow-inner">
-                            <Bell className="w-12 h-12 text-sage-50 dark:text-sage-40 animate-bounce" />
+                            <Bell className="w-12 h-12 text-sage-60 dark:text-sage-30 animate-bounce" />
                           </div>
                         </div>
                         {filter !== 'unread' && (
@@ -475,7 +475,7 @@ export function NotificationPage() {
                             ? '🎉 모든 알림을 확인했습니다!'
                             : '📬 아직 알림이 없어요'}
                         </h3>
-                        <p className="text-text-secondary dark:text-text-secondary-dark leading-relaxed">
+                        <p className="text-sage-70 dark:text-sage-30 leading-relaxed">
                           {filter === 'unread'
                             ? '새로운 알림이 오면 여기에서 확인할 수 있어요. 잠시 쉬어가세요! 😊'
                             : '다이어리 작성이나 AI 분석 등의 알림을 받으시려면 알림 설정에서 활성화해주세요.'}
@@ -484,7 +484,7 @@ export function NotificationPage() {
                         {filter !== 'unread' && (
                           <div className="pt-4">
                             <button
-                              className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-sage-50 to-sage-60 dark:from-sage-70 dark:to-sage-80 text-white rounded-full font-medium hover:scale-105 transform transition-all duration-200 shadow-lg hover:shadow-xl"
+                              className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-sage-60 to-sage-70 dark:from-sage-60 dark:to-sage-70 text-white rounded-full font-medium hover:scale-105 transform transition-all duration-200 shadow-lg hover:shadow-xl"
                               onClick={() => {
                                 // 알림 설정 탭으로 이동하는 로직 추가할 수 있음
                                 const settingsTab = document.querySelector(
@@ -514,8 +514,8 @@ export function NotificationPage() {
                             type="button"
                             className={`group relative w-full text-left rounded-xl border-2 transition-all duration-300 cursor-pointer overflow-hidden ${
                               isUnread
-                                ? 'bg-blue-50 dark:bg-blue-950/30 border-blue-300 dark:border-blue-700 shadow-lg hover:shadow-xl hover:border-blue-400 dark:hover:border-blue-600 hover:bg-blue-100 dark:hover:bg-blue-900/40'
-                                : 'bg-background-primary dark:bg-background-dark-secondary border-border-subtle dark:border-border-dark hover:border-sage-300 dark:hover:border-sage-700 shadow-md hover:shadow-lg hover:bg-background-secondary dark:hover:bg-background-dark'
+                                ? 'bg-blue-100 dark:bg-blue-950/40 border-blue-400 dark:border-blue-600 shadow-lg hover:shadow-xl hover:border-blue-500 dark:hover:border-blue-500 hover:bg-blue-150 dark:hover:bg-blue-900/50'
+                                : 'bg-background-primary dark:bg-background-dark-secondary border-border-subtle dark:border-border-dark hover:border-sage-400 dark:hover:border-sage-600 shadow-md hover:shadow-lg hover:bg-background-secondary dark:hover:bg-background-dark'
                             } hover:scale-[1.02] hover:-translate-y-1`}
                             style={{
                               animationDelay: `${index * 100}ms`,
@@ -539,7 +539,7 @@ export function NotificationPage() {
                           >
                             {/* 읽지 않음 표시선 - 더 두껍고 그라데이션 */}
                             {isUnread && (
-                              <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-gradient-to-b from-blue-400 via-blue-500 to-blue-600 rounded-l-xl"></div>
+                              <div className="absolute left-0 top-0 bottom-0 w-2 bg-gradient-to-b from-blue-500 via-blue-600 to-blue-700 rounded-l-xl shadow-sm"></div>
                             )}
 
                             {/* 배경 패턴 효과 */}
@@ -554,8 +554,8 @@ export function NotificationPage() {
                                       getNotificationDisplayType(
                                         notification.notification_type,
                                       ) === 'emotion_report'
-                                        ? 'bg-blue-100 dark:bg-blue-900/50'
-                                        : 'bg-purple-100 dark:bg-purple-900/50'
+                                        ? 'bg-blue-200 dark:bg-blue-800/60'
+                                        : 'bg-purple-200 dark:bg-purple-800/60'
                                     }`}
                                   >
                                     <IconComponent
@@ -563,14 +563,14 @@ export function NotificationPage() {
                                         getNotificationDisplayType(
                                           notification.notification_type,
                                         ) === 'emotion_report'
-                                          ? 'text-blue-600 dark:text-blue-400'
-                                          : 'text-purple-600 dark:text-purple-400'
+                                          ? 'text-blue-700 dark:text-blue-300'
+                                          : 'text-purple-700 dark:text-purple-300'
                                       }`}
                                     />
                                   </div>
 
                                   {isUnread && (
-                                    <div className="absolute -top-1 -right-1 w-4 h-4 bg-gradient-to-br from-blue-400 to-blue-600 rounded-full border-2 border-white dark:border-gray-800 animate-pulse"></div>
+                                    <div className="absolute -top-1 -right-1 w-4 h-4 bg-gradient-to-br from-blue-500 to-blue-700 rounded-full border-2 border-white dark:border-gray-800 animate-pulse shadow-sm"></div>
                                   )}
                                 </div>
 
@@ -597,7 +597,13 @@ export function NotificationPage() {
                                     </div>
                                   </div>
 
-                                  <p className="text-text-secondary dark:text-text-secondary-dark text-sm leading-relaxed mb-4 line-clamp-2">
+                                  <p
+                                    className={`text-sm leading-relaxed mb-4 line-clamp-2 ${
+                                      isUnread
+                                        ? 'text-text-primary dark:text-text-primary-dark'
+                                        : 'text-text-secondary dark:text-text-secondary-dark'
+                                    }`}
+                                  >
                                     {notification.body}
                                   </p>
 
@@ -623,32 +629,32 @@ export function NotificationPage() {
                                     </div>
 
                                     {/* 개선된 액션 버튼들 */}
-                                    <div className="flex items-center space-x-2 opacity-0 group-hover:opacity-100 transition-all duration-200 transform translate-x-2 group-hover:translate-x-0">
+                                    <div className="flex items-center space-x-2 opacity-60 group-hover:opacity-100 transition-all duration-200 transform translate-x-1 group-hover:translate-x-0">
                                       {isUnread && (
                                         <Button
                                           variant="ghost"
                                           size="sm"
-                                          className="h-9 w-9 p-0 rounded-lg bg-blue-50 hover:bg-blue-100 dark:bg-blue-900/30 dark:hover:bg-blue-800/50 transition-all duration-200"
+                                          className="h-9 w-9 p-0 rounded-lg bg-blue-100 hover:bg-blue-200 dark:bg-blue-800/50 dark:hover:bg-blue-700/60 transition-all duration-200 shadow-sm"
                                           onClick={(e) => {
                                             e.stopPropagation();
                                             markAsRead(notification.id);
                                           }}
                                           title="읽음으로 표시"
                                         >
-                                          <Check className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                                          <Check className="w-4 h-4 text-blue-700 dark:text-blue-300" />
                                         </Button>
                                       )}
                                       <Button
                                         variant="ghost"
                                         size="sm"
-                                        className="h-9 w-9 p-0 rounded-lg bg-red-50 hover:bg-red-100 dark:bg-red-900/30 dark:hover:bg-red-800/50 transition-all duration-200"
+                                        className="h-9 w-9 p-0 rounded-lg bg-red-100 hover:bg-red-200 dark:bg-red-900/40 dark:hover:bg-red-800/60 transition-all duration-200 shadow-sm"
                                         onClick={(e) => {
                                           e.stopPropagation();
                                           deleteNotification(notification.id);
                                         }}
                                         title="삭제"
                                       >
-                                        <X className="w-4 h-4 text-red-500" />
+                                        <X className="w-4 h-4 text-red-600 dark:text-red-400" />
                                       </Button>
                                     </div>
                                   </div>

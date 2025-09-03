@@ -26,6 +26,8 @@ export default function SignupForm() {
     watch,
     formState: { errors, isSubmitting },
     trigger,
+    setError,
+    clearErrors,
   } = useForm<SignupFormData>({
     resolver: zodResolver(signupSchema),
     mode: 'onBlur',
@@ -64,6 +66,9 @@ export default function SignupForm() {
       return;
     }
 
+    // 폼 제출 시 이전 서버 에러들 클리어
+    clearErrors();
+
     // 디버깅을 위한 데이터 로깅
     const signupData = {
       email: data.email,
@@ -83,6 +88,7 @@ export default function SignupForm() {
         error,
         '회원가입 실패',
         '회원가입 중 오류가 발생했습니다.',
+        setError, // 서버 검증 에러를 필드별로 설정
       );
     }
   };
@@ -124,6 +130,7 @@ export default function SignupForm() {
         error,
         '인증 코드 발송 실패',
         '인증 코드 발송 중 오류가 발생했습니다.',
+        setError, // 서버 검증 에러를 필드별로 설정
       );
     } finally {
       setIsSendingCode(false);
@@ -148,7 +155,12 @@ export default function SignupForm() {
       setEmailVerified(true);
       showSuccess('이메일 인증 완료', '이메일 인증이 완료되었습니다.');
     } catch (error: unknown) {
-      handleApiError(error, '인증 실패', '인증 코드가 올바르지 않습니다.');
+      handleApiError(
+        error,
+        '인증 실패',
+        '인증 코드가 올바르지 않습니다.',
+        setError,
+      );
     } finally {
       setIsVerifyingCode(false);
     }
@@ -174,6 +186,7 @@ export default function SignupForm() {
           new Error('닉네임 중복'),
           '닉네임 사용 불가',
           '이미 사용 중인 닉네임입니다.',
+          setError,
         );
       }
     } catch (error: unknown) {
@@ -181,6 +194,7 @@ export default function SignupForm() {
         error,
         '닉네임 확인 실패',
         '닉네임 확인 중 오류가 발생했습니다.',
+        setError,
       );
     }
   };
