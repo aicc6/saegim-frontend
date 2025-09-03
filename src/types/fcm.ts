@@ -40,20 +40,30 @@ export interface SaeGimNotificationData {
 // 알림 권한 상태
 export type NotificationPermission = 'default' | 'granted' | 'denied';
 
-// 알림 설정 인터페이스
+// 알림 설정 인터페이스 - notification_settings 테이블 구조와 일치
 export interface NotificationSettings {
-  enabled: boolean;
-  diaryReminder: boolean;
-  aiContentReady: boolean;
-  emotionTrend: boolean;
-  anniversary: boolean;
-  friendShare: boolean;
-  quietHours: {
-    enabled: boolean;
-    startTime: string; // HH:mm 형식
-    endTime: string; // HH:mm 형식
-  };
-  frequency: 'immediate' | 'hourly' | 'daily' | 'weekly';
+  id: string;
+  user_id: string;
+  push_enabled: boolean;
+  diary_reminder_enabled: boolean;
+  diary_reminder_time: string | null; // HH:MM 형식
+  diary_reminder_days: string[] | null; // ['monday', 'tuesday', ...] 형식
+  report_notification_enabled: boolean;
+  ai_processing_enabled: boolean;
+  browser_push_enabled: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+// API 요청용 인터페이스 (업데이트 시 사용)
+export interface NotificationSettingsUpdate {
+  push_enabled?: boolean;
+  diary_reminder_enabled?: boolean;
+  diary_reminder_time?: string | null;
+  diary_reminder_days?: string[] | null;
+  report_notification_enabled?: boolean;
+  ai_processing_enabled?: boolean;
+  browser_push_enabled?: boolean;
 }
 
 // FCM 토큰 인터페이스
@@ -106,7 +116,7 @@ export interface FCMState {
   isSupported: boolean;
 
   // 설정
-  settings: NotificationSettings;
+  settings: NotificationSettings | null;
 
   // 알림 히스토리
   notifications: NotificationHistory[];
@@ -119,7 +129,8 @@ export interface FCMState {
   // 액션
   requestPermission: () => Promise<boolean>;
   registerToken: () => Promise<void>;
-  updateSettings: (settings: Partial<NotificationSettings>) => void;
+  updateSettings: (settings: NotificationSettingsUpdate) => Promise<void>;
+  loadSettings: () => Promise<void>;
   markAsRead: (notificationId: string) => void;
   markAllAsRead: () => void;
   clearHistory: () => void;
