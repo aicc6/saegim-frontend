@@ -104,7 +104,7 @@ export default function NotificationSettings() {
   return (
     <div className="space-y-8">
       {/* 개선된 권한 상태 카드 */}
-      <Card className="overflow-hidden border-2 border-gray-300 dark:border-gray-600 shadow-2xl bg-white dark:bg-gray-900 hover:border-sage-400 dark:hover:border-sage-500 transition-all duration-300 hover:shadow-3xl">
+      <Card className="overflow-hidden rounded-2xl border border-border-subtle dark:border-border-dark shadow-2xl bg-background-primary dark:bg-background-dark-secondary transition-colors hover:shadow-3xl">
         <CardHeader className="pb-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
@@ -123,7 +123,7 @@ export default function NotificationSettings() {
                 <CardTitle className="text-xl font-bold text-text-primary dark:text-text-primary-dark">
                   푸시 알림
                 </CardTitle>
-                <CardDescription className="text-gray-600 dark:text-gray-300 mt-1 font-medium">
+                <CardDescription className="text-text-secondary dark:text-text-secondary-dark mt-1 font-medium">
                   {statusInfo.description}
                 </CardDescription>
               </div>
@@ -157,14 +157,14 @@ export default function NotificationSettings() {
             <div className="max-w-md mx-auto text-center space-y-6">
               {/* 개선된 권한 요청 안내 */}
               <div className="space-y-4">
-                <div className="mx-auto w-16 h-16 bg-gradient-to-br from-blue-100 to-indigo-200 dark:from-blue-900/50 dark:to-indigo-900/50 rounded-2xl flex items-center justify-center">
-                  <Bell className="w-8 h-8 text-blue-600 dark:text-blue-400" />
+                <div className="mx-auto w-16 h-16 rounded-2xl bg-background-secondary dark:bg-background-dark-secondary flex items-center justify-center">
+                  <Bell className="w-8 h-8 text-sage-70 dark:text-sage-40" />
                 </div>
                 <div className="space-y-2">
                   <h3 className="text-lg font-semibold text-text-primary dark:text-text-primary-dark">
                     📱 알림 설정
                   </h3>
-                  <p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed font-medium">
+                  <p className="text-sm text-text-secondary dark:text-text-secondary-dark leading-relaxed font-medium">
                     다이어리 작성 리마인더와 AI 분석 결과 등<br />
                     유용한 알림을 받아보세요!
                   </p>
@@ -214,7 +214,7 @@ export default function NotificationSettings() {
           {permission === 'granted' && (
             <div className="space-y-6">
               {/* 개선된 디바이스 등록 상태 */}
-              <div className="p-5 bg-gray-50 dark:bg-gray-800 rounded-xl border-2 border-gray-300 dark:border-gray-600 shadow-lg hover:shadow-xl hover:border-sage-400 dark:hover:border-sage-500 transition-all duration-300">
+              <div className="p-5 bg-background-secondary dark:bg-background-dark rounded-xl border-2 border-border-subtle dark:border-border-dark shadow-lg hover:shadow-xl hover:border-sage-400 dark:hover:border-sage-500 transition-all duration-300">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-3">
                     <div
@@ -236,7 +236,7 @@ export default function NotificationSettings() {
                       <span className="text-sm font-semibold text-text-primary dark:text-text-primary-dark">
                         디바이스 등록 상태
                       </span>
-                      <p className="text-xs text-gray-600 dark:text-gray-300 font-medium">
+                      <p className="text-xs text-text-secondary dark:text-text-secondary-dark font-medium">
                         {isTokenRegistered
                           ? '이 디바이스에서 알림을 받을 수 있습니다'
                           : '디바이스 등록이 필요합니다'}
@@ -259,7 +259,7 @@ export default function NotificationSettings() {
               {/* 개선된 알림 유형 설정 */}
               <div className="space-y-4">
                 <div className="flex items-center space-x-2 mb-4">
-                  <Settings className="w-5 h-5 text-gray-600 dark:text-gray-300" />
+                  <Settings className="w-5 h-5 text-text-secondary dark:text-text-secondary-dark" />
                   <h4 className="text-lg font-semibold text-text-primary dark:text-text-primary-dark">
                     알림 유형
                   </h4>
@@ -267,11 +267,11 @@ export default function NotificationSettings() {
 
                 <div className="grid gap-4">
                   {/* 푸시 알림 전체 설정 */}
-                  <div className="p-4 bg-gradient-to-r from-indigo-50/50 to-purple-50/30 dark:from-indigo-950/20 dark:to-purple-950/10 rounded-xl border border-indigo-100 dark:border-indigo-900/30 transition-all duration-200 hover:shadow-sm">
+                  <div className="p-4 rounded-xl bg-background-secondary dark:bg-background-dark border border-border-subtle dark:border-border-dark transition-colors">
                     <div className="flex items-center justify-between">
                       <div className="flex items-start space-x-3">
-                        <div className="p-2 bg-indigo-100 dark:bg-indigo-900/50 rounded-lg mt-0.5">
-                          <Bell className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+                        <div className="p-2 rounded-lg mt-0.5 bg-background-hover dark:bg-background-dark-secondary">
+                          <Bell className="w-4 h-4 text-sage-70 dark:text-sage-40" />
                         </div>
                         <div className="space-y-1">
                           <label
@@ -280,7 +280,7 @@ export default function NotificationSettings() {
                           >
                             🔔 푸시 알림 활성화
                           </label>
-                          <p className="text-xs text-gray-600 dark:text-gray-300 leading-relaxed font-medium">
+                          <p className="text-xs text-text-secondary dark:text-text-secondary-dark leading-relaxed font-medium">
                             모든 푸시 알림의 전체 활성화 설정입니다
                           </p>
                         </div>
@@ -308,11 +308,11 @@ export default function NotificationSettings() {
                   </div>
 
                   {/* 다이어리 작성 리마인더 */}
-                  <div className="p-5 bg-blue-50 dark:bg-blue-950/30 rounded-xl border-2 border-blue-200 dark:border-blue-800/50 shadow-lg transition-all duration-300 hover:shadow-xl hover:border-blue-300 dark:hover:border-blue-700/70 hover:bg-blue-100 dark:hover:bg-blue-900/40">
+                  <div className="p-5 rounded-xl bg-background-secondary dark:bg-background-dark border-2 border-border-subtle dark:border-border-dark shadow-lg transition-colors">
                     <div className="flex items-center justify-between mb-3">
                       <div className="flex items-start space-x-3">
-                        <div className="p-2 bg-blue-100 dark:bg-blue-900/50 rounded-lg mt-0.5">
-                          <Bell className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                        <div className="p-2 rounded-lg mt-0.5 bg-background-hover dark:bg-background-dark-secondary">
+                          <Bell className="w-4 h-4 text-sage-70 dark:text-sage-40" />
                         </div>
                         <div className="space-y-1">
                           <label
@@ -321,7 +321,7 @@ export default function NotificationSettings() {
                           >
                             📝 다이어리 작성 리마인더
                           </label>
-                          <p className="text-xs text-gray-600 dark:text-gray-300 leading-relaxed font-medium">
+                          <p className="text-xs text-text-secondary dark:text-text-secondary-dark leading-relaxed font-medium">
                             감정 기록을 위한 부드러운 알림을 보내드려요
                           </p>
                         </div>
@@ -353,10 +353,10 @@ export default function NotificationSettings() {
 
                     {/* 리마인더 시간 설정 */}
                     {settings?.diary_reminder_enabled && (
-                      <div className="pt-3 border-t border-blue-100 dark:border-blue-800 space-y-4 animate-in slide-in-from-top-2 duration-200">
+                      <div className="pt-3 border-t border-border-subtle dark:border-border-dark space-y-4 animate-in slide-in-from-top-2 duration-200">
                         <div className="space-y-2">
                           <div className="flex items-center space-x-2">
-                            <Clock className="w-4 h-4 text-blue-500 dark:text-blue-400" />
+                            <Clock className="w-4 h-4 text-sage-60 dark:text-sage-40" />
                             <label
                               htmlFor="diary-reminder-time"
                               className="text-sm font-medium text-text-primary dark:text-text-primary-dark"
@@ -373,7 +373,7 @@ export default function NotificationSettings() {
                                 diary_reminder_time: e.target.value,
                               })
                             }
-                            className="w-full p-3 text-sm border-2 border-gray-400 dark:border-gray-300 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-4 focus:ring-sage-500/30 dark:focus:ring-sage-400/40 focus:border-sage-500 dark:focus:border-sage-400 hover:border-sage-400 dark:hover:border-sage-500 shadow-sm hover:shadow-md transition-all duration-200"
+                            className="w-full p-3 text-sm border-2 border-border-subtle dark:border-border-dark rounded-lg bg-background-primary dark:bg-background-dark-secondary text-text-primary dark:text-text-primary-dark focus:ring-4 focus:ring-sage-500/30 dark:focus:ring-sage-400/40 focus:border-sage-500 dark:focus:border-sage-400 hover:border-sage-400 dark:hover:border-sage-500 shadow-sm hover:shadow-md transition-all duration-200"
                             disabled={isLoading}
                           />
                         </div>
@@ -381,7 +381,7 @@ export default function NotificationSettings() {
                         {/* 리마인더 요일 설정 */}
                         <fieldset className="space-y-2">
                           <div className="flex items-center space-x-2">
-                            <Calendar className="w-4 h-4 text-blue-500 dark:text-blue-400" />
+                            <Calendar className="w-4 h-4 text-sage-60 dark:text-sage-40" />
                             <legend className="text-sm font-medium text-text-primary dark:text-text-primary-dark">
                               리마인더 요일
                             </legend>
@@ -412,7 +412,7 @@ export default function NotificationSettings() {
                                   className={`p-2.5 text-xs font-semibold rounded-lg transition-all duration-200 border-2 ${
                                     isSelected
                                       ? 'bg-sage-500 dark:bg-sage-400 text-white shadow-lg border-sage-500 dark:border-sage-400 hover:bg-sage-600 dark:hover:bg-sage-500 hover:shadow-xl transform hover:scale-105'
-                                      : 'bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 border-gray-400 dark:border-gray-300 hover:bg-sage-50 dark:hover:bg-sage-500/10 hover:text-sage-700 dark:hover:text-sage-300 hover:border-sage-400 dark:hover:border-sage-400 shadow-sm hover:shadow-md transform hover:scale-105'
+                                      : 'bg-background-primary dark:bg-background-dark-secondary text-text-primary dark:text-text-primary-dark border-border-subtle dark:border-border-dark hover:bg-sage-50 dark:hover:bg-sage-500/10 hover:text-sage-700 dark:hover:text-sage-300 hover:border-sage-400 dark:hover:border-sage-400 shadow-sm hover:shadow-md transform hover:scale-105'
                                   }`}
                                 >
                                   {day.short}
@@ -420,7 +420,7 @@ export default function NotificationSettings() {
                               );
                             })}
                           </div>
-                          <p className="text-xs text-gray-600 dark:text-gray-300 font-medium">
+                          <p className="text-xs text-text-secondary dark:text-text-secondary-dark font-medium">
                             {settings?.diary_reminder_days?.length || 0}개 요일
                             선택됨
                           </p>
@@ -430,11 +430,11 @@ export default function NotificationSettings() {
                   </div>
 
                   {/* AI 처리 알림 */}
-                  <div className="p-5 bg-purple-50 dark:bg-purple-950/30 rounded-xl border-2 border-purple-200 dark:border-purple-800/50 shadow-lg transition-all duration-300 hover:shadow-xl hover:border-purple-300 dark:hover:border-purple-700/70 hover:bg-purple-100 dark:hover:bg-purple-900/40">
+                  <div className="p-5 rounded-xl bg-background-secondary dark:bg-background-dark border-2 border-border-subtle dark:border-border-dark shadow-lg transition-colors">
                     <div className="flex items-center justify-between">
                       <div className="flex items-start space-x-3">
-                        <div className="p-2 bg-purple-100 dark:bg-purple-900/50 rounded-lg mt-0.5">
-                          <Sparkles className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+                        <div className="p-2 rounded-lg mt-0.5 bg-background-hover dark:bg-background-dark-secondary">
+                          <Sparkles className="w-4 h-4 text-sage-70 dark:text-sage-40" />
                         </div>
                         <div className="space-y-1">
                           <label
@@ -443,7 +443,7 @@ export default function NotificationSettings() {
                           >
                             ✨ AI 처리 알림
                           </label>
-                          <p className="text-xs text-gray-600 dark:text-gray-300 leading-relaxed font-medium">
+                          <p className="text-xs text-text-secondary dark:text-text-secondary-dark leading-relaxed font-medium">
                             AI 분석 및 콘텐츠 생성 완료시 알려드려요
                           </p>
                         </div>
@@ -475,11 +475,11 @@ export default function NotificationSettings() {
                   </div>
 
                   {/* 리포트 알림 */}
-                  <div className="p-4 bg-gradient-to-r from-green-50/50 to-emerald-50/30 dark:from-green-950/20 dark:to-emerald-950/10 rounded-xl border border-green-100 dark:border-green-900/30 transition-all duration-200 hover:shadow-sm">
+                  <div className="p-4 rounded-xl bg-background-secondary dark:bg-background-dark border border-border-subtle dark:border-border-dark transition-colors">
                     <div className="flex items-center justify-between">
                       <div className="flex items-start space-x-3">
-                        <div className="p-2 bg-green-100 dark:bg-green-900/50 rounded-lg mt-0.5">
-                          <TrendingUp className="w-4 h-4 text-green-600 dark:text-green-400" />
+                        <div className="p-2 rounded-lg mt-0.5 bg-background-hover dark:bg-background-dark-secondary">
+                          <TrendingUp className="w-4 h-4 text-sage-70 dark:text-sage-40" />
                         </div>
                         <div className="space-y-1">
                           <label
@@ -488,7 +488,7 @@ export default function NotificationSettings() {
                           >
                             📊 리포트 알림
                           </label>
-                          <p className="text-xs text-gray-600 dark:text-gray-300 leading-relaxed font-medium">
+                          <p className="text-xs text-text-secondary dark:text-text-secondary-dark leading-relaxed font-medium">
                             주간/월간 감정 분석 리포트를 받아보세요
                           </p>
                         </div>
@@ -528,17 +528,17 @@ export default function NotificationSettings() {
                     variant="ghost"
                     size="sm"
                     onClick={() => setShowAdvanced(!showAdvanced)}
-                    className="w-full p-4 rounded-xl bg-gray-50 dark:bg-gray-800 border-2 border-gray-300 dark:border-gray-600 shadow-md hover:bg-sage-50 dark:hover:bg-gray-700 hover:border-sage-400 dark:hover:border-sage-500 hover:shadow-lg transition-all duration-300"
+                    className="w-full p-4 rounded-xl bg-background-secondary dark:bg-background-dark border-2 border-border-subtle dark:border-border-dark shadow-md hover:bg-background-hover dark:hover:bg-background-dark-secondary hover:border-sage-400 dark:hover:border-sage-500 hover:shadow-lg transition-all duration-300"
                   >
                     <div className="flex items-center justify-center space-x-2">
-                      <Settings className="h-4 w-4 text-gray-600 dark:text-gray-300" />
+                      <Settings className="h-4 w-4 text-text-secondary dark:text-text-secondary-dark" />
                       <span className="font-medium text-text-primary dark:text-text-primary-dark">
                         {showAdvanced ? '고급 설정 숨기기' : '고급 설정 보기'}
                       </span>
                       {showAdvanced ? (
-                        <ChevronUp className="h-4 w-4 text-gray-600 dark:text-gray-300" />
+                        <ChevronUp className="h-4 w-4 text-text-secondary dark:text-text-secondary-dark" />
                       ) : (
-                        <ChevronDown className="h-4 w-4 text-gray-600 dark:text-gray-300" />
+                        <ChevronDown className="h-4 w-4 text-text-secondary dark:text-text-secondary-dark" />
                       )}
                     </div>
                   </Button>
@@ -547,11 +547,11 @@ export default function NotificationSettings() {
                   {showAdvanced && (
                     <div className="mt-4 space-y-4 animate-in slide-in-from-top-2 duration-300">
                       {/* 브라우저 푸시 알림 */}
-                      <div className="p-5 bg-cyan-50 dark:bg-cyan-950/30 rounded-xl border-2 border-cyan-200 dark:border-cyan-800/50 shadow-lg transition-all duration-300 hover:shadow-xl hover:border-cyan-300 dark:hover:border-cyan-700/70 hover:bg-cyan-100 dark:hover:bg-cyan-900/40">
+                      <div className="p-5 rounded-xl bg-background-secondary dark:bg-background-dark border-2 border-border-subtle dark:border-border-dark shadow-lg transition-colors">
                         <div className="flex items-center justify-between">
                           <div className="flex items-start space-x-3">
-                            <div className="p-2 bg-cyan-100 dark:bg-cyan-900/50 rounded-lg mt-0.5">
-                              <Smartphone className="w-4 h-4 text-cyan-600 dark:text-cyan-400" />
+                            <div className="p-2 rounded-lg mt-0.5 bg-background-hover dark:bg-background-dark-secondary">
+                              <Smartphone className="w-4 h-4 text-sage-70 dark:text-sage-40" />
                             </div>
                             <div className="space-y-1">
                               <label
@@ -560,7 +560,7 @@ export default function NotificationSettings() {
                               >
                                 🌐 브라우저 푸시 알림
                               </label>
-                              <p className="text-xs text-gray-600 dark:text-gray-300 leading-relaxed font-medium">
+                              <p className="text-xs text-text-secondary dark:text-text-secondary-dark leading-relaxed font-medium">
                                 브라우저를 통한 직접적인 푸시 알림 활성화
                               </p>
                             </div>
