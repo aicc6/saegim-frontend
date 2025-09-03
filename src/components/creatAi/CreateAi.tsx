@@ -84,6 +84,8 @@ interface GeneratedTextCard {
     mime_type: string;
     file_size: number;
     filename: string;
+    isSelected: boolean; // 다이어리 저장 시 포함할지 여부
+    isThumbnail: boolean; // 썸네일로 설정되었는지 여부
   }>;
 }
 
@@ -91,6 +93,148 @@ interface GeneratedTextCard {
 const MemoizedChatInput = memo(ChatInput);
 const MemoizedChatOptions = memo(ChatOptions);
 const MemoizedImagePreview = memo(ImagePreview);
+
+// 이미지 선택 UI 컴포넌트
+const ImageSelectionUI = memo(
+  ({
+    images,
+    cardId,
+    onImageSelect,
+    onImageThumbnail,
+  }: {
+    images: Array<{
+      file_id: string;
+      original_url: string;
+      thumbnail_url: string;
+      mime_type: string;
+      file_size: number;
+      filename: string;
+      isSelected: boolean;
+      isThumbnail: boolean;
+    }>;
+    cardId: string;
+    onImageSelect: (
+      cardId: string,
+      imageIndex: number,
+      isSelected: boolean,
+    ) => void;
+    onImageThumbnail: (cardId: string, imageIndex: number) => void;
+  }) => {
+    if (!images || images.length === 0) return null;
+
+    return (
+      <div className="mt-4 p-4 bg-sage-10 rounded-lg border border-sage-20">
+        <h4 className="text-sm font-medium text-sage-800 mb-3 flex items-center gap-2">
+          <svg
+            className="w-4 h-4"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 002 2z"
+            />
+          </svg>
+          업로드된 이미지 ({images.filter((img) => img.isSelected).length}/
+          {images.length}개 선택됨)
+        </h4>
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+          {images.map((image, index) => (
+            <div key={image.file_id} className="relative group">
+              <div className="relative">
+                <Image
+                  src={image.thumbnail_url}
+                  alt={image.filename}
+                  width={96}
+                  height={96}
+                  className={`w-full h-24 object-cover rounded-lg border-2 transition-all duration-200 cursor-pointer hover:scale-105 ${
+                    image.isThumbnail
+                      ? 'border-blue-500 ring-2 ring-blue-200 shadow-lg'
+                      : image.isSelected
+                        ? 'border-green-500 shadow-md'
+                        : 'border-gray-300 opacity-60'
+                  }`}
+                  onClick={() => onImageThumbnail(cardId, index)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      onImageThumbnail(cardId, index);
+                    }
+                  }}
+                  role="button"
+                  tabIndex={0}
+                  title={
+                    image.isThumbnail
+                      ? '썸네일로 설정됨 (클릭하여 변경)'
+                      : '클릭하여 썸네일로 설정'
+                  }
+                />
+
+                {/* 선택 상태 토글 버튼 */}
+                <button
+                  onClick={() =>
+                    onImageSelect(cardId, index, !image.isSelected)
+                  }
+                  className={`absolute top-1 right-1 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-200 shadow-md ${
+                    image.isSelected
+                      ? 'bg-green-500 text-white hover:bg-green-600'
+                      : 'bg-red-500 text-white hover:bg-red-600'
+                  }`}
+                  title={
+                    image.isSelected
+                      ? '다이어리에 포함 (클릭하여 제외)'
+                      : '다이어리에서 제외 (클릭하여 포함)'
+                  }
+                >
+                  {image.isSelected ? '✓' : '✕'}
+                </button>
+
+                {/* 썸네일 표시 */}
+                {image.isThumbnail && (
+                  <div className="absolute top-1 left-1 bg-blue-500 text-white text-xs px-2 py-1 rounded-full font-medium">
+                    썸네일
+                  </div>
+                )}
+              </div>
+
+              {/* 파일명 표시 */}
+              <div
+                className="mt-1 text-xs text-center text-gray-600 truncate px-1"
+                title={image.filename}
+              >
+                {image.filename}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div className="mt-3 text-xs text-sage-600 bg-sage-20 p-3 rounded-lg">
+          <p className="font-medium mb-2">💡 사용법:</p>
+          <p>
+            • <span className="text-blue-600 font-medium">파란색 테두리</span>:
+            썸네일로 설정된 이미지 (다이어리 저장 시 썸네일로 사용)
+          </p>
+          <p>
+            • <span className="text-green-600">초록색 체크</span>: 다이어리에
+            포함될 이미지
+          </p>
+          <p>
+            • <span className="text-red-600">빨간색 X</span>: 다이어리에서
+            제외된 이미지
+          </p>
+          <p className="mt-2 text-sage-700">
+            • 재생성 시에도 이미지 선택 상태가 유지됩니다
+          </p>
+        </div>
+      </div>
+    );
+  },
+);
+
+ImageSelectionUI.displayName = 'ImageSelectionUI';
 
 // 메인 컴포넌트
 function CreateAi() {
@@ -232,7 +376,13 @@ function CreateAi() {
                   },
                 ],
                 // 스트리밍에서 업로드된 이미지 정보 저장
-                uploadedImages: uploadedImages || undefined,
+                uploadedImages: uploadedImages
+                  ? uploadedImages.map((img) => ({
+                      ...img,
+                      isSelected: true, // 기본적으로 선택됨
+                      isThumbnail: false, // 기본적으로 썸네일 아님
+                    }))
+                  : undefined,
               };
             }
             return card;
@@ -316,6 +466,8 @@ function CreateAi() {
                 versions: [newVersion, ...card.versions],
                 currentVersionIndex: 0,
                 editedText: accumulatedText,
+                // 재생성 시 이미지 선택 상태는 그대로 보존
+                uploadedImages: card.uploadedImages, // 기존 이미지 상태 유지
               };
             }
             return card;
@@ -353,7 +505,13 @@ function CreateAi() {
           editedText: accumulatedText,
           createdAt: new Date(),
           // 새 글 생성 시 사용된 이미지 저장
-          uploadedImages: uploadedImages || undefined,
+          uploadedImages: uploadedImages
+            ? uploadedImages.map((img) => ({
+                ...img,
+                isSelected: true, // 기본적으로 선택됨
+                isThumbnail: false, // 기본적으로 썸네일 아님
+              }))
+            : undefined,
         };
 
         // 신규 생성 완료 후 폼 리셋
@@ -460,6 +618,46 @@ function CreateAi() {
     selectedImages,
   ]);
 
+  // 이미지 선택 상태 관리 함수들
+  const handleImageSelection = useCallback(
+    (cardId: string, imageIndex: number, isSelected: boolean) => {
+      setGeneratedCards((prev) =>
+        prev.map((card) => {
+          if (card.id === cardId && card.uploadedImages) {
+            return {
+              ...card,
+              uploadedImages: card.uploadedImages.map((img, idx) =>
+                idx === imageIndex ? { ...img, isSelected } : img,
+              ),
+            };
+          }
+          return card;
+        }),
+      );
+    },
+    [],
+  );
+
+  const handleImageThumbnail = useCallback(
+    (cardId: string, imageIndex: number) => {
+      setGeneratedCards((prev) =>
+        prev.map((card) => {
+          if (card.id === cardId && card.uploadedImages) {
+            return {
+              ...card,
+              uploadedImages: card.uploadedImages.map((img, idx) => ({
+                ...img,
+                isThumbnail: idx === imageIndex, // 선택된 이미지만 썸네일로 설정
+              })),
+            };
+          }
+          return card;
+        }),
+      );
+    },
+    [],
+  );
+
   // 카드별 액션 핸들러들
   const handleCardEdit = useCallback(
     (cardId: string) => {
@@ -536,6 +734,15 @@ function CreateAi() {
           uploaded_images:
             card.uploadedImages && card.uploadedImages.length > 0
               ? card.uploadedImages
+                  .filter((img) => img.isSelected) // 선택된 이미지만 포함
+                  .map((img) => ({
+                    file_id: img.file_id,
+                    original_url: img.original_url,
+                    thumbnail_url: img.thumbnail_url, // 모든 이미지에 썸네일 URL 포함
+                    mime_type: img.mime_type,
+                    file_size: img.file_size,
+                    filename: img.filename,
+                  }))
               : undefined,
         });
 
@@ -922,6 +1129,16 @@ function CreateAi() {
                       </span>
                     </div>
                   </div>
+
+                  {/* 이미지 선택 UI */}
+                  {card.uploadedImages && card.uploadedImages.length > 0 && (
+                    <ImageSelectionUI
+                      images={card.uploadedImages}
+                      cardId={card.id}
+                      onImageSelect={handleImageSelection}
+                      onImageThumbnail={handleImageThumbnail}
+                    />
+                  )}
                 </div>
               );
             })}
