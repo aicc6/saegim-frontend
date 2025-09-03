@@ -12,7 +12,7 @@ function HomeContent() {
   logger.debug('CreateAi 컴포넌트 렌더링 시작');
 
   return (
-    <div className="flex bg-sage-20 items-center justify-center min-h-dvh">
+    <div className="flex bg-background-primary dark:bg-background-dark items-center justify-center min-h-dvh">
       <main className="w-full max-w-2xl px-4 animate-page-transition">
         <CreateAi />
       </main>
@@ -26,11 +26,13 @@ export default function Home() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen flex items-center justify-center bg-sage-20">
+        <div className="min-h-screen flex items-center justify-center bg-background-primary dark:bg-background-dark">
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-sage-50 mx-auto mb-4"></div>
-            <p className="text-sage-80 dark:text-gray-300">로딩 중...</p>
-            <p className="text-sm text-gray-500 mt-2">
+            <p className="text-text-primary dark:text-text-primary-dark">
+              로딩 중...
+            </p>
+            <p className="text-sm text-text-secondary dark:text-text-secondary-dark mt-2">
               Suspense fallback 실행 중
             </p>
           </div>

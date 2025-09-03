@@ -460,18 +460,18 @@ export function NotificationPage() {
                             animationFillMode: 'forwards',
                           }}
                         >
-                          {/* Shimmer 효과 */}
-                          <div className="absolute inset-0 -translate-x-full animate-[shimmer_2s_infinite] bg-gradient-to-r from-transparent via-background-primary/40 dark:via-background-dark-secondary/20 to-transparent"></div>
+                          {/* Shimmer 효과 제거 (플랫 스타일) */}
+                          <div className="hidden" />
 
                           <div className="flex items-start space-x-4">
                             <div className="relative">
-                              <div className="w-12 h-12 bg-gradient-to-br from-sage-40 to-sage-50 dark:from-sage-60 dark:to-sage-70 rounded-full animate-pulse"></div>
+                              <div className="w-12 h-12 bg-background-secondary dark:bg-background-dark rounded-full animate-pulse"></div>
                               <div className="absolute -top-1 -right-1 w-4 h-4 bg-sage-60 dark:bg-sage-50 rounded-full animate-pulse"></div>
                             </div>
                             <div className="flex-1 space-y-3">
                               <div className="space-y-2">
-                                <div className="h-5 bg-gradient-to-r from-sage-40 to-sage-30 dark:from-sage-70 dark:to-sage-80 rounded-lg animate-pulse w-3/4"></div>
-                                <div className="h-4 bg-gradient-to-r from-sage-30 to-sage-25 dark:from-sage-80 dark:to-sage-70 rounded animate-pulse w-full"></div>
+                                <div className="h-5 bg-background-secondary dark:bg-background-dark rounded-lg animate-pulse w-3/4"></div>
+                                <div className="h-4 bg-background-secondary dark:bg-background-dark rounded animate-pulse w-full"></div>
                               </div>
                               <div className="flex items-center justify-between">
                                 <div className="h-3 bg-sage-25 dark:bg-sage-80 rounded-full animate-pulse w-2/3"></div>
@@ -486,14 +486,14 @@ export function NotificationPage() {
                   ) : filteredNotifications.length === 0 ? (
                     <div className="text-center py-20">
                       <div className="relative inline-block mb-8">
-                        {/* 배경 그라데이션 원 */}
-                        <div className="w-32 h-32 bg-gradient-to-br from-sage-20 via-sage-30 to-sage-40 dark:from-sage-80 dark:via-sage-70 dark:to-sage-60 rounded-full flex items-center justify-center shadow-lg">
+                        {/* 배경 원 (플랫) */}
+                        <div className="w-32 h-32 bg-background-secondary dark:bg-background-dark rounded-full flex items-center justify-center shadow-lg">
                           <div className="w-24 h-24 bg-background-primary dark:bg-background-dark-secondary rounded-full flex items-center justify-center shadow-inner">
                             <Bell className="w-12 h-12 text-sage-60 dark:text-sage-30 animate-bounce" />
                           </div>
                         </div>
                         {filter !== 'unread' && (
-                          <div className="absolute -top-2 -right-2 w-8 h-8 bg-gradient-to-br from-green-400 to-green-600 rounded-full flex items-center justify-center shadow-lg">
+                          <div className="absolute -top-2 -right-2 w-8 h-8 bg-sage-90 dark:bg-sage-60 rounded-full flex items-center justify-center shadow-lg">
                             <span className="text-white text-sm font-bold">
                               ✓
                             </span>
@@ -559,13 +559,13 @@ export function NotificationPage() {
                             }}
                             aria-label={`알림: ${notification.title}. ${isUnread ? '읽지 않음' : '읽음'}`}
                           >
-                            {/* 읽지 않음 표시선 - 더 두껍고 그라데이션 */}
+                            {/* 읽지 않음 표시선 - 플랫 */}
                             {isUnread && (
-                              <div className="absolute left-0 top-0 bottom-0 w-2 bg-gradient-to-b from-blue-500 via-blue-600 to-blue-700 rounded-l-xl shadow-sm"></div>
+                              <div className="absolute left-0 top-0 bottom-0 w-2 bg-sage-70 dark:bg-sage-50 rounded-l-xl shadow-sm"></div>
                             )}
 
-                            {/* 배경 패턴 효과 */}
-                            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-background-primary/5 dark:via-background-dark-secondary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                            {/* 배경 패턴 효과 제거 */}
+                            <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
 
                             <div className="relative p-5 pl-7">
                               <div className="flex items-start space-x-4">
@@ -592,7 +592,7 @@ export function NotificationPage() {
                                   </div>
 
                                   {isUnread && (
-                                    <div className="absolute -top-1 -right-1 w-4 h-4 bg-gradient-to-br from-blue-500 to-blue-700 rounded-full border-2 border-white dark:border-gray-800 animate-pulse shadow-sm"></div>
+                                    <div className="absolute -top-1 -right-1 w-4 h-4 bg-sage-70 dark:bg-sage-50 rounded-full border-2 border-white dark:border-gray-800 animate-pulse shadow-sm"></div>
                                   )}
                                 </div>
 
