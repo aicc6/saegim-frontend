@@ -53,6 +53,9 @@ export default function ViewPostPage({
     isLoading,
     deletedImageIds,
     addDeletedImageId,
+    tempEntry,
+    setTempEntry,
+    clearTempEntry,
   } = useDiaryStore();
   const [entry, setEntry] = useState<DiaryEntry | null>(null);
   const [isEditing, setIsEditing] = useState(false);
@@ -64,6 +67,8 @@ export default function ViewPostPage({
   const [showImageOptionsModal, setShowImageOptionsModal] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [sameDateEntries, setSameDateEntries] = useState<DiaryListEntry[]>([]);
+  // 다음 다이어리 ID를 저장하여 useEffect에서 라우팅 처리
+  const [nextDiaryId, setNextDiaryId] = useState<string | null>(null);
   // deletedImageIds는 전역 스토어에서 가져옴
 
   // 삭제 확인 모달 상태
@@ -96,6 +101,25 @@ export default function ViewPostPage({
       }
     }
   }, [entryId, addDeletedImageId]);
+
+  // nextDiaryId가 설정되면 라우팅 처리 (깜빡임 방지)
+  useEffect(() => {
+    if (nextDiaryId && tempEntry) {
+      // 현재 from 파라미터 유지
+      const currentFrom = new URLSearchParams(window.location.search).get(
+        'from',
+      );
+      const fromParam = currentFrom
+        ? `?from=${encodeURIComponent(currentFrom)}`
+        : '';
+
+      // 라우팅 실행
+      router.push(`/viewPost/${nextDiaryId}${fromParam}`);
+
+      // nextDiaryId 초기화
+      setNextDiaryId(null);
+    }
+  }, [nextDiaryId, tempEntry, router]);
 
   useEffect(() => {
     // 1. URL 쿼리 파라미터에서 from 경로 확인
@@ -179,8 +203,11 @@ export default function ViewPostPage({
         setEditedEmotion(currentDiary.user_emotion || '');
         setEditedKeywords(currentDiary.keywords || []);
       }
+
+      // 새로운 데이터가 로드되면 tempEntry 정리 (깜빡임 방지 로직 완료)
+      clearTempEntry();
     }
-  }, [currentDiary, entryId, deletedImageIds, isEditing]);
+  }, [currentDiary, entryId, deletedImageIds, isEditing, clearTempEntry]);
 
   // 편집 모드 시작 시 초기값 설정
   useEffect(() => {
@@ -635,27 +662,23 @@ export default function ViewPostPage({
   const handleNavigate = (direction: 'prev' | 'next') => {
     if (direction === 'prev' && currentIndex > 0) {
       const prevEntry = sameDateEntries[currentIndex - 1];
-      // 현재 from 파라미터 유지
-      const currentFrom = new URLSearchParams(window.location.search).get(
-        'from',
-      );
-      const fromParam = currentFrom
-        ? `?from=${encodeURIComponent(currentFrom)}`
-        : '';
-      router.push(`/viewPost/${prevEntry.id}${fromParam}`);
+
+      // 현재 entry를 Zustand store의 tempEntry에 저장 (깜빡임 방지!)
+      setTempEntry(entry);
+
+      // 다음 다이어리 ID를 상태로 저장하여 useEffect에서 처리
+      setNextDiaryId(prevEntry.id);
     } else if (
       direction === 'next' &&
       currentIndex < sameDateEntries.length - 1
     ) {
       const nextEntry = sameDateEntries[currentIndex + 1];
-      // 현재 from 파라미터 유지
-      const currentFrom = new URLSearchParams(window.location.search).get(
-        'from',
-      );
-      const fromParam = currentFrom
-        ? `?from=${encodeURIComponent(currentFrom)}`
-        : '';
-      router.push(`/viewPost/${nextEntry.id}${fromParam}`);
+
+      // 현재 entry를 Zustand store의 tempEntry에 저장 (깜빡임 방지!)
+      setTempEntry(entry);
+
+      // 다음 다이어리 ID를 상태로 저장하여 useEffect에서 처리
+      setNextDiaryId(nextEntry.id);
     }
   };
 
@@ -709,6 +732,92 @@ export default function ViewPostPage({
   };
 
   if (!entry) {
+    // Zustand store의 tempEntry가 있으면 임시로 표시 (깜빡임 방지!)
+    if (tempEntry) {
+      return (
+        <div className="h-full bg-background-primary flex flex-col">
+          {/* 페이지 헤더 */}
+          <PageHeader
+            title={tempEntry?.title || '제목 없음'}
+            subtitle={`${new Date(tempEntry.diary_date || tempEntry.created_at).getMonth() + 1}월 ${new Date(tempEntry.diary_date || tempEntry.created_at).getDate()}일`}
+            actions={
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleBack}
+                className="text-text-secondary hover:text-text-primary hover:bg-background-hover"
+              >
+                <ArrowLeft className="h-5 w-5 mr-2" />
+                뒤로가기
+              </Button>
+            }
+          />
+
+          <div className="flex-1 bg-ivory-cream p-8 min-h-0 overflow-auto">
+            <div className="max-w-4xl mx-auto">
+              <div className="bg-white rounded-lg border-2 border-sage-30 p-8 shadow-sm relative">
+                {/* 로딩 오버레이 */}
+                <div className="absolute inset-0 bg-white/80 backdrop-blur-sm rounded-lg flex items-center justify-center z-10">
+                  <div className="text-center">
+                    <div className="inline-block h-8 w-8 animate-spin rounded-full border-2 border-sage-30 border-t-sage-70 mb-4"></div>
+                    <p className="text-sage-100 font-medium">
+                      다음 다이어리를 불러오는 중...
+                    </p>
+                  </div>
+                </div>
+
+                {/* 임시 다이어리 내용 (로딩 중에도 표시) */}
+                <div className="opacity-50">
+                  {/* 감정 및 키워드 섹션 */}
+                  <div className="flex gap-6 mb-6">
+                    <div
+                      className="bg-sage-10 rounded-lg p-4 border border-sage-30 flex-shrink-0"
+                      style={{ minWidth: '200px' }}
+                    >
+                      <div className="space-y-3">
+                        <div className="flex items-center space-x-3">
+                          <span className="text-base font-medium text-sage-100">
+                            사용자 감정 :
+                          </span>
+                          <span className="text-2xl">😐</span>
+                        </div>
+                        <div className="flex items-center space-x-3">
+                          <span className="text-base font-medium text-sage-100">
+                            AI 분석 감정:
+                          </span>
+                          <span className="text-2xl">😐</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="bg-sage-10 rounded-lg p-4 border border-sage-30 flex-1">
+                      <p className="text-base font-medium text-sage-100 mb-2">
+                        키워드:
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        <span className="px-2 py-1 bg-sage-20 text-sage-100 rounded-full text-sm">
+                          로딩 중...
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 텍스트 내용 */}
+                  <div className="w-full h-96 p-4 border-2 border-sage-30 rounded-lg bg-sage-5 overflow-y-auto">
+                    <p className="text-base text-sage-100 leading-relaxed whitespace-pre-wrap">
+                      {tempEntry.ai_generated_text ||
+                        tempEntry.content ||
+                        '[글 본문]'}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // tempEntry도 없으면 오류 메시지
     return (
       <div className="min-h-screen bg-background-primary flex items-center justify-center">
         <div className="text-center">

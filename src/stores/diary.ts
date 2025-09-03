@@ -29,6 +29,7 @@ interface DiaryState {
   currentPage: number;
   pageSize: number;
   deletedImageIds: Set<string>; // 삭제된 이미지 ID 추적
+  tempEntry: DiaryEntry | null; // 이전 데이터 유지를 위한 임시 상태 (깜빡임 방지)
 
   // 액션
   fetchDiaries: (filters?: DiaryFilters) => Promise<void>;
@@ -51,6 +52,8 @@ interface DiaryState {
   addDeletedImageId: (imageId: string) => void; // 이미지 삭제 ID 추가
   removeDeletedImageId: (imageId: string) => void; // 이미지 삭제 ID 제거
   clearDeletedImageIds: () => void; // 모든 삭제된 이미지 ID 초기화
+  setTempEntry: (entry: DiaryEntry | null) => void; // 임시 entry 설정
+  clearTempEntry: () => void; // 임시 entry 정리
 }
 
 export const useDiaryStore = create<DiaryState>((set, get) => ({
@@ -65,6 +68,7 @@ export const useDiaryStore = create<DiaryState>((set, get) => ({
   deletedImageIds: new Set(
     JSON.parse(localStorage.getItem('deletedImageIds') || '[]'),
   ), // localStorage에서 복원
+  tempEntry: null, // 이전 데이터 유지를 위한 임시 상태
 
   // 다이어리 목록 조회
   fetchDiaries: async (filters?: DiaryFilters) => {
@@ -303,4 +307,10 @@ export const useDiaryStore = create<DiaryState>((set, get) => ({
     localStorage.removeItem('deletedImageIds');
     set({ deletedImageIds: new Set() });
   },
+
+  // 임시 entry 설정 (깜빡임 방지용)
+  setTempEntry: (entry: DiaryEntry | null) => set({ tempEntry: entry }),
+
+  // 임시 entry 정리
+  clearTempEntry: () => set({ tempEntry: null }),
 }));
