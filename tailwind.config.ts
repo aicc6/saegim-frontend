@@ -198,6 +198,7 @@ const config: Config = {
 
       screens: {
         xs: '475px',
+        'mobile-lg': '800px', // 모바일에서 키워드 숨김용 브레이크포인트
         'chart-lg': '1330px', // 차트 가로 배치용 커스텀 브레이크포인트
       },
 

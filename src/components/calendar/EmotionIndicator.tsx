@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import { EmotionType, EMOTION_COLORS, EMOTION_EMOJIS } from '@/types/diary';
 import { cn } from '@/lib/utils';
 
@@ -12,8 +13,25 @@ export const EmotionIndicator = ({
   emotion,
   keywords,
   isCurrentMonth,
-  isSelected,
+  isSelected: _isSelected,
 }: EmotionIndicatorProps) => {
+  const [showKeywords, setShowKeywords] = useState(false);
+
+  useEffect(() => {
+    const checkScreenSize = () => {
+      setShowKeywords(window.innerWidth > 800);
+    };
+
+    // 초기 체크
+    checkScreenSize();
+
+    // 리사이즈 이벤트 리스너 추가
+    window.addEventListener('resize', checkScreenSize);
+
+    // 클린업
+    return () => window.removeEventListener('resize', checkScreenSize);
+  }, []);
+
   if (!emotion && (!keywords || keywords.length === 0)) return null;
 
   const getKeywordBackgroundColor = (emotion: EmotionType | null) => {
@@ -51,7 +69,7 @@ export const EmotionIndicator = ({
           </div>
         )}
 
-        {keywords && keywords.length > 0 && (
+        {keywords && keywords.length > 0 && showKeywords && (
           <div className="flex items-center justify-center gap-1">
             {keywords.slice(0, 2).map((keyword: string, index: number) => (
               <span
