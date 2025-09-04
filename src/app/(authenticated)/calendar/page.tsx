@@ -554,9 +554,9 @@ export default function CalendarPage() {
                       calendarRef.current.goToToday();
                     }
                   }}
-                  className="border-4 px-4 py-2 rounded-lg transition-colors duration-200 hover:opacity-80 text-text-primary border-sage-40"
+                  className="border-4 px-3 py-1 rounded-lg transition-colors duration-200 hover:opacity-80 text-text-primary border-sage-40"
                 >
-                  <span className="text-sm font-black">
+                  <span className="text-h4 font-black">
                     {new Date().getDate()}
                   </span>
                 </button>
