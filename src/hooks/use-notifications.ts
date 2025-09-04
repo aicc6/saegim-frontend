@@ -34,34 +34,6 @@ interface UseNotificationsReturn {
 // 로컬 스토리지 키
 const STORAGE_KEY = 'saegim_notifications';
 
-// 초기 더미 데이터 (개발용)
-const initialNotifications: Notification[] = [
-  {
-    id: '1',
-    title: '새로운 기능 업데이트',
-    message: '일기 작성 기능이 개선되었습니다. 새로운 템플릿을 확인해보세요.',
-    timestamp: new Date(Date.now() - 1000 * 60 * 30), // 30분 전
-    isRead: false,
-    type: 'info',
-  },
-  {
-    id: '2',
-    title: '일기 작성 완료',
-    message: '오늘의 일기가 성공적으로 저장되었습니다.',
-    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2), // 2시간 전
-    isRead: false,
-    type: 'success',
-  },
-  {
-    id: '3',
-    title: '백업 알림',
-    message: '데이터 백업이 완료되었습니다.',
-    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24), // 1일 전
-    isRead: true,
-    type: 'info',
-  },
-];
-
 export function useNotifications(): UseNotificationsReturn {
   const [notifications, setNotifications] = useState<Notification[]>([]);
 
@@ -89,16 +61,12 @@ export function useNotifications(): UseNotificationsReturn {
           );
           setNotifications(converted);
         } else {
-          // 초기 더미 데이터 설정 (개발용)
-          setNotifications(initialNotifications);
-          localStorage.setItem(
-            STORAGE_KEY,
-            JSON.stringify(initialNotifications),
-          );
+          // 빈 배열로 초기화
+          setNotifications([]);
         }
       } catch (error) {
         logger.error('Failed to load notifications:', error);
-        setNotifications(initialNotifications);
+        setNotifications([]);
       }
     };
 
