@@ -77,13 +77,32 @@ export default function LoginForm({ redirectTo }: LoginFormProps) {
             const currentUser = currentUserResponse.data;
 
             // 백엔드의 최신 정보로 로그인
+            // provider 타입 안전성 검증
+            const validProviders: readonly (
+              | 'google'
+              | 'kakao'
+              | 'naver'
+              | 'email'
+            )[] = ['google', 'kakao', 'naver', 'email'];
+            const provider =
+              currentUser.provider &&
+              validProviders.includes(
+                currentUser.provider as 'google' | 'kakao' | 'naver' | 'email',
+              )
+                ? (currentUser.provider as
+                    | 'google'
+                    | 'kakao'
+                    | 'naver'
+                    | 'email')
+                : 'email';
+
             login({
               id: currentUser.user_id,
               email: currentUser.email,
               name: currentUser.nickname,
               nickname: currentUser.nickname,
               profileImage: currentUser.profile_image || '',
-              provider: currentUser.provider || 'email',
+              provider: provider,
               createdAt: new Date().toISOString(),
             });
           } else {
