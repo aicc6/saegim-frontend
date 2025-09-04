@@ -925,7 +925,7 @@ export default function ViewPostPage({
                           onClick={() =>
                             setShowEmotionSelector(!showEmotionSelector)
                           }
-                          className="flex items-center space-x-2 px-3 py-1 bg-white border border-sage-30 rounded-md hover:bg-sage-20"
+                          className={`flex items-center space-x-2 px-3 py-1 ${isDarkMode ? 'bg-gray-800' : 'bg-white'} border border-sage-30 rounded-md hover:bg-sage-20`}
                         >
                           <span className="text-2xl">
                             {editedEmotion

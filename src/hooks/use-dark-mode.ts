@@ -15,17 +15,28 @@ export function useDarkMode() {
 
     // 초기 다크 모드 상태 확인
     const checkDarkMode = () => {
-      // 1. HTML의 color-scheme 속성 확인
+      // 1. HTML의 color-scheme 속성 확인 (우선순위 높음)
       const colorScheme =
         htmlElement.style.colorScheme ||
         getComputedStyle(htmlElement).colorScheme;
+
+      console.log('다크 모드 감지:', {
+        colorScheme,
+        styleColorScheme: htmlElement.style.colorScheme,
+        computedColorScheme: getComputedStyle(htmlElement).colorScheme,
+      });
 
       if (colorScheme === 'dark') {
         setIsDarkMode(true);
         return;
       }
 
-      // 2. CSS prefers-color-scheme 미디어 쿼리 확인
+      if (colorScheme === 'light') {
+        setIsDarkMode(false);
+        return;
+      }
+
+      // 2. CSS prefers-color-scheme 미디어 쿼리 확인 (fallback)
       const prefersDark = window.matchMedia(
         '(prefers-color-scheme: dark)',
       ).matches;
