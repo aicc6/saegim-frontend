@@ -525,28 +525,41 @@ input[type='date']::-webkit-calendar-picker-indicator {
   filter: invert(0.4) sepia(1) saturate(0) hue-rotate(0deg) brightness(0.7);
 }
 
-/* 오늘 날짜 라이트모드 스타일 */
-.calendar-day-today {
+/* 오늘 날짜 라이트모드 스타일 (선택되지 않은 상태) */
+.calendar-day-today:not(.selected) {
   background-color: rgb(240, 243, 241) !important; /* sage-30 */
   border: 2px solid rgb(185, 201, 189) !important; /* sage-100 */
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1) !important;
 }
 
-.calendar-day-today .calendar-date-number {
+.calendar-day-today:not(.selected) .calendar-date-number {
   color: rgb(55, 65, 81) !important; /* sage-700 */
   font-weight: 900 !important;
   font-size: 1.125rem !important; /* text-lg */
 }
 
-/* 오늘 날짜 다크모드 스타일 */
-.dark .calendar-day-today {
+/* 오늘 날짜 다크모드 스타일 (선택되지 않은 상태) */
+.dark .calendar-day-today:not(.selected) {
   background-color: rgb(185, 201, 189) !important; /* sage-100 */
   border: 2px solid rgb(156, 175, 160) !important; /* sage-200 */
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2) !important;
 }
 
-.dark .calendar-day-today .calendar-date-number {
+.dark .calendar-day-today:not(.selected) .calendar-date-number {
   color: rgb(107, 114, 128) !important; /* sage-300 */
+  font-weight: 900 !important;
+  font-size: 1.125rem !important; /* text-lg */
+}
+
+/* 오늘 날짜가 선택된 상태일 때는 기본 선택 스타일 유지 */
+.calendar-day-today.selected {
+  background-color: #f9f5ef !important; /* 아이보리 색 */
+  border: 2px solid #b2c5b8 !important;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1) !important;
+}
+
+.calendar-day-today.selected .calendar-date-number {
+  color: #000000 !important;
   font-weight: 900 !important;
   font-size: 1.125rem !important; /* text-lg */
 }

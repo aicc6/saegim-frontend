@@ -70,6 +70,8 @@ export const CalendarDay = ({
       // 오늘 날짜 스타일 (우선순위 높게)
       day.isToday &&
         'bg-sage-30 dark:bg-sage-100 border-2 border-sage-100 dark:border-sage-200 shadow-md calendar-day-today',
+      // 선택된 상태일 때 selected 클래스 추가
+      day.isSelected && 'selected',
       !day.isSelected && 'hover:bg-gray-50',
     );
   };
