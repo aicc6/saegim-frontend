@@ -70,9 +70,9 @@ const EMOTION_CONFIGS: EmotionConfig[] = [
     label: '불안',
     emoji: '😨',
     styles: {
-      bg: 'bg-orange-100',
+      bg: 'bg-purple-100',
       text: 'text-orange-700',
-      ring: 'ring-orange-400',
+      ring: 'ring-purple-400',
     },
   },
 ];
