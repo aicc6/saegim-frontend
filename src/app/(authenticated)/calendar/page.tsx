@@ -536,7 +536,7 @@ export default function CalendarPage() {
       {/* 페이지 헤더 */}
       <PageHeader
         title="캘린더"
-        subtitle="월간 감정 기록과 키워드 분석을 확인하세요"
+        subtitle="월간 감정 분포와 주요 키워드 확인 가능합니다"
       />
 
       <div className="flex flex-1 min-h-0">

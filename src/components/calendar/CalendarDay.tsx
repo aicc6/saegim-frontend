@@ -67,9 +67,10 @@ export const CalendarDay = ({
       index >= totalDays - 7 && !day.isSelected && 'border-b-0',
       // Visual states
       !day.isCurrentMonth && 'opacity-50',
-      // 오늘 날짜 스타일 (우선순위 높게)
+      // 오늘 날짜 스타일 (현재 월에 속한 경우만)
       day.isToday &&
-        'bg-sage-30 dark:bg-sage-100 border-2 border-sage-100 dark:border-sage-200 shadow-md calendar-day-today',
+        day.isCurrentMonth &&
+        'bg-sage-30 dark:bg-sage-100 border-2 border-sage-100 dark:border-sage-200 shadow-md calendar-day-today current-month',
       // 선택된 상태일 때 selected 클래스 추가
       day.isSelected && 'selected',
       !day.isSelected && 'hover:bg-gray-50',
@@ -95,7 +96,7 @@ export const CalendarDay = ({
         className={cn(
           'absolute top-1 right-1 text-body-small z-10',
           day.isCurrentMonth ? 'font-bold' : 'font-medium',
-          day.isToday
+          day.isToday && day.isCurrentMonth
             ? 'text-sage-700 dark:text-sage-300 font-black text-lg calendar-date-number'
             : 'text-text-primary',
         )}
