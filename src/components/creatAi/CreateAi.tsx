@@ -245,7 +245,11 @@ function CreateAi() {
   const [regeneratingCardId, setRegeneratingCardId] = useState<string | null>(
     null,
   );
-  const [selectedDate, setSelectedDate] = useState<string>(''); // 선택된 날짜 상태
+  const [selectedDate, setSelectedDate] = useState<string>(() => {
+    // 오늘 날짜를 YYYY-MM-DD 형식으로 반환
+    const today = new Date();
+    return today.toISOString().split('T')[0];
+  }); // 선택된 날짜 상태
   const [isDarkMode, setIsDarkMode] = useState(false); // 다크모드 상태
 
   const {
