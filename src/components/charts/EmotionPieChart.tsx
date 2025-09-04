@@ -102,17 +102,20 @@ export const EmotionPieChart = memo(function EmotionPieChart({
   return (
     <div
       className={cn(
-        'bg-background-primary rounded-lg border border-border-subtle p-6',
+        'bg-background-primary rounded-xl border border-border-subtle p-6 shadow-lg hover:shadow-xl transition-all duration-300',
         className,
       )}
     >
-      <h3 className="text-h4 font-bold text-text-primary mb-4">감정 분포</h3>
+      <h3 className="text-h4 font-bold text-text-primary mb-6 flex items-center gap-2">
+        <div className="w-2 h-2 bg-sage-60 rounded-full"></div>
+        감정 분포
+      </h3>
 
       <div className="flex items-center justify-between">
         {/* 차트 */}
         <div className="relative flex-1 flex justify-center">
           {/* CSS 기반 원형 차트 */}
-          <div className="relative w-[200px] h-[200px]">
+          <div className="relative w-[200px] h-[200px] drop-shadow-lg">
             {chartData.map((item) => {
               const isFullCircle =
                 item.startAngle === 0 && item.endAngle >= 359;
@@ -135,7 +138,7 @@ export const EmotionPieChart = memo(function EmotionPieChart({
 
             {/* 중앙 원 - 크기 축소 */}
             <div className="absolute inset-0 flex items-center justify-center">
-              <div className="w-16 h-16 bg-background-primary rounded-full border-2 border-border-subtle flex items-center justify-center">
+              <div className="w-16 h-16 bg-background-primary rounded-full border-2 border-border-subtle flex items-center justify-center shadow-inner">
                 <div className="text-center">
                   <div className="text-lg font-bold text-text-primary">
                     {total}
@@ -182,7 +185,7 @@ export const EmotionPieChart = memo(function EmotionPieChart({
         </div>
 
         {/* 범례 */}
-        <div className="space-y-2 ml-4 hidden md:block 2xl:space-y-3 2xl:ml-6">
+        <div className="space-y-3 ml-6 hidden md:block 2xl:space-y-4 2xl:ml-8">
           {Object.entries(emotionLabels).map(([emotion, label]) => {
             const count = data[emotion as EmotionType] || 0;
             const percentage = total > 0 ? (count / total) * 100 : 0;
@@ -191,29 +194,26 @@ export const EmotionPieChart = memo(function EmotionPieChart({
             return (
               <div
                 key={emotion}
-                className="flex items-center space-x-2 2xl:space-x-3"
+                className="flex items-center space-x-3 2xl:space-x-4 group hover:bg-background-hover rounded-lg p-2 -m-2 transition-all duration-200"
               >
-                <div className="flex items-center space-x-1 2xl:space-x-2">
+                <div className="flex items-center space-x-2 2xl:space-x-3">
                   <div
-                    className="w-3 h-3 2xl:w-4 2xl:h-4 rounded-full border border-white shadow-sm"
+                    className="w-4 h-4 2xl:w-5 2xl:h-5 rounded-full border-2 border-white shadow-md group-hover:scale-110 transition-transform duration-200"
                     style={{ backgroundColor: color }}
                   />
-                  <span className="text-base 2xl:text-xl">
+                  <span className="text-lg 2xl:text-xl group-hover:scale-105 transition-transform duration-200">
                     {EMOTION_EMOJIS[emotion as EmotionType]}
                   </span>
                 </div>
 
-                {/* 텍스트는 770px~1279px(md부터 xl까지)와 1536px 이상(2xl)에서 표시 */}
-                <div className="flex-1 hidden md:block xl:hidden 2xl:block">
+                {/* 텍스트는 770px 이상에서 표시 */}
+                <div className="flex-1 hidden md:block">
                   <div className="flex items-center justify-between">
-                    <span className="text-body 2xl:text-body text-body-small text-text-primary">
+                    <span className="text-sm 2xl:text-base text-text-primary font-medium">
                       {label}
                     </span>
-                    <span className="text-body-small 2xl:text-body-small text-caption text-text-secondary">
-                      {count}개
-                    </span>
                   </div>
-                  <div className="text-caption 2xl:text-caption text-caption text-text-secondary">
+                  <div className="text-xs 2xl:text-xs text-text-secondary">
                     {percentage.toFixed(1)}%
                   </div>
                 </div>
