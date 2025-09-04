@@ -25,6 +25,20 @@ const config: Config = {
           100: '#3F764A',
         },
 
+        // Sage 다크 모드 변형
+        'sage-dark': {
+          10: '#111827',
+          20: '#1F2937',
+          30: '#374151',
+          40: '#4B5563',
+          50: '#6B7280',
+          60: '#9CA3AF',
+          70: '#D1D5DB',
+          80: '#E5E7EB',
+          90: '#F3F4F6',
+          100: '#F9FAFB',
+        },
+
         // 의미론적 토큰 - Interactive
         interactive: {
           primary: '#B2C5B8', // sage-50

@@ -200,7 +200,7 @@ function LandingWithSearchParams() {
 
   return (
     <>
-      <section className="relative overflow-hidden py-20 lg:py-32">
+      <section className="relative overflow-hidden py-20 lg:py-32 bg-sage-20 transition-colors">
         {/* 히어로 섹션 */}
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
@@ -239,7 +239,7 @@ function LandingWithSearchParams() {
                 <Button
                   size="lg"
                   variant="outline"
-                  className="border-sage-30 bg-white dark:bg-gray-800 text-sage-100 dark:text-gray-100 hover:bg-sage-10 dark:hover:bg-gray-700 dark:border-gray-600 w-full sm:w-auto shadow-sm"
+                  className="border-sage-30 bg-sage-10 text-sage-100 hover:bg-sage-20 w-full sm:w-auto shadow-sm"
                   onClick={handleViewRecords}
                 >
                   <Play className="w-4 h-4 mr-2" />
@@ -251,7 +251,7 @@ function LandingWithSearchParams() {
             {/* 이미지/일러스트 */}
             <div className="relative">
               <div className="relative z-10">
-                <Card className="p-6 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border-sage-20 dark:border-gray-700 shadow-xl">
+                <Card className="p-6 bg-sage-10/80 backdrop-blur-sm border-sage-30 shadow-xl">
                   <CardContent className="p-0 space-y-4">
                     <div className="flex items-center space-x-3">
                       <div className="w-10 h-10 bg-sage-20 rounded-full flex items-center justify-center">
@@ -264,7 +264,7 @@ function LandingWithSearchParams() {
                         <p className="text-sm text-sage-70">평온한 하루</p>
                       </div>
                     </div>
-                    <div className="bg-sage-10 p-4 rounded-lg">
+                    <div className="bg-sage-30 p-4 rounded-lg">
                       <p className="text-sage-80 font-serif leading-relaxed text-center">
                         &quot;바람에 흔들리는 나뭇잎처럼
                         <br />
@@ -291,13 +291,13 @@ function LandingWithSearchParams() {
       </section>
 
       {/* 주요 기능 섹션 */}
-      <section id="features" className="py-20 bg-white dark:bg-gray-900">
+      <section id="features" className="py-20 bg-sage-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center space-y-4 mb-16">
-            <h2 className="text-3xl lg:text-4xl font-bold text-sage-100 dark:text-gray-100">
+            <h2 className="text-3xl lg:text-4xl font-bold text-sage-100">
               새김만의 특별한 기능
             </h2>
-            <p className="text-lg text-sage-70 dark:text-gray-300 max-w-2xl mx-auto">
+            <p className="text-lg text-sage-70 max-w-2xl mx-auto">
               AI 기술과 자연 치유의 만남으로 당신만의 특별한 감정 기록 경험을
               제공합니다
             </p>
@@ -309,7 +309,7 @@ function LandingWithSearchParams() {
               return (
                 <Card
                   key={index}
-                  className="border-sage-20 dark:border-gray-700 hover:shadow-lg transition-shadow bg-white dark:bg-gray-800"
+                  className="border-sage-20 hover:shadow-lg transition-shadow bg-sage-10"
                 >
                   <CardContent className="p-6 text-center space-y-4">
                     <div
@@ -317,10 +317,10 @@ function LandingWithSearchParams() {
                     >
                       <Icon className="w-6 h-6" />
                     </div>
-                    <h3 className="text-lg font-semibold text-sage-100 dark:text-gray-100">
+                    <h3 className="text-lg font-semibold text-sage-100">
                       {feature.title}
                     </h3>
-                    <p className="text-sage-70 dark:text-gray-300 text-sm leading-relaxed">
+                    <p className="text-sage-70 text-sm leading-relaxed">
                       {feature.description}
                     </p>
                   </CardContent>
