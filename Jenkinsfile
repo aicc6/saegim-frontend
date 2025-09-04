@@ -33,8 +33,8 @@ pipeline {
     DOCKER_REGISTRY    = "${env.DOCKER_REGISTRY ?: env.CUSTOM_DOCKER_REGISTRY}"   // 예: nexus-docker.aicc-project.com
     DOCKER_CREDENTIALS = "${env.DOCKER_CREDENTIALS ?: env.CUSTOM_DOCKER_CREDENTIALS}"
 
-    // Image / Container
-    IMAGE_NAME     = 'saegim-frontend'
+    // Image / Container (네임스페이스 포함 경로로 고정)
+    IMAGE_NAME     = 'aicc/saegim-frontend'
     DOCKER_IMAGE   = "${DOCKER_REGISTRY ? DOCKER_REGISTRY + '/' : ''}${IMAGE_NAME}"
     CONTAINER_BASE = 'saegim-frontend'
 
@@ -92,7 +92,9 @@ pipeline {
           echo "DOCKERFILE_PATH=${DOCKERFILE_PATH}"
           echo "DOCKER_REGISTRY=${DOCKER_REGISTRY}"
           echo "IMAGE_NAME=${IMAGE_NAME}"
+          echo "DOCKER_IMAGE=${DOCKER_IMAGE}"
           echo "GIT_SHORT_SHA=${GIT_SHORT_SHA}"
+          echo "BUILD_NUMBER=${BUILD_NUMBER}"
         '''
       }
     }
@@ -171,12 +173,12 @@ pipeline {
     stage('Docker Build & Push (normalized tagging)') {
       steps {
         script {
-          // 통일된 태깅 규칙
+          // 태깅 규칙: 커밋 해시 + 빌드 번호(+ main이면 latest 추가)
           def isMain   = (env.TARGET_BRANCH == 'main')
           def TAG_SHA  = env.GIT_SHORT_SHA
+          def TAG_NUM  = env.BUILD_NUMBER
           def TAG_BR   = env.TARGET_BRANCH.replaceAll(/[^a-zA-Z0-9._-]/, '-')
 
-          // 빌드 (+ .env.local을 로드해서 --build-arg 주입)
           sh """
             set -e
 
@@ -197,32 +199,34 @@ pipeline {
             : "\${NEXT_PUBLIC_FIREBASE_APP_ID:?NEXT_PUBLIC_FIREBASE_APP_ID is required}"
             : "\${NEXT_PUBLIC_FIREBASE_VAPID_KEY:?NEXT_PUBLIC_FIREBASE_VAPID_KEY is required}"
 
-            docker build -f "${DOCKERFILE_PATH}" \\
-              --build-arg NEXT_PUBLIC_API_BASE_URL="\${NEXT_PUBLIC_API_BASE_URL}" \\
-              --build-arg GOOGLE_REDIRECT_URI="\${GOOGLE_REDIRECT_URI}" \\
-              --build-arg NEXT_PUBLIC_FIREBASE_API_KEY="\${NEXT_PUBLIC_FIREBASE_API_KEY}" \\
-              --build-arg NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN="\${NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN}" \\
-              --build-arg NEXT_PUBLIC_FIREBASE_PROJECT_ID="\${NEXT_PUBLIC_FIREBASE_PROJECT_ID}" \\
-              --build-arg NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET="\${NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET}" \\
-              --build-arg NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID="\${NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID}" \\
-              --build-arg NEXT_PUBLIC_FIREBASE_APP_ID="\${NEXT_PUBLIC_FIREBASE_APP_ID}" \\
-              --build-arg NEXT_PUBLIC_FIREBASE_VAPID_KEY="\${NEXT_PUBLIC_FIREBASE_VAPID_KEY}" \\
-              -t "${DOCKER_IMAGE}:${TAG_SHA}" \\
+            docker build -f "${DOCKERFILE_PATH}" \
+              --build-arg NEXT_PUBLIC_API_BASE_URL="\${NEXT_PUBLIC_API_BASE_URL}" \
+              --build-arg GOOGLE_REDIRECT_URI="\${GOOGLE_REDIRECT_URI}" \
+              --build-arg NEXT_PUBLIC_FIREBASE_API_KEY="\${NEXT_PUBLIC_FIREBASE_API_KEY}" \
+              --build-arg NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN="\${NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN}" \
+              --build-arg NEXT_PUBLIC_FIREBASE_PROJECT_ID="\${NEXT_PUBLIC_FIREBASE_PROJECT_ID}" \
+              --build-arg NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET="\${NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET}" \
+              --build-arg NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID="\${NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID}" \
+              --build-arg NEXT_PUBLIC_FIREBASE_APP_ID="\${NEXT_PUBLIC_FIREBASE_APP_ID}" \
+              --build-arg NEXT_PUBLIC_FIREBASE_VAPID_KEY="\${NEXT_PUBLIC_FIREBASE_VAPID_KEY}" \
+              -t "${DOCKER_IMAGE}:${TAG_SHA}" \
+              -t "${DOCKER_IMAGE}:${TAG_NUM}" \
               "${CONTEXT_DIR}"
           """
 
-          // push (레지스트리 설정이 있으면)
           if (env.DOCKER_REGISTRY && env.DOCKER_CREDENTIALS) {
             sh """ docker push "${DOCKER_IMAGE}:${TAG_SHA}" """
+            sh """ docker push "${DOCKER_IMAGE}:${TAG_NUM}" """
 
             if (isMain) {
               sh """
-                docker tag "${DOCKER_IMAGE}:${TAG_SHA}" "${DOCKER_IMAGE}:latest"
+                docker tag  "${DOCKER_IMAGE}:${TAG_SHA}" "${DOCKER_IMAGE}:latest"
                 docker push "${DOCKER_IMAGE}:latest"
               """
             } else {
+              // 브랜치 태그는 선택적 유지 (원하면 주석 처리)
               sh """
-                docker tag "${DOCKER_IMAGE}:${TAG_SHA}" "${DOCKER_IMAGE}:${TAG_BR}"
+                docker tag  "${DOCKER_IMAGE}:${TAG_SHA}" "${DOCKER_IMAGE}:${TAG_BR}"
                 docker push "${DOCKER_IMAGE}:${TAG_BR}"
               """
             }
@@ -230,7 +234,8 @@ pipeline {
             echo "No registry configured — using local image only."
           }
 
-          env.IMAGE_TAG_FOR_DEPLOY = TAG_SHA
+          // 이후 배포는 순번 태그를 우선 사용
+          env.IMAGE_TAG_FOR_DEPLOY = TAG_NUM
         }
       }
     }
@@ -261,17 +266,17 @@ pipeline {
             docker rm   "${containerName}" || true
 
             echo "== Run new container (NO host port), network: $DOCKER_NETWORK =="
-            docker run -d \\
-              --name "${containerName}" \\
-              --network "${DOCKER_NETWORK}" \\
-              --restart unless-stopped \\
-              --label "app=saegim-frontend" \\
-              --label "env=${deployEnv}" \\
-              --label "git_sha=${GIT_SHORT_SHA}" \\
-              --health-cmd="curl -f http://localhost:3000/ || exit 1" \\
-              --health-interval=30s \\
-              --health-timeout=10s \\
-              --health-retries=3 \\
+            docker run -d \
+              --name "${containerName}" \
+              --network "${DOCKER_NETWORK}" \
+              --restart unless-stopped \
+              --label "app=saegim-frontend" \
+              --label "env=${deployEnv}" \
+              --label "git_sha=${GIT_SHORT_SHA}" \
+              --health-cmd="curl -f http://localhost:3000/ || exit 1" \
+              --health-interval=30s \
+              --health-timeout=10s \
+              --health-retries=3 \
               "${imageRef}"
 
             echo "== No host port binding by policy (NPM routes by container name) =="
