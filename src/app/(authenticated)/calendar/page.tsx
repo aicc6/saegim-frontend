@@ -792,23 +792,15 @@ export default function CalendarPage() {
 
               {/* 2XL 미만: 1280px 이상에서는 가로 배치, 1280px 미만에서는 세로 배치 */}
               <div className="block 2xl:hidden">
-                <div className="grid grid-cols-1 xl:grid-cols-5 gap-6">
-                  {/* 감정 분포 차트 - 더 넓은 공간 할당 */}
-                  <div className="xl:col-span-2">
+                <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+                  {/* 왼쪽 컬럼: 감정 분포 차트와 이달의 요약 */}
+                  <div className="space-y-6">
+                    {/* 감정 분포 차트 */}
                     <EmotionPieChart
                       data={currentMonthData.emotionDistribution}
                     />
-                  </div>
 
-                  {/* 키워드 분포 차트 - 작은 공간 할당 */}
-                  <div className="xl:col-span-2">
-                    <KeywordBarChart
-                      data={currentMonthData.keywordDistribution}
-                    />
-                  </div>
-
-                  {/* 월간 요약 - 가장 작은 공간 할당 */}
-                  <div className="xl:col-span-1">
+                    {/* 월간 요약 */}
                     <div className="bg-background-primary rounded-lg border border-border-subtle p-6">
                       <h3 className="text-h4 font-bold text-text-primary mb-4">
                         이달의 요약
@@ -844,6 +836,13 @@ export default function CalendarPage() {
                         </div>
                       </div>
                     </div>
+                  </div>
+
+                  {/* 오른쪽 컬럼: 키워드 분포 차트 */}
+                  <div>
+                    <KeywordBarChart
+                      data={currentMonthData.keywordDistribution}
+                    />
                   </div>
                 </div>
               </div>

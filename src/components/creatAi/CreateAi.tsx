@@ -890,7 +890,7 @@ function CreateAi() {
   // showResults가 true이거나 스트리밍 중일 때는 CreateChat 스타일 레이아웃 사용
   if (showResults || isStreaming) {
     return (
-      <div className="flex bg-sage-20 min-h-screen flex-col relative">
+      <div className="flex bg-background-primary dark:bg-background-dark min-h-screen flex-col relative">
         {/* 상단 스크롤 영역 - 단순한 스타일 */}
         <div className="flex-1 overflow-y-auto p-4 pb-8">
           <div className="mx-auto max-w-2xl space-y-4">
@@ -902,11 +902,11 @@ function CreateAi() {
               return (
                 <div
                   key={card.id}
-                  className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm relative"
+                  className="bg-background-primary dark:bg-background-dark-secondary rounded-lg border border-border-subtle dark:border-border-dark p-6 shadow-sm relative"
                 >
                   <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center gap-3">
-                      <h3 className="text-lg font-medium text-gray-900">
+                      <h3 className="text-lg font-medium text-text-primary dark:text-text-primary-dark">
                         생성된 글
                       </h3>
                     </div>
@@ -914,7 +914,9 @@ function CreateAi() {
                       {/* 버전 선택 버튼들 */}
                       {card.versions.length > 1 && (
                         <div className="flex items-center gap-2">
-                          <span className="text-xs text-gray-500">버전:</span>
+                          <span className="text-xs text-text-secondary dark:text-text-secondary-dark">
+                            버전:
+                          </span>
                           <div className="flex gap-1">
                             {[...card.versions]
                               .sort((a, b) => a.versionNumber - b.versionNumber)
@@ -934,7 +936,7 @@ function CreateAi() {
                                     className={`w-6 h-6 text-xs rounded-full transition-colors ${
                                       originalIndex === card.currentVersionIndex
                                         ? 'bg-sage-90 text-white'
-                                        : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
+                                        : 'bg-background-secondary text-text-secondary hover:bg-background-hover dark:bg-background-dark dark:text-text-secondary-dark dark:hover:bg-background-dark-secondary'
                                     }`}
                                   >
                                     {version.versionNumber}
@@ -950,7 +952,7 @@ function CreateAi() {
                         <button
                           onClick={() => handleCardEdit(card.id)}
                           disabled={isRegenerating}
-                          className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          className="p-2 text-text-secondary hover:text-text-primary hover:bg-background-hover dark:text-text-secondary-dark dark:hover:text-text-primary-dark dark:hover:bg-background-dark-secondary rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                           title={card.isEditMode ? '편집 완료' : '텍스트 편집'}
                         >
                           <Edit3 className="w-4 h-4" />
@@ -968,7 +970,7 @@ function CreateAi() {
                         <button
                           onClick={() => handleCardRegenerate(card.id)}
                           disabled={isStreaming || card.versions.length >= 5}
-                          className="p-2 text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          className="p-2 text-sage-70 hover:text-sage-80 hover:bg-sage-10 dark:text-sage-40 dark:hover:text-sage-30 dark:hover:bg-background-dark-secondary rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                           title={
                             isRegenerating
                               ? '새 버전 생성 중...'
@@ -991,7 +993,7 @@ function CreateAi() {
                             )
                           }
                           disabled={isRegenerating}
-                          className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          className="p-2 text-text-secondary hover:text-text-primary hover:bg-background-hover dark:text-text-secondary-dark dark:hover:text-text-primary-dark dark:hover:bg-background-dark-secondary rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                           title="복사하기"
                         >
                           <Copy className="w-4 h-4" />
@@ -1004,7 +1006,7 @@ function CreateAi() {
                   <div className="prose prose-gray max-w-none">
                     {card.isEditMode ? (
                       // 편집 모드
-                      <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
+                      <div className="rounded-lg p-4 border bg-background-secondary dark:bg-background-dark border-border-subtle dark:border-border-dark">
                         <div className="flex items-center gap-2 mb-3">
                           <Edit3 className="w-4 h-4 text-blue-600" />
                           <span className="text-sm font-medium text-blue-700">
@@ -1016,13 +1018,13 @@ function CreateAi() {
                           onChange={(e) =>
                             handleCardEditTextChange(card.id, e.target.value)
                           }
-                          className="w-full h-40 p-3 border border-blue-300 rounded-lg focus:outline-none focus:border-blue-500 bg-white text-gray-800 resize-none"
+                          className="w-full h-40 p-3 border border-border-subtle dark:border-border-dark rounded-lg focus:outline-none focus:border-border-focus bg-background-primary dark:bg-background-dark-secondary text-text-primary dark:text-text-primary-dark resize-none"
                           placeholder="생성된 글을 편집하세요"
                         />
                       </div>
                     ) : (
                       // ✅ Best Practice: 스트리밍 콘텐츠 즉시 표시 + 완료 후 연속성 보장
-                      <div className="text-gray-800 leading-relaxed whitespace-pre-wrap">
+                      <div className="text-text-primary dark:text-text-primary-dark leading-relaxed whitespace-pre-wrap">
                         {/* ✅ 스트리밍 중이거나 완료 직후 streamedText/accumulatedText 우선 표시 */}
                         {isStreaming &&
                         (card.sessionId === '' ||
@@ -1031,15 +1033,15 @@ function CreateAi() {
                             {streamedText ? (
                               <>
                                 {streamedText}
-                                <span className="inline-block w-px h-5 bg-gray-400 ml-1 animate-pulse"></span>
+                                <span className="inline-block w-px h-5 bg-border-strong dark:bg-border-dark ml-1 animate-pulse"></span>
                               </>
                             ) : accumulatedText ? (
                               <>
                                 {accumulatedText}
-                                <span className="inline-block w-px h-5 bg-gray-400 ml-1 animate-pulse"></span>
+                                <span className="inline-block w-px h-5 bg-border-strong dark:bg-border-dark ml-1 animate-pulse"></span>
                               </>
                             ) : (
-                              <span className="text-gray-500 italic">
+                              <span className="text-text-secondary dark:text-text-secondary-dark italic">
                                 AI 응답을 기다리는 중...
                               </span>
                             )}
@@ -1050,27 +1052,27 @@ function CreateAi() {
                             {streamedText ? (
                               <>
                                 {streamedText}
-                                <span className="inline-block w-px h-5 bg-indigo-400 ml-1 animate-pulse"></span>
+                                <span className="inline-block w-px h-5 bg-sage-60 dark:bg-sage-40 ml-1 animate-pulse"></span>
                               </>
                             ) : accumulatedText ? (
                               <>
                                 {accumulatedText}
-                                <span className="inline-block w-px h-5 bg-indigo-400 ml-1 animate-pulse"></span>
+                                <span className="inline-block w-px h-5 bg-sage-60 dark:bg-sage-40 ml-1 animate-pulse"></span>
                               </>
                             ) : (
                               <div className="flex items-center gap-2">
                                 <div className="flex gap-1">
-                                  <div className="w-1.5 h-1.5 bg-indigo-400 rounded-full animate-bounce"></div>
+                                  <div className="w-1.5 h-1.5 bg-sage-60 dark:bg-sage-40 rounded-full animate-bounce"></div>
                                   <div
-                                    className="w-1.5 h-1.5 bg-indigo-400 rounded-full animate-bounce"
+                                    className="w-1.5 h-1.5 bg-sage-60 dark:bg-sage-40 rounded-full animate-bounce"
                                     style={{ animationDelay: '0.1s' }}
                                   ></div>
                                   <div
-                                    className="w-1.5 h-1.5 bg-indigo-400 rounded-full animate-bounce"
+                                    className="w-1.5 h-1.5 bg-sage-60 dark:bg-sage-40 rounded-full animate-bounce"
                                     style={{ animationDelay: '0.2s' }}
                                   ></div>
                                 </div>
-                                <span className="text-indigo-600 text-sm">
+                                <span className="text-text-secondary dark:text-text-secondary-dark text-sm">
                                   새 버전 생성 중...
                                 </span>
                               </div>
@@ -1082,7 +1084,7 @@ function CreateAi() {
                           currentVersion.text ||
                           streamedText ||
                           accumulatedText || (
-                            <span className="text-gray-400 italic">
+                            <span className="text-text-secondary dark:text-text-secondary-dark italic">
                               텍스트가 없습니다
                             </span>
                           )
@@ -1092,7 +1094,7 @@ function CreateAi() {
                   </div>
 
                   {/* 카드 메타 정보 */}
-                  <div className="mt-4 pt-3 border-t border-gray-100 text-xs text-gray-500 flex items-center justify-between">
+                  <div className="mt-4 pt-3 border-t border-border-subtle dark:border-border-dark text-xs text-text-secondary dark:text-text-secondary-dark flex items-center justify-between">
                     <div className="flex items-center gap-4">
                       <span className="max-w-48 truncate" title={card.prompt}>
                         프롬프트: {card.prompt}
@@ -1145,7 +1147,7 @@ function CreateAi() {
 
             {/* 카드가 없을 때 안내 메시지 */}
             {!isStreaming && generatedCards.length === 0 && (
-              <div className="text-center py-12 text-gray-500">
+              <div className="text-center py-12 text-text-secondary dark:text-text-secondary-dark">
                 <div className="text-6xl mb-4">✨</div>
                 <p className="text-lg font-medium mb-2">
                   아직 생성된 글이 없습니다
@@ -1159,7 +1161,7 @@ function CreateAi() {
         {/* 하단 고정 입력 영역 - CreateChat 스타일 */}
         <div className="fixed bottom-19 lg:bottom-0 z-20  w-full max-w-2xl px-4">
           <div className="mx-auto max-w-2xl">
-            <div className="border-t border-gray-200 rounded-t-4xl bg-white/95 backdrop-blur-sm shadow-lg p-4 space-y-3">
+            <div className="border-t border-border-subtle dark:border-border-dark rounded-t-4xl bg-background-primary/95 dark:bg-background-dark-secondary/95 backdrop-blur-sm shadow-lg p-4 space-y-3">
               {/* 선택된 이미지들 미리보기 */}
               <MemoizedImagePreview
                 selectedImages={newSelectedImages}
@@ -1213,7 +1215,7 @@ function CreateAi() {
 
   // 초기 입력 화면
   return (
-    <div className="rounded-3xl bg-ivory-cream shadow-card relative p-4 sm:p-6 md:p-8 max-w-4xl mx-auto">
+    <div className="rounded-3xl bg-background-primary dark:bg-background-dark-secondary shadow-card relative p-4 sm:p-6 md:p-8 max-w-4xl mx-auto">
       <h1 className="text-2xl sm:text-3xl md:text-4xl font-poetic font-bold text-[#3F764A] text-center">
         <span className="inline-flex items-center gap-2 whitespace-nowrap">
           <span className="text-soft-rose text-xl sm:text-2xl md:text-3xl">
@@ -1223,13 +1225,13 @@ function CreateAi() {
         </span>
       </h1>
 
-      <p className="mt-2 text-sm sm:text-base text-body text-gray-600 text-center px-2">
+      <p className="mt-2 text-sm sm:text-base text-body text-text-secondary dark:text-text-secondary-dark text-center px-2">
         키워드나 짧은 글을 입력하면 AI가 감정적인 글을 생성해 드립니다
       </p>
 
       {/* 에러 메시지 표시 */}
       {(error || streamError) && (
-        <div className="mt-4 p-3 sm:p-4 bg-red-50 border border-red-200 rounded-xl mx-2">
+        <div className="mt-4 p-3 sm:p-4 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-xl mx-2">
           <div className="flex items-center gap-2">
             <svg
               className="w-4 h-4 sm:w-5 sm:h-5 text-red-500 flex-shrink-0"
@@ -1244,7 +1246,7 @@ function CreateAi() {
                 d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
               />
             </svg>
-            <p className="text-red-700 text-xs sm:text-sm font-medium">
+            <p className="text-red-700 dark:text-red-300 text-xs sm:text-sm font-medium">
               {error || streamError}
             </p>
             <button
@@ -1307,7 +1309,7 @@ function CreateAi() {
           onChange={(e) => setPrompt(e.target.value)}
           rows={3}
           placeholder="예: 바람, 초록빛 오후, 천천히 걷는 길"
-          className="w-full rounded-xl border border-border-subtle bg-white p-3 sm:p-4 pr-12 text-sm sm:text-base text-gray-900 placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-border-focus shadow-card resize-none"
+          className="w-full rounded-xl border border-border-subtle dark:border-border-dark bg-background-primary dark:bg-background-dark-secondary p-3 sm:p-4 pr-12 text-sm sm:text-base text-text-primary dark:text-text-primary-dark placeholder:text-text-secondary dark:placeholder-text-secondary-dark focus:outline-none focus:ring-2 focus:ring-border-focus shadow-card resize-none"
         />
 
         {/* 이미지 추가 버튼 - textarea 내부 오른쪽 위 */}
@@ -1315,11 +1317,11 @@ function CreateAi() {
           <button
             type="button"
             onClick={handleAddImageClick}
-            className="absolute top-2 right-2 w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center text-sage-60 hover:text-sage-80 hover:bg-sage-10 rounded-lg transition-colors"
+            className="absolute top-2 right-4 w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center text-sage-60 dark:text-sage-40 hover:text-sage-80 dark:hover:text-sage-30 hover:bg-sage-10 dark:hover:bg-background-dark-secondary rounded-lg transition-colors"
             title="이미지 추가"
           >
             <svg
-              className="w-4 h-4 sm:w-5 sm:h-5"
+              className="w-6 h-6 sm:w-7 sm:h-7"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -1351,7 +1353,7 @@ function CreateAi() {
           <div>
             <div
               id="style-label"
-              className="mb-2 block text-xs sm:text-sm text-gray-600"
+              className="mb-2 block text-xs sm:text-sm text-text-secondary dark:text-text-secondary-dark"
             >
               문체 선택
             </div>
@@ -1365,7 +1367,7 @@ function CreateAi() {
           <div>
             <div
               id="length-label"
-              className="mb-2 block text-xs sm:text-sm text-gray-600"
+              className="mb-2 block text-xs sm:text-sm text-text-secondary dark:text-text-secondary-dark"
             >
               길이 선택
             </div>
@@ -1380,7 +1382,7 @@ function CreateAi() {
 
         {/* 감정 선택 */}
         <div>
-          <div className="mb-3 block text-xs sm:text-sm text-gray-600 text-center">
+          <div className="mb-3 block text-xs sm:text-sm text-text-secondary dark:text-text-secondary-dark text-center">
             감정을 선택해주세요 😊 (선택 사항)
           </div>
           <div
@@ -1396,7 +1398,7 @@ function CreateAi() {
                 className={`flex h-12 w-12 sm:h-16 sm:w-16 items-center justify-center rounded-full border-2 text-lg sm:text-2xl transition-all ${
                   emotion === value
                     ? 'border-sage-60 bg-sage-50 shadow-md scale-110'
-                    : 'border-sage-20 bg-white hover:border-sage-40 hover:bg-sage-10 hover:scale-105'
+                    : 'border-border-subtle dark:border-border-dark bg-background-primary dark:bg-background-dark-secondary hover:border-sage-40 hover:bg-sage-10 dark:hover:bg-background-dark-secondary hover:scale-105'
                 }`}
                 aria-label={`${label} 선택`}
               >
@@ -1404,7 +1406,7 @@ function CreateAi() {
               </button>
             ))}
           </div>
-          <p className="mt-2 text-center text-xs sm:text-sm text-gray-600">
+          <p className="mt-2 text-center text-xs sm:text-sm text-text-secondary dark:text-text-secondary-dark">
             선택된 감정:{' '}
             <span className="font-medium text-sage-100">
               {emotion
@@ -1422,11 +1424,11 @@ function CreateAi() {
               type="date"
               value={selectedDate}
               onChange={(e) => setSelectedDate(e.target.value)}
-              className="px-3 py-2 border border-border-subtle rounded-lg bg-white text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-border-focus"
+              className="px-3 py-2 border border-border-subtle dark:border-border-dark rounded-lg bg-background-primary dark:bg-background-dark-secondary text-sm text-text-primary dark:text-text-primary-dark focus:outline-none focus:ring-2 focus:ring-border-focus"
               max={new Date().toISOString().split('T')[0]} // 오늘까지만 선택 가능
             />
           </div>
-          <p className="mt-2 text-center text-xs sm:text-sm text-gray-600">
+          <p className="mt-2 text-center text-xs sm:text-sm text-text-secondary dark:text-text-secondary-dark">
             선택된 날짜:{' '}
             <span className="font-medium text-sage-100">
               {selectedDate

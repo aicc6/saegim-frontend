@@ -159,6 +159,18 @@
 /* ==========  다크 모드 변형 (클래스 기반)  ========== */
 
 .dark {
+  /* Sage 다크 모드 재정의 */
+  --sage-10: #111827;
+  --sage-20: #1f2937;
+  --sage-30: #374151;
+  --sage-40: #4b5563;
+  --sage-50: #6b7280;
+  --sage-60: #9ca3af;
+  --sage-70: #d1d5db;
+  --sage-80: #e5e7eb;
+  --sage-90: #f3f4f6;
+  --sage-100: #f9fafb;
+
   /* 배경 시스템 */
   --background-primary: #0f1419;
   --background-secondary: #1a1f2e;

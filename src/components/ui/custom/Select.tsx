@@ -101,13 +101,13 @@ export default function Select({
         aria-label={ariaLabel}
         onClick={() => setIsOpen((o) => !o)}
         onKeyDown={onKeyDown}
-        className={`w-full rounded-2xl border border-border-subtle bg-white p-3.5 text-left text-body text-gray-900 focus:outline-none focus:ring-2 focus:ring-border-focus shadow-card flex items-center justify-between ${
+        className={`w-full rounded-2xl border border-border-subtle dark:border-border-dark bg-background-primary dark:bg-background-dark-secondary p-3.5 text-left text-body text-text-primary dark:text-text-primary-dark focus:outline-none focus:ring-2 focus:ring-border-focus shadow-card flex items-center justify-between ${
           buttonClassName ?? ''
         }`}
       >
         <span>{selected?.label ?? placeholder ?? '선택'}</span>
         <svg
-          className="h-5 w-5 text-gray-600"
+          className="h-5 w-5 text-text-secondary dark:text-text-secondary-dark"
           viewBox="0 0 24 24"
           fill="none"
           stroke="currentColor"
@@ -124,7 +124,7 @@ export default function Select({
           ref={listRef}
           role="listbox"
           tabIndex={-1}
-          className="absolute left-0 right-0 mt-2 max-h-64 overflow-auto rounded-2xl border border-border-subtle bg-white shadow-card z-20"
+          className="absolute left-0 right-0 mt-2 max-h-64 overflow-auto rounded-2xl border border-border-subtle dark:border-border-dark bg-background-primary dark:bg-background-dark-secondary shadow-card z-20"
         >
           {options.map((opt, idx) => {
             const isSelected = opt.value === value;
@@ -148,13 +148,13 @@ export default function Select({
                     setIsOpen(false);
                   }
                 }}
-                className={`px-3.5 py-2.5 cursor-pointer text-body ${
+                className={`px-3.5 py-2.5 cursor-pointer text-body text-text-primary dark:text-text-primary-dark ${
                   isHighlighted
-                    ? 'bg-background-hover'
+                    ? 'bg-background-hover dark:bg-background-dark'
                     : isSelected
-                      ? 'bg-background-secondary'
-                      : 'bg-white'
-                } text-gray-900 hover:bg-background-hover ${optionClassName ?? ''}`}
+                      ? 'bg-background-secondary dark:bg-background-dark'
+                      : 'bg-background-primary dark:bg-background-dark-secondary'
+                } hover:bg-background-hover dark:hover:bg-background-dark ${optionClassName ?? ''}`}
               >
                 {opt.label}
               </li>
