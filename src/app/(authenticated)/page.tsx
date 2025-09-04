@@ -12,7 +12,7 @@ function HomeContent() {
   logger.debug('CreateAi 컴포넌트 렌더링 시작');
 
   return (
-    <div className="flex bg-background-primary dark:bg-background-dark items-center justify-center min-h-dvh">
+    <div className="flex bg-sage-20 dark:bg-background-dark items-center justify-center min-h-dvh">
       <main className="w-full max-w-2xl px-4 animate-page-transition">
         <CreateAi />
       </main>
