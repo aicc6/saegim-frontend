@@ -1,13 +1,15 @@
 // 공통 타입 정의
 import type { EmotionType } from './diary';
 
+export type UserProvider = 'google' | 'kakao' | 'naver' | 'email';
+
 export interface User {
   id: string;
   email: string;
   name: string;
   nickname?: string;
   profileImage?: string;
-  provider: 'google' | 'kakao' | 'naver' | 'email';
+  provider: UserProvider;
   createdAt: string;
 }
 

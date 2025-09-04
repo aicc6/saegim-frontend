@@ -20,6 +20,7 @@ import {
 import { cn } from '@/lib/utils';
 import { calendarApi } from '@/lib/api/calendar';
 import { authApi } from '@/lib/api/auth';
+import { UserProvider } from '@/types';
 
 const logger = getLogger('calendar');
 
@@ -388,9 +389,7 @@ export default function CalendarPage() {
               email: userInfo.email || '',
               name: userInfo.nickname || '',
               profileImage: '',
-              provider:
-                (userInfo.provider as 'email' | 'google' | 'kakao' | 'naver') ||
-                'email',
+              provider: (userInfo.provider as UserProvider) || 'email',
               createdAt: userInfo.created_at || new Date().toISOString(),
             });
 
