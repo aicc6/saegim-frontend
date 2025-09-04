@@ -166,11 +166,15 @@ export default function LoginForm({ redirectTo }: LoginFormProps) {
 
         if (
           errorMessage.includes('401') ||
-          errorMessage.includes('unauthorized')
+          errorMessage.includes('unauthorized') ||
+          errorMessage.includes('이메일 또는 비밀번호')
         ) {
           errorTitle = '인증 실패';
           errorDescription = '이메일 또는 비밀번호가 올바르지 않습니다.';
-        } else if (errorMessage.includes('password')) {
+        } else if (
+          errorMessage.includes('password') &&
+          !errorMessage.includes('이메일 또는')
+        ) {
           errorTitle = '비밀번호 오류';
           errorDescription =
             '비밀번호가 변경되었을 수 있습니다. 비밀번호 찾기를 이용해주세요.';
