@@ -3,6 +3,8 @@ import { useState, useCallback, useRef, useEffect } from 'react';
 export const useImageHandler = (maxImages: number = 3) => {
   const [selectedImages, setSelectedImages] = useState<File[]>([]);
   const [imageUrls, setImageUrls] = useState<string[]>([]);
+  // 최신 URL 목록을 보관하여 언마운트 시 정리할 때 사용
+  const imageUrlsRef = useRef<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleImageSelect = useCallback(
@@ -57,12 +59,17 @@ export const useImageHandler = (maxImages: number = 3) => {
     setSelectedImages([]);
   }, [imageUrls]);
 
-  // Cleanup URLs on unmount
+  // 최신 URL 목록을 ref에 동기화
+  useEffect(() => {
+    imageUrlsRef.current = imageUrls;
+  }, [imageUrls]);
+
+  // 언마운트 시에만 URL 정리 (의도치 않은 URL 해제 방지)
   useEffect(() => {
     return () => {
-      imageUrls.forEach((url) => URL.revokeObjectURL(url));
+      imageUrlsRef.current.forEach((url) => URL.revokeObjectURL(url));
     };
-  }, [imageUrls]);
+  }, []);
 
   return {
     selectedImages,
