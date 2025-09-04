@@ -246,6 +246,7 @@ function CreateAi() {
     null,
   );
   const [selectedDate, setSelectedDate] = useState<string>(''); // 선택된 날짜 상태
+  const [isDarkMode, setIsDarkMode] = useState(false); // 다크모드 상태
 
   const {
     config,
@@ -405,6 +406,24 @@ function CreateAi() {
     return () => {
       setRegeneratingCardId(null);
     };
+  }, []);
+
+  // 다크모드 상태 감지
+  useEffect(() => {
+    const checkDarkMode = () => {
+      setIsDarkMode(document.documentElement.classList.contains('dark'));
+    };
+
+    checkDarkMode();
+
+    // 다크모드 변경 감지
+    const observer = new MutationObserver(checkDarkMode);
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['class'],
+    });
+
+    return () => observer.disconnect();
   }, []);
 
   // ChatUI 관련 훅들 추가
@@ -1302,39 +1321,59 @@ function CreateAi() {
         </div>
       )}
 
-      {/* textarea와 이미지 추가 버튼 */}
-      <div className="relative mt-4 sm:mt-6 px-2">
-        <textarea
-          value={prompt}
-          onChange={(e) => setPrompt(e.target.value)}
-          rows={3}
-          placeholder="예: 바람, 초록빛 오후, 천천히 걷는 길"
-          className="w-full rounded-xl border border-border-subtle dark:border-border-dark bg-background-primary dark:bg-background-dark-secondary p-3 sm:p-4 pr-12 text-sm sm:text-base text-text-primary dark:text-text-primary-dark placeholder:text-text-secondary dark:placeholder-text-secondary-dark focus:outline-none focus:ring-2 focus:ring-border-focus shadow-card resize-none"
-        />
+      {/* 글쓰기 폼 - 날짜 선택 포함 */}
+      <div className="mt-4 sm:mt-6 px-2">
+        <div className="bg-background-primary dark:bg-background-dark-secondary rounded-xl border border-border-subtle dark:border-border-dark shadow-card overflow-hidden">
+          {/* 헤더 - 날짜 선택과 이미지 추가 버튼 */}
+          <div className="flex items-center justify-between px-4 py-3 bg-sage-5/30 dark:bg-background-dark/30">
+            {/* 날짜 선택 - 왼쪽 */}
+            <input
+              type="date"
+              value={selectedDate}
+              onChange={(e) => setSelectedDate(e.target.value)}
+              className="px-3 py-1.5 text-sm border border-sage-30 dark:border-sage-40 rounded-lg text-sage-90 focus:outline-none focus:ring-2 focus:ring-sage-50 dark:text-white dark:focus:ring-sage-40"
+              style={{
+                backgroundColor: isDarkMode ? '#1f2937' : 'white',
+                color: isDarkMode ? 'white' : '#1f2937',
+              }}
+              max={new Date().toISOString().split('T')[0]}
+            />
+            {/* 이미지 추가 버튼 - 오른쪽 */}
+            {canAddMore && (
+              <button
+                type="button"
+                onClick={handleAddImageClick}
+                className="w-8 h-8 flex items-center justify-center text-sage-60 dark:text-sage-40 hover:text-sage-80 dark:hover:text-sage-30 hover:bg-sage-10 dark:hover:bg-background-dark-secondary rounded-lg transition-colors"
+                title="이미지 추가"
+              >
+                <svg
+                  className="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 002 2z"
+                  />
+                </svg>
+              </button>
+            )}
+          </div>
 
-        {/* 이미지 추가 버튼 - textarea 내부 오른쪽 위 */}
-        {canAddMore && (
-          <button
-            type="button"
-            onClick={handleAddImageClick}
-            className="absolute top-2 right-4 w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center text-sage-60 dark:text-sage-40 hover:text-sage-80 dark:hover:text-sage-30 hover:bg-sage-10 dark:hover:bg-background-dark-secondary rounded-lg transition-colors"
-            title="이미지 추가"
-          >
-            <svg
-              className="w-6 h-6 sm:w-7 sm:h-7"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 002 2z"
-              />
-            </svg>
-          </button>
-        )}
+          {/* textarea 영역 */}
+          <div className="p-4">
+            <textarea
+              value={prompt}
+              onChange={(e) => setPrompt(e.target.value)}
+              rows={4}
+              placeholder="예: 바람, 초록빛 오후, 천천히 걷는 길"
+              className="w-full text-sm sm:text-base text-sage-200 placeholder:text-sage-100/70 dark:placeholder:text-sage-40/70 focus:outline-none resize-none bg-sage-5/20 dark:bg-sage-40/10 rounded-lg p-3 border border-sage-20/50 dark:border-sage-40/30 focus:border-sage-40 dark:focus:border-sage-30 transition-colors"
+            />
+          </div>
+        </div>
 
         {/* 숨겨진 파일 input */}
         <input
@@ -1416,37 +1455,12 @@ function CreateAi() {
             </span>
           </p>
         </div>
-
-        {/* 날짜 선택 */}
-        <div>
-          <div className="flex justify-center">
-            <input
-              type="date"
-              value={selectedDate}
-              onChange={(e) => setSelectedDate(e.target.value)}
-              className="px-3 py-2 border border-border-subtle dark:border-border-dark rounded-lg bg-background-primary dark:bg-background-dark-secondary text-sm text-text-primary dark:text-text-primary-dark focus:outline-none focus:ring-2 focus:ring-border-focus"
-              max={new Date().toISOString().split('T')[0]} // 오늘까지만 선택 가능
-            />
-          </div>
-          <p className="mt-2 text-center text-xs sm:text-sm text-text-secondary dark:text-text-secondary-dark">
-            선택된 날짜:{' '}
-            <span className="font-medium text-sage-100">
-              {selectedDate
-                ? new Date(selectedDate).toLocaleDateString('ko-KR', {
-                    year: 'numeric',
-                    month: 'long',
-                    day: 'numeric',
-                  })
-                : '날짜 선택 안함 (오늘 날짜로 저장)'}
-            </span>
-          </p>
-        </div>
       </div>
 
       <button
         onClick={handleGenerateText}
         disabled={isStreaming || !prompt.trim()}
-        className="mt-6 sm:mt-8 w-full rounded-xl bg-sage-90 px-4 sm:px-6 py-3 sm:py-4 text-sm sm:text-base md:text-lg font-semibold text-text-on-color hover:bg-sage-100 active:bg-sage-80 disabled:opacity-40 transition-colors shadow-card mx-2"
+        className="mt-6 sm:mt-8 w-full rounded-xl bg-sage-90 dark:bg-sage-80 px-4 sm:px-6 py-3 sm:py-4 text-sm sm:text-base md:text-lg font-semibold text-white dark:text-sage-10 hover:bg-sage-100 dark:hover:bg-sage-70 active:bg-sage-80 dark:active:bg-sage-90 disabled:opacity-40 transition-colors shadow-card mx-2"
       >
         {isStreaming ? (
           <span className="inline-flex items-center justify-center gap-2">
