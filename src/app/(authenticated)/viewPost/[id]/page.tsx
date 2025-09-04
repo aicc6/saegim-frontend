@@ -16,6 +16,7 @@ import PageHeader from '@/components/common/PageHeader';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { showSuccess, showError } from '@/hooks/use-modal';
+import { useDarkMode } from '@/hooks/use-dark-mode';
 import DeleteConfirmModal from '@/components/diary/DeleteConfirmModal';
 
 const emotionLabels = {
@@ -44,6 +45,7 @@ export default function ViewPostPage({
   const router = useRouter();
   const { toast } = useToast();
   const { id: entryId } = use(params); // React.use()로 params unwrap
+  const isDarkMode = useDarkMode();
   const {
     diaries,
     currentDiary,
@@ -780,9 +782,13 @@ export default function ViewPostPage({
 
           <div className="flex-1 bg-ivory-cream p-8 min-h-0 overflow-auto">
             <div className="max-w-4xl mx-auto">
-              <div className="bg-white rounded-lg border-2 border-sage-30 p-8 shadow-sm relative">
+              <div
+                className={`${isDarkMode ? '' : 'bg-white'} rounded-lg border-2 border-sage-30 p-8 shadow-sm relative`}
+              >
                 {/* 로딩 오버레이 */}
-                <div className="absolute inset-0 bg-white/80 backdrop-blur-sm rounded-lg flex items-center justify-center z-10">
+                <div
+                  className={`absolute inset-0 ${isDarkMode ? 'bg-black/80' : 'bg-white/80'} backdrop-blur-sm rounded-lg flex items-center justify-center z-10`}
+                >
                   <div className="text-center">
                     <div className="inline-block h-8 w-8 animate-spin rounded-full border-2 border-sage-30 border-t-sage-70 mb-4"></div>
                     <p className="text-sage-100 font-medium">
@@ -897,7 +903,9 @@ export default function ViewPostPage({
       <div className="flex-1 bg-ivory-cream p-8 min-h-0 overflow-auto">
         <div className="max-w-4xl mx-auto">
           {/* 메인 콘텐츠 영역 */}
-          <div className="bg-white rounded-lg border-2 border-sage-30 p-8 shadow-sm">
+          <div
+            className={`${isDarkMode ? '' : 'bg-white'} rounded-lg border-2 border-sage-30 p-8 shadow-sm`}
+          >
             {/* 감정 및 키워드 섹션 - 수평 배치 */}
             <div className="flex gap-6 mb-6">
               {/* 감정 섹션 - 크기 축소 */}
@@ -937,7 +945,9 @@ export default function ViewPostPage({
 
                         {/* 감정 선택 드롭다운 */}
                         {showEmotionSelector && (
-                          <div className="absolute top-full left-0 mt-1 bg-white border border-sage-30 rounded-md shadow-lg z-10 min-w-[200px]">
+                          <div
+                            className={`absolute top-full left-0 mt-1 ${isDarkMode ? 'bg-gray-800' : 'bg-white'} border border-sage-30 rounded-md shadow-lg z-10 min-w-[200px]`}
+                          >
                             {emotionOptions.map((emotionOption) => (
                               <button
                                 key={emotionOption}
@@ -967,7 +977,7 @@ export default function ViewPostPage({
                             </span>
                           </>
                         ) : (
-                          <span className="text-sage-100 font-medium text-gray-500">
+                          <span className="text-sage-100 font-medium">
                             설정되지 않음
                           </span>
                         )}
@@ -1003,7 +1013,7 @@ export default function ViewPostPage({
 
                   {/* 감정이 모두 없는 경우 */}
                   {!entry.user_emotion && !entry.ai_emotion && (
-                    <div className="text-sage-100 font-medium text-gray-500">
+                    <div className="text-sage-100 font-medium">
                       감정 정보가 없습니다
                     </div>
                   )}
@@ -1071,7 +1081,7 @@ export default function ViewPostPage({
                             </span>
                           ))
                         ) : (
-                          <span className="text-sage-100 font-medium text-gray-500">
+                          <span className="text-sage-100 font-medium">
                             설정되지 않음
                           </span>
                         )}
@@ -1180,7 +1190,7 @@ export default function ViewPostPage({
                 <textarea
                   value={editedContent}
                   onChange={(e) => setEditedContent(e.target.value)}
-                  className="w-full h-96 p-4 border-2 border-sage-30 rounded-lg focus:outline-none focus:border-sage-70 bg-white text-sage-100 resize-none text-base leading-relaxed"
+                  className={`w-full h-96 p-4 border-2 border-sage-30 rounded-lg focus:outline-none focus:border-sage-70 ${isDarkMode ? 'bg-transparent' : 'bg-white'} text-sage-100 resize-none text-base leading-relaxed`}
                   placeholder="[글 본문]"
                 />
               ) : (
@@ -1333,6 +1343,7 @@ export default function ViewPostPage({
         onClose={() => setShowImageOptionsModal(false)}
         onLoadExisting={handleLoadExistingImages}
         onUploadNew={handleUploadNewImage}
+        isDarkMode={isDarkMode}
       />
 
       {/* 삭제 확인 모달 */}
@@ -1353,17 +1364,21 @@ const ImageOptionsModal = ({
   onClose,
   onLoadExisting,
   onUploadNew,
+  isDarkMode,
 }: {
   isOpen: boolean;
   onClose: () => void;
   onLoadExisting: () => void;
   onUploadNew: () => void;
+  isDarkMode: boolean;
 }) => {
   if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg p-6 w-80 max-w-md">
+      <div
+        className={`${isDarkMode ? 'bg-gray-800' : 'bg-white'} rounded-lg p-6 w-80 max-w-md`}
+      >
         <h3 className="text-lg font-semibold text-gray-900 mb-4">
           이미지 불러오기 옵션
         </h3>
