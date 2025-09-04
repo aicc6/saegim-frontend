@@ -85,17 +85,63 @@ export default function ProfileForm() {
       const response = await authApi.getCurrentUser();
       const profile = response.data;
 
+      // 프로필 이미지 우선순위: localStorage > 서버 데이터 > 전역 상태
+      let profileImage = profile.profile_image || authUser?.profileImage || '';
+
+      // localStorage에서 프로필 이미지 확인 및 복원
+      if (typeof window !== 'undefined') {
+        try {
+          // 여러 저장소에서 확인
+          const storageKeys = [
+            'saegim-profile-image',
+            'saegim-profile-image-backup',
+            'saegim-user-profile-image',
+            'user-profile-image-saegim',
+          ];
+
+          let foundImage = null;
+          for (const key of storageKeys) {
+            const savedImage = localStorage.getItem(key);
+            if (savedImage) {
+              foundImage = savedImage;
+              logger.info(
+                `ProfileForm: ${key}에서 프로필 이미지 복원됨:`,
+                savedImage,
+              );
+              break;
+            }
+          }
+
+          if (foundImage) {
+            profileImage = foundImage;
+            // 메인 저장소로 복원
+            localStorage.setItem('saegim-profile-image', foundImage);
+          } else {
+            logger.info(
+              'ProfileForm: 저장된 프로필 이미지 없음, 서버 데이터 사용:',
+              profile.profile_image,
+            );
+          }
+        } catch (error) {
+          logger.warn('ProfileForm: 프로필 이미지 복원 실패:', error);
+        }
+      }
+
       setProfileData({
         nickname: profile.nickname,
         email: profile.email,
-        profileImage: profile.profile_image || authUser?.profileImage || '',
+        profileImage: profileImage,
         accountType: profile.account_type,
         provider: profile.provider || '',
       });
       setOriginalNickname(profile.nickname);
-      setOriginalProfileImage(
-        profile.profile_image || authUser?.profileImage || '',
-      );
+      setOriginalProfileImage(profileImage);
+
+      // 전역 상태도 복원된 프로필 이미지로 동기화
+      updateUser({
+        nickname: profile.nickname,
+        profileImage: profileImage,
+      });
     } catch (error) {
       logger.error('프로필 로드 실패', { error });
       toast({
@@ -106,7 +152,7 @@ export default function ProfileForm() {
     } finally {
       setIsLoading(false);
     }
-  }, [toast, authUser?.profileImage]);
+  }, [toast, authUser?.profileImage, updateUser]);
 
   // 프로필 정보 로드
   useEffect(() => {
@@ -156,78 +202,321 @@ export default function ProfileForm() {
         return;
       }
 
-      // 다이어리 이미지 업로드 API를 사용하여 프로필 사진 업로드
+      // 프로필 이미지 전용 업로드 API 사용
       const formData = new FormData();
-      formData.append('images', file);
+      formData.append('image', file);
 
       const response = await apiClient.upload(
-        '/api/diary/images/upload',
+        '/api/auth/profile/upload-image',
         formData,
       );
 
+      logger.info('업로드 응답 전체 구조:', {
+        response: response,
+        responseData: response.data,
+        responseType: typeof response.data,
+        responseKeys: response.data ? Object.keys(response.data) : [],
+        fullResponse: JSON.stringify(response, null, 2),
+      });
+
+      // 응답 구조 상세 분석
+      logger.info('응답 구조 상세 분석:', {
+        'response.success': response.success,
+        'response.message': response.message,
+        'response.timestamp': response.timestamp,
+        'response.request_id': response.request_id,
+        'response.data type': typeof response.data,
+        'response.data value': response.data,
+        'response.data keys': response.data
+          ? Object.keys(response.data)
+          : 'N/A',
+        'response.data stringified': JSON.stringify(response.data, null, 2),
+      });
+
+      // 다양한 응답 구조 처리
+      let imageUrl: string | null = null;
+
+      // 1. response.data.image_url 확인
       if (
         response.data &&
-        Array.isArray(response.data) &&
-        response.data.length > 0
+        typeof response.data === 'object' &&
+        'image_url' in response.data
       ) {
-        const uploadedImage = response.data[0] as {
-          file_id: string;
-          original_url: string;
-          thumbnail_url: string;
-          mime_type: string;
-          file_size: number;
-          filename: string;
-        };
-        const imageUrl =
-          uploadedImage.thumbnail_url || uploadedImage.original_url;
+        imageUrl = (response.data as { image_url: string }).image_url;
+        logger.info('이미지 URL을 response.data.image_url에서 찾음:', imageUrl);
+      }
+      // 2. response.data 자체가 URL인 경우
+      else if (response.data && typeof response.data === 'string') {
+        imageUrl = response.data;
+        logger.info('이미지 URL을 response.data에서 찾음 (문자열):', imageUrl);
+      }
+      // 3. response 자체에 image_url이 있는 경우
+      else if ('image_url' in response) {
+        imageUrl = (response as { image_url: string }).image_url;
+        logger.info('이미지 URL을 response.image_url에서 찾음:', imageUrl);
+      }
+      // 4. response.data가 객체인 경우 다양한 필드명 시도
+      else if (response.data && typeof response.data === 'object') {
+        const possibleFields = [
+          'image_url',
+          'imageUrl',
+          'url',
+          'profile_image',
+          'profileImage',
+          'image',
+          'file_url',
+          'fileUrl',
+          'upload_url',
+          'uploadUrl',
+          'path',
+          'filename',
+          'location',
+          'uri',
+          'link',
+          'file_path',
+          'image_path',
+          'thumbnail_url',
+          'thumbnailUrl',
+        ];
 
-        // 로컬 상태 업데이트
+        for (const field of possibleFields) {
+          if (
+            field in response.data &&
+            typeof (response.data as Record<string, unknown>)[field] ===
+              'string'
+          ) {
+            imageUrl = (response.data as Record<string, string>)[field];
+            logger.info(
+              `이미지 URL을 response.data.${field}에서 찾음:`,
+              imageUrl,
+            );
+            break;
+          }
+        }
+      }
+      // 5. response 자체에서 다양한 필드명 시도
+      else {
+        const possibleFields = [
+          'image_url',
+          'imageUrl',
+          'url',
+          'profile_image',
+          'profileImage',
+          'image',
+          'file_url',
+          'fileUrl',
+          'upload_url',
+          'uploadUrl',
+          'path',
+          'filename',
+          'location',
+          'uri',
+          'link',
+          'file_path',
+          'image_path',
+          'thumbnail_url',
+          'thumbnailUrl',
+        ];
+
+        for (const field of possibleFields) {
+          if (
+            field in (response as unknown as Record<string, unknown>) &&
+            typeof (response as unknown as Record<string, unknown>)[field] ===
+              'string'
+          ) {
+            imageUrl = (response as unknown as Record<string, string>)[field];
+            logger.info(`이미지 URL을 response.${field}에서 찾음:`, imageUrl);
+            break;
+          }
+        }
+      }
+
+      if (imageUrl) {
+        // 즉시 UI에 반영 (업로드된 이미지 URL 사용)
         setProfileData((prev) => ({
           ...prev,
-          profileImage: imageUrl,
+          profileImage: imageUrl as string,
         }));
 
-        // 전역 상태 즉시 업데이트 (네비게이션에 즉시 반영)
-        updateUser({ profileImage: imageUrl });
+        setOriginalProfileImage(imageUrl as string);
 
-        // 프로필 사진 URL을 DB에 즉시 저장
-        try {
-          await authApi.updateProfile({
-            nickname: profileData.nickname,
-            profile_image_url: imageUrl,
-          });
+        // 전역 상태 즉시 업데이트 (사이드바 등에 즉시 반영)
+        updateUser({ profileImage: imageUrl as string });
 
-          // 원본 프로필 이미지 업데이트
-          setOriginalProfileImage(imageUrl);
+        // 프로필 이미지를 localStorage에 별도로 저장 (로그아웃 후에도 유지)
+        if (typeof window !== 'undefined') {
+          try {
+            // 메인 저장소에 저장
+            localStorage.setItem('saegim-profile-image', imageUrl);
+            logger.info('프로필 이미지를 localStorage에 저장:', imageUrl);
 
-          // 로컬 상태도 전역 상태와 동기화
-          setProfileData((prev) => ({
-            ...prev,
-            profileImage: imageUrl,
-          }));
+            // 백업 저장소에도 저장
+            localStorage.setItem('saegim-profile-image-backup', imageUrl);
+            logger.info('프로필 이미지 백업 저장 완료');
 
-          logger.info('프로필 사진 DB 저장 완료');
+            // 추가 보안: 여러 키로 저장
+            localStorage.setItem('saegim-user-profile-image', imageUrl);
+            localStorage.setItem('user-profile-image-saegim', imageUrl);
 
-          // 성공 안내 모달 표시
-          toast({
-            title: '✅ 프로필 이미지 업데이트 완료',
-            description: '프로필 이미지가 성공적으로 업데이트되었습니다.',
-            duration: 3000,
-          });
-        } catch (error) {
-          logger.error('프로필 사진 DB 저장 실패:', error);
-          toast({
-            title: '⚠️ 저장 실패',
-            description:
-              '프로필 이미지 업로드는 완료되었지만 저장에 실패했습니다. 다시 시도해주세요.',
-            variant: 'destructive',
-            duration: 5000,
-          });
+            // 저장 확인
+            const savedImage = localStorage.getItem('saegim-profile-image');
+            const backupImage = localStorage.getItem(
+              'saegim-profile-image-backup',
+            );
+            if (savedImage === imageUrl && backupImage === imageUrl) {
+              logger.info('프로필 이미지 localStorage 저장 확인 성공');
+            } else {
+              logger.warn('프로필 이미지 localStorage 저장 확인 실패');
+            }
+          } catch (error) {
+            logger.error('프로필 이미지 localStorage 저장 실패:', error);
+          }
         }
+
+        // 디버깅을 위한 로그
+        logger.info('전역 상태 업데이트 완료:', {
+          profileImage: imageUrl,
+          timestamp: new Date().toISOString(),
+        });
+
+        // 전역 상태 업데이트 확인 및 사이드바 강제 리렌더링
+        setTimeout(() => {
+          const currentUser = useAuthStore.getState().user;
+          logger.info('전역 상태 업데이트 확인:', {
+            currentProfileImage: currentUser?.profileImage,
+            expectedProfileImage: imageUrl,
+            isMatch: currentUser?.profileImage === imageUrl,
+          });
+
+          // 사이드바 강제 리렌더링을 위한 이벤트 발생
+          window.dispatchEvent(
+            new CustomEvent('sidebar-force-update', {
+              detail: { profileImage: imageUrl, timestamp: Date.now() },
+            }),
+          );
+
+          // 추가로 전역 상태 변경 이벤트도 발생
+          window.dispatchEvent(
+            new CustomEvent('auth-update', {
+              detail: { user: currentUser },
+            }),
+          );
+
+          // 전역 상태를 다시 한 번 강제로 업데이트
+          if (currentUser && currentUser.profileImage !== imageUrl) {
+            logger.warn('전역 상태 불일치 감지, 재업데이트 시도');
+            updateUser({ profileImage: imageUrl as string });
+          }
+        }, 100);
+
+        // 성공 안내 토스트 표시
+        toast({
+          title: '✅ 프로필 이미지 업로드 완료',
+          description:
+            '프로필 이미지가 성공적으로 업로드되었습니다. 사이드바에도 반영됩니다.',
+          duration: 3000,
+        });
 
         logger.info('프로필 사진 업로드 성공:', imageUrl);
       } else {
-        throw new Error('업로드 응답 형식이 올바르지 않습니다.');
+        // 이미지 URL을 찾지 못한 경우 추가 시도
+        logger.warn('기본 경로에서 이미지 URL을 찾지 못함, 추가 시도 중...');
+
+        // 다양한 필드명으로 시도
+        const possibleFields = [
+          'image_url',
+          'imageUrl',
+          'url',
+          'profile_image',
+          'profileImage',
+          'image',
+          'file_url',
+          'fileUrl',
+          'upload_url',
+          'uploadUrl',
+          'path',
+          'filename',
+          'location',
+          'uri',
+          'link',
+        ];
+
+        for (const field of possibleFields) {
+          if (
+            response.data &&
+            typeof response.data === 'object' &&
+            response.data !== null &&
+            field in response.data &&
+            typeof (response.data as Record<string, unknown>)[field] ===
+              'string'
+          ) {
+            imageUrl = (response.data as Record<string, string>)[field];
+            logger.info(`이미지 URL을 ${field} 필드에서 찾음:`, imageUrl);
+            break;
+          }
+        }
+
+        if (imageUrl) {
+          // 이미지 URL을 찾았으면 처리 계속
+          setProfileData((prev) => ({
+            ...prev,
+            profileImage: imageUrl as string,
+          }));
+
+          setOriginalProfileImage(imageUrl as string);
+          updateUser({ profileImage: imageUrl as string });
+
+          // localStorage에 저장
+          if (typeof window !== 'undefined') {
+            try {
+              const storageKeys = [
+                'saegim-profile-image',
+                'saegim-profile-image-backup',
+                'saegim-user-profile-image',
+                'user-profile-image-saegim',
+              ];
+
+              storageKeys.forEach((key) => {
+                localStorage.setItem(key, imageUrl as string);
+              });
+
+              logger.info('프로필 이미지를 localStorage에 저장됨:', imageUrl);
+            } catch (error) {
+              logger.error('프로필 이미지 localStorage 저장 실패:', error);
+            }
+          }
+
+          toast({
+            title: '✅ 프로필 이미지 업로드 완료',
+            description: '프로필 이미지가 성공적으로 업로드되었습니다.',
+            duration: 3000,
+          });
+
+          logger.info('프로필 사진 업로드 성공 (대체 필드):', imageUrl);
+        } else {
+          // 이미지 URL을 찾지 못한 경우 상세한 디버깅 정보 제공
+          logger.error('이미지 URL을 찾을 수 없음 - 상세 디버깅 정보:', {
+            'response 전체': response,
+            'response.data': response.data,
+            'response.data 타입': typeof response.data,
+            'response.data 값': response.data,
+            'response.data 키들': response.data
+              ? Object.keys(response.data as Record<string, unknown>)
+              : 'N/A',
+            'response 키들': Object.keys(
+              response as unknown as Record<string, unknown>,
+            ),
+            'response.success': response.success,
+            'response.message': response.message,
+            'response.timestamp': response.timestamp,
+            'response.request_id': response.request_id,
+            '전체 응답 JSON': JSON.stringify(response, null, 2),
+          });
+
+          throw new Error(
+            `업로드 응답에서 이미지 URL을 찾을 수 없습니다. 응답 구조: ${JSON.stringify(response, null, 2)}`,
+          );
+        }
       }
     } catch (error) {
       logger.error('프로필 사진 업로드 실패:', error);
@@ -266,11 +555,37 @@ export default function ProfileForm() {
       setOriginalNickname(profileData.nickname);
       setOriginalProfileImage(profileData.profileImage);
 
-      // 전역 상태 즉시 업데이트 (네비게이션에 즉시 반영)
+      // 전역 상태 동기화 (사이드바 등에 반영)
       updateUser({
         nickname: profileData.nickname,
         profileImage: profileData.profileImage,
       });
+
+      // 프로필 이미지를 localStorage에도 저장 (업데이트 시에도)
+      if (profileData.profileImage && typeof window !== 'undefined') {
+        try {
+          const storageKeys = [
+            'saegim-profile-image',
+            'saegim-profile-image-backup',
+            'saegim-user-profile-image',
+            'user-profile-image-saegim',
+          ];
+
+          storageKeys.forEach((key) => {
+            localStorage.setItem(key, profileData.profileImage);
+          });
+
+          logger.info(
+            'ProfileForm: 프로필 업데이트 시 localStorage에 저장됨:',
+            profileData.profileImage,
+          );
+        } catch (error) {
+          logger.warn(
+            'ProfileForm: 프로필 업데이트 시 localStorage 저장 실패:',
+            error,
+          );
+        }
+      }
 
       toast({
         title:

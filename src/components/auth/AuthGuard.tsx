@@ -15,7 +15,7 @@ interface AuthGuardProps {
 
 export default function AuthGuard({ children }: AuthGuardProps) {
   const router = useRouter();
-  const { clearStorage } = useAuthStore();
+  const { clearStorage, updateUser } = useAuthStore();
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthorized, setIsAuthorized] = useState(false);
 
@@ -36,6 +36,57 @@ export default function AuthGuard({ children }: AuthGuardProps) {
         if (!userData.user_id || !userData.email) {
           throw new Error('Invalid user data: missing required fields');
         }
+
+        // localStorage에서 프로필 이미지 복원 (우선순위: localStorage > 백업들 > 서버 데이터)
+        let profileImage = userData.profile_image || '';
+        if (typeof window !== 'undefined') {
+          try {
+            // 여러 저장소에서 확인
+            const storageKeys = [
+              'saegim-profile-image',
+              'saegim-profile-image-backup',
+              'saegim-user-profile-image',
+              'user-profile-image-saegim',
+            ];
+
+            let foundImage = null;
+            for (const key of storageKeys) {
+              const savedImage = localStorage.getItem(key);
+              if (savedImage) {
+                foundImage = savedImage;
+                logger.info(
+                  `AuthGuard: ${key}에서 프로필 이미지 복원됨:`,
+                  savedImage,
+                );
+                break;
+              }
+            }
+
+            if (foundImage) {
+              profileImage = foundImage;
+              // 메인 저장소로 복원
+              localStorage.setItem('saegim-profile-image', foundImage);
+            } else {
+              logger.info(
+                'AuthGuard: 저장된 프로필 이미지 없음, 서버 데이터 사용:',
+                userData.profile_image,
+              );
+            }
+          } catch (error) {
+            logger.warn('AuthGuard: 프로필 이미지 복원 실패:', error);
+          }
+        }
+
+        // 전역 상태에 사용자 정보 저장 (프로필 이미지 포함)
+        updateUser({
+          id: userData.user_id,
+          email: userData.email,
+          name: userData.nickname || userData.email,
+          nickname: userData.nickname || userData.email,
+          profileImage: profileImage,
+          provider: userData.provider || 'email',
+          createdAt: new Date().toISOString(),
+        });
 
         // 서버 인증 및 데이터 검증 모두 통과
         setIsAuthorized(true);
@@ -83,7 +134,7 @@ export default function AuthGuard({ children }: AuthGuardProps) {
     };
 
     checkAuth();
-  }, [router, clearStorage]);
+  }, [router, clearStorage, updateUser]);
 
   if (isLoading) {
     return (

@@ -30,6 +30,46 @@ export const useAuthStore = create<AuthState>()(
 
         login: (user: User) => {
           const now = Date.now();
+
+          // localStorage에서 프로필 이미지 복원 (우선순위: localStorage > 백업들 > 서버 데이터)
+          if (typeof window !== 'undefined') {
+            try {
+              // 여러 저장소에서 확인
+              const storageKeys = [
+                'saegim-profile-image',
+                'saegim-profile-image-backup',
+                'saegim-user-profile-image',
+                'user-profile-image-saegim',
+              ];
+
+              let foundImage = null;
+              for (const key of storageKeys) {
+                const savedImage = localStorage.getItem(key);
+                if (savedImage) {
+                  foundImage = savedImage;
+                  console.log(
+                    `로그인 시 ${key}에서 프로필 이미지 복원됨:`,
+                    savedImage,
+                  );
+                  break;
+                }
+              }
+
+              if (foundImage) {
+                user.profileImage = foundImage;
+                // 메인 저장소로 복원
+                localStorage.setItem('saegim-profile-image', foundImage);
+              } else {
+                console.log(
+                  '저장된 프로필 이미지 없음, 서버 데이터 사용:',
+                  user.profileImage,
+                );
+              }
+            } catch (error) {
+              console.warn('프로필 이미지 복원 실패:', error);
+            }
+          }
+
           set({
             user,
             isAuthenticated: true,
@@ -48,6 +88,23 @@ export const useAuthStore = create<AuthState>()(
         },
 
         logout: () => {
+          // 로그아웃 전에 현재 프로필 이미지를 localStorage에 보존
+          const currentUser = get().user;
+          if (currentUser?.profileImage && typeof window !== 'undefined') {
+            try {
+              localStorage.setItem(
+                'saegim-profile-image',
+                currentUser.profileImage,
+              );
+              console.log(
+                '로그아웃 시 프로필 이미지 보존됨:',
+                currentUser.profileImage,
+              );
+            } catch (error) {
+              console.warn('로그아웃 시 프로필 이미지 보존 실패:', error);
+            }
+          }
+
           set({
             user: null,
             isAuthenticated: false,
@@ -67,6 +124,7 @@ export const useAuthStore = create<AuthState>()(
             const updatedUser = { ...currentUser, ...userData };
             set({
               user: updatedUser,
+              isAuthenticated: true, // 인증 상태 유지
               lastActivity: Date.now(),
             });
 
@@ -123,21 +181,46 @@ export const useAuthStore = create<AuthState>()(
         },
 
         clearStorage: () => {
-          // 세션 스토리지에서 인증 정보 완전 삭제
+          // 로컬 스토리지에서 인증 정보 완전 삭제
           if (typeof window !== 'undefined') {
             // auth-storage만 삭제 (다른 앱의 데이터 보호)
-            sessionStorage.removeItem('auth-storage');
+            localStorage.removeItem('auth-storage');
 
-            // 모든 sessionStorage 항목 삭제 (auth 관련)
-            Object.keys(sessionStorage).forEach((key) => {
+            // 모든 localStorage 항목 삭제 (auth 관련) - 프로필 이미지는 제외
+            const protectedKeys = [
+              'saegim-profile-image',
+              'saegim-profile-image-backup',
+              'saegim-user-profile-image',
+              'user-profile-image-saegim',
+            ];
+
+            Object.keys(localStorage).forEach((key) => {
               if (
                 key.includes('auth') ||
                 key.includes('user') ||
                 key.includes('token')
               ) {
-                sessionStorage.removeItem(key);
+                // 프로필 이미지 관련 키들은 삭제하지 않음
+                if (!protectedKeys.includes(key)) {
+                  localStorage.removeItem(key);
+                }
               }
             });
+
+            // 프로필 이미지 유지 확인 로그
+            const savedImage = localStorage.getItem('saegim-profile-image');
+            const backupImage = localStorage.getItem(
+              'saegim-profile-image-backup',
+            );
+            if (savedImage) {
+              console.log('로그아웃 후 프로필 이미지 유지됨:', savedImage);
+            }
+            if (backupImage) {
+              console.log(
+                '로그아웃 후 프로필 이미지 백업 유지됨:',
+                backupImage,
+              );
+            }
           }
           // Zustand 스토어도 초기화
           set({
@@ -152,14 +235,14 @@ export const useAuthStore = create<AuthState>()(
         name: 'auth-storage',
         storage: {
           getItem: (name: string) => {
-            const value = sessionStorage.getItem(name);
+            const value = localStorage.getItem(name);
             return value ? JSON.parse(value) : null;
           },
           setItem: (name: string, value: unknown) => {
-            sessionStorage.setItem(name, JSON.stringify(value));
+            localStorage.setItem(name, JSON.stringify(value));
           },
           removeItem: (name: string) => {
-            sessionStorage.removeItem(name);
+            localStorage.removeItem(name);
           },
         },
         partialize: (state) => ({

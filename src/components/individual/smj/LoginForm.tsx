@@ -67,17 +67,52 @@ export default function LoginForm({ redirectTo }: LoginFormProps) {
         password: data.password,
       });
 
-      // 로그인 성공 시 사용자 정보를 스토어에 저장
+      // 로그인 성공 시 백엔드에서 사용자 정보를 가져와서 스토어에 저장
       const userData = response.data;
       if (userData && typeof userData === 'object' && 'user_id' in userData) {
-        login({
-          id: userData.user_id as string,
-          email: userData.email as string,
-          name: userData.nickname as string, // 백엔드에서는 nickname, 프론트엔드에서는 name
-          profileImage: '',
-          provider: 'email',
-          createdAt: new Date().toISOString(),
-        });
+        // 백엔드에서 최신 사용자 정보 조회 (프로필 이미지 포함)
+        try {
+          const currentUserResponse = await authApi.getCurrentUser();
+          if (currentUserResponse.success && currentUserResponse.data) {
+            const currentUser = currentUserResponse.data;
+
+            // 백엔드의 최신 정보로 로그인
+            login({
+              id: currentUser.user_id,
+              email: currentUser.email,
+              name: currentUser.nickname,
+              nickname: currentUser.nickname,
+              profileImage: currentUser.profile_image || '',
+              provider: currentUser.provider || 'email',
+              createdAt: new Date().toISOString(),
+            });
+          } else {
+            // 백엔드 조회 실패 시 기본 정보로 로그인
+            login({
+              id: userData.user_id as string,
+              email: userData.email as string,
+              name: userData.nickname as string,
+              nickname: userData.nickname as string,
+              profileImage: '',
+              provider: 'email',
+              createdAt: new Date().toISOString(),
+            });
+          }
+        } catch (userInfoError) {
+          logger.warn('사용자 정보 조회 실패, 기본 정보로 로그인', {
+            userInfoError,
+          });
+          // 백엔드 조회 실패 시 기본 정보로 로그인
+          login({
+            id: userData.user_id as string,
+            email: userData.email as string,
+            name: userData.nickname as string,
+            nickname: userData.nickname as string,
+            profileImage: '',
+            provider: 'email',
+            createdAt: new Date().toISOString(),
+          });
+        }
       } else {
         throw new Error('잘못된 응답 형식입니다.');
       }

@@ -292,8 +292,9 @@ class ApiClient {
       }
 
       const data = await response.json();
-      logger.debug('✅ ApiClient: 파일 업로드 성공');
+      logger.debug('✅ ApiClient: 파일 업로드 성공', { data });
 
+      // 백엔드에서 이미 BaseResponse 형식으로 응답하므로 그대로 반환
       return data;
     } catch (error) {
       logger.error('❌ ApiClient: 파일 업로드 실패', error);

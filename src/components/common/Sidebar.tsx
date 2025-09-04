@@ -24,7 +24,6 @@ import { useNotifications } from '@/hooks/use-notifications';
 import { useAuthStore } from '@/stores/auth';
 import { useFCMStore } from '@/stores/fcm';
 import { authApi, getLogger } from '@/lib';
-import { AuthUserResponse } from '@/types/api';
 import ThemeToggle from '../ui/custom/ThemeToggle';
 import NotificationPopover from './NotificationPopover';
 
@@ -39,8 +38,7 @@ const navigation = [
 export function Sidebar() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
-  const [userInfo, setUserInfo] = useState<AuthUserResponse | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [forceUpdate, setForceUpdate] = useState(0); // 강제 리렌더링을 위한 상태
   const { isCollapsed, setIsCollapsed } = useSidebar();
   const { resolvedTheme } = useTheme();
   const pathname = usePathname();
@@ -58,28 +56,105 @@ export function Sidebar() {
     markAllAsRead: fcmMarkAllAsRead,
   } = useFCMStore();
 
-  // 사용자 정보 가져오기
+  // 전역 상태에서 사용자 정보 사용 (ProfileForm에서 updateUser 호출 시 자동 반영)
+
+  // 전역 상태를 직접 구독하여 변경 감지
   useEffect(() => {
-    const fetchUserInfo = async () => {
-      try {
-        const response = await authApi.getCurrentUser();
-        if (response.data) {
-          setUserInfo(response.data as AuthUserResponse);
-        }
-      } catch (error) {
-        logger.error('사용자 정보 가져오기 실패', { error });
-      } finally {
-        setIsLoading(false);
-      }
+    const unsubscribe = useAuthStore.subscribe(
+      (state) => state.user,
+      (user) => {
+        logger.info('사이드바: 전역 상태 직접 구독으로 변경 감지:', {
+          hasProfileImage: !!user?.profileImage,
+          profileImage: user?.profileImage,
+          nickname: user?.nickname,
+        });
+        // 강제 리렌더링 트리거
+        setForceUpdate((prev) => prev + 1);
+      },
+    );
+
+    return unsubscribe;
+  }, []);
+
+  // 전역 상태 변경 감지 (프로필 이미지 업데이트 시 즉시 반영)
+  useEffect(() => {
+    // authUser가 변경될 때마다 사이드바가 자동으로 리렌더링됨
+    // 이는 useAuthStore의 subscribeWithSelector 덕분에 자동으로 처리됨
+    logger.info('사이드바 사용자 정보 업데이트:', {
+      hasProfileImage: !!authUser?.profileImage,
+      profileImage: authUser?.profileImage,
+      nickname: authUser?.nickname,
+    });
+
+    // 강제 리렌더링 트리거
+    setForceUpdate((prev) => prev + 1);
+  }, [authUser]);
+
+  // 전역 상태 변경 이벤트 리스너 추가
+  useEffect(() => {
+    const handleAuthUpdate = (event: CustomEvent) => {
+      logger.info('사이드바: 전역 상태 변경 이벤트 수신:', event.detail);
+      // 강제 리렌더링 트리거
+      setForceUpdate((prev) => prev + 1);
     };
 
-    if (mounted) {
-      fetchUserInfo();
-    }
-  }, [mounted]);
+    const handleSidebarForceUpdate = (event: CustomEvent) => {
+      logger.info('사이드바: 강제 업데이트 이벤트 수신:', event.detail);
+      // 강제 리렌더링 트리거
+      setForceUpdate((prev) => prev + 1);
+
+      // 전역 상태에서 최신 정보 가져오기
+      const currentUser = useAuthStore.getState().user;
+      logger.info('사이드바: 강제 업데이트 후 전역 상태 확인:', {
+        currentUser: currentUser,
+        profileImage: currentUser?.profileImage,
+      });
+    };
+
+    window.addEventListener('auth-update', handleAuthUpdate as EventListener);
+    window.addEventListener(
+      'sidebar-force-update',
+      handleSidebarForceUpdate as EventListener,
+    );
+
+    return () => {
+      window.removeEventListener(
+        'auth-update',
+        handleAuthUpdate as EventListener,
+      );
+      window.removeEventListener(
+        'sidebar-force-update',
+        handleSidebarForceUpdate as EventListener,
+      );
+    };
+  }, []);
+
+  // 디버깅을 위한 로그
+  useEffect(() => {
+    logger.info('사이드바 마운트/업데이트:', {
+      hasProfileImage: !!authUser?.profileImage,
+      profileImage: authUser?.profileImage,
+      nickname: authUser?.nickname,
+      fullUser: authUser,
+      forceUpdate,
+    });
+  }, [authUser, forceUpdate]);
 
   const handleLogout = async () => {
     try {
+      // 로그아웃 전에 현재 프로필 이미지를 localStorage에 보존
+      if (authUser?.profileImage && typeof window !== 'undefined') {
+        try {
+          localStorage.setItem('saegim-profile-image', authUser.profileImage);
+          logger.info(
+            '사이드바: 로그아웃 시 프로필 이미지 보존됨:',
+            authUser.profileImage,
+          );
+        } catch (error) {
+          logger.warn('사이드바: 로그아웃 시 프로필 이미지 보존 실패:', error);
+        }
+      }
+
       // 백엔드에 로그아웃 요청
       await authApi.logout();
 
@@ -101,6 +176,20 @@ export function Sidebar() {
       }, 100);
     } catch (error) {
       logger.error('로그아웃 처리 중 오류', { error });
+
+      // 에러 발생 시에도 프로필 이미지 보존
+      if (authUser?.profileImage && typeof window !== 'undefined') {
+        try {
+          localStorage.setItem('saegim-profile-image', authUser.profileImage);
+          logger.info(
+            '사이드바: 에러 발생 시에도 프로필 이미지 보존됨:',
+            authUser.profileImage,
+          );
+        } catch (error) {
+          logger.warn('사이드바: 에러 발생 시 프로필 이미지 보존 실패:', error);
+        }
+      }
+
       // 에러가 발생해도 클라이언트 상태는 정리하고 로그인 페이지로 이동
       logout();
 
@@ -128,7 +217,48 @@ export function Sidebar() {
   const isDark = resolvedTheme === 'dark';
 
   // 사용자 표시 이름 (닉네임이 있으면 닉네임, 없으면 이메일)
-  const displayName = userInfo?.nickname || userInfo?.email || '사용자';
+  const displayName = authUser?.nickname || authUser?.email || '사용자';
+
+  // 프로필 이미지 우선순위: 전역 상태 > localStorage > 백업 > 추가 백업들
+  const getProfileImage = () => {
+    if (authUser?.profileImage) return authUser.profileImage;
+    if (typeof window !== 'undefined') {
+      try {
+        // 여러 저장소에서 확인
+        const storageKeys = [
+          'saegim-profile-image',
+          'saegim-profile-image-backup',
+          'saegim-user-profile-image',
+          'user-profile-image-saegim',
+        ];
+
+        for (const key of storageKeys) {
+          const savedImage = localStorage.getItem(key);
+          if (savedImage) {
+            logger.info(`사이드바: ${key}에서 프로필 이미지 로드:`, savedImage);
+
+            // 메인 저장소가 아니면 복원
+            if (key !== 'saegim-profile-image') {
+              localStorage.setItem('saegim-profile-image', savedImage);
+              logger.info('사이드바: 프로필 이미지 메인 저장소로 복원됨');
+            }
+
+            return savedImage;
+          }
+        }
+
+        logger.info('사이드바: 모든 저장소에서 프로필 이미지를 찾을 수 없음');
+      } catch (error) {
+        logger.error(
+          '사이드바: localStorage에서 프로필 이미지 로드 실패:',
+          error,
+        );
+      }
+    }
+    return null;
+  };
+
+  const profileImage = getProfileImage();
 
   return (
     <>
@@ -165,9 +295,9 @@ export function Sidebar() {
                           : 'text-sage-70 hover:text-sage-100'
                     }`}
                   >
-                    {authUser?.profileImage ? (
+                    {profileImage ? (
                       <Image
-                        src={authUser.profileImage}
+                        src={profileImage}
                         alt="프로필 이미지"
                         width={20}
                         height={20}
@@ -206,9 +336,9 @@ export function Sidebar() {
                           : 'text-sage-70 hover:text-sage-100'
                     }`}
                   >
-                    {authUser?.profileImage ? (
+                    {profileImage ? (
                       <Image
-                        src={authUser.profileImage}
+                        src={profileImage}
                         alt="프로필 이미지"
                         width={20}
                         height={20}
@@ -217,7 +347,7 @@ export function Sidebar() {
                     ) : (
                       <User className="mr-3 h-5 w-5" />
                     )}
-                    {!isLoading && displayName}
+                    {displayName}
                   </Button>
                 </Link>
                 <Button
@@ -359,9 +489,9 @@ export function Sidebar() {
                 }`}
                 onClick={() => setIsMobileMenuOpen(false)}
               >
-                {authUser?.profileImage ? (
+                {profileImage ? (
                   <Image
-                    src={authUser.profileImage}
+                    src={profileImage}
                     alt="프로필 이미지"
                     width={24}
                     height={24}
@@ -370,7 +500,7 @@ export function Sidebar() {
                 ) : (
                   <User className="mr-4 h-6 w-6" />
                 )}
-                {!isLoading && displayName}
+                {displayName}
               </Link>
 
               <div className="flex items-center space-x-2">
