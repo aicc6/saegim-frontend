@@ -125,26 +125,58 @@ export const EmotionPieChart = memo(function EmotionPieChart({
                     background: isFullCircle
                       ? `conic-gradient(from ${rotation}deg, ${item.color} 0deg, ${item.color} 360deg)`
                       : `conic-gradient(from ${rotation}deg, ${item.color} 0deg, ${item.color} ${item.percentage * 3.6}deg, transparent ${item.percentage * 3.6}deg)`,
-                    mask: 'radial-gradient(circle, transparent 40px, black 40px)',
+                    mask: 'radial-gradient(circle, transparent 32px, black 32px)',
                     WebkitMask:
-                      'radial-gradient(circle, transparent 40px, black 40px)',
+                      'radial-gradient(circle, transparent 32px, black 32px)',
                   }}
                 />
               );
             })}
 
-            {/* 중앙 원 */}
+            {/* 중앙 원 - 크기 축소 */}
             <div className="absolute inset-0 flex items-center justify-center">
-              <div className="w-20 h-20 bg-background-primary rounded-full border-2 border-border-subtle flex items-center justify-center">
+              <div className="w-16 h-16 bg-background-primary rounded-full border-2 border-border-subtle flex items-center justify-center">
                 <div className="text-center">
-                  <div className="text-h3 font-bold text-text-primary">
+                  <div className="text-lg font-bold text-text-primary">
                     {total}
                   </div>
-                  <div className="text-caption text-text-secondary">
-                    총 기록
-                  </div>
+                  <div className="text-xs text-text-secondary">총 기록</div>
                 </div>
               </div>
+            </div>
+
+            {/* 모바일용 이모티콘 표시 (760px 미만에서만) */}
+            <div className="absolute inset-0 md:hidden">
+              {chartData.map((item, index) => {
+                // 각 섹션의 중앙 각도 계산
+                const midAngle = (item.startAngle + item.endAngle) / 2;
+                const radians = (midAngle * Math.PI) / 180;
+
+                // 차트 중심에서 70px 떨어진 위치에 이모티콘 배치 (배경색의 중앙쯤 위치)
+                const radius = 65;
+                const x = 100 + radius * Math.cos(radians - Math.PI / 2); // -90도 회전하여 12시 방향부터 시작
+                const y = 100 + radius * Math.sin(radians - Math.PI / 2);
+
+                return (
+                  <div
+                    key={item.emotion}
+                    className="absolute transform -translate-x-1/2 -translate-y-1/2"
+                    style={{
+                      left: `${x}px`,
+                      top: `${y}px`,
+                    }}
+                  >
+                    <div className="flex flex-col items-center">
+                      <div className="text-lg font-bold">
+                        {EMOTION_EMOJIS[item.emotion]}
+                      </div>
+                      <div className="text-xs font-bold text-white drop-shadow-lg">
+                        {item.percentage.toFixed(0)}%
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
         </div>
