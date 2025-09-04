@@ -48,6 +48,7 @@ export interface AuthUserResponse {
   nickname?: string;
   account_type?: string;
   profile_image?: string;
+  provider?: string;
 }
 
 export interface EmailTokenVerificationResponse {
