@@ -77,6 +77,21 @@ export default function AuthGuard({ children }: AuthGuardProps) {
           }
         }
 
+        // provider 타입 안전성 검증
+        const validProviders: readonly (
+          | 'google'
+          | 'kakao'
+          | 'naver'
+          | 'email'
+        )[] = ['google', 'kakao', 'naver', 'email'];
+        const provider =
+          userData.provider &&
+          validProviders.includes(
+            userData.provider as 'google' | 'kakao' | 'naver' | 'email',
+          )
+            ? (userData.provider as 'google' | 'kakao' | 'naver' | 'email')
+            : 'email';
+
         // 전역 상태에 사용자 정보 저장 (프로필 이미지 포함)
         updateUser({
           id: userData.user_id,
@@ -84,7 +99,7 @@ export default function AuthGuard({ children }: AuthGuardProps) {
           name: userData.nickname || userData.email,
           nickname: userData.nickname || userData.email,
           profileImage: profileImage,
-          provider: userData.provider || 'email',
+          provider: provider,
           createdAt: new Date().toISOString(),
         });
 

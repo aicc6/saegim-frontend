@@ -150,7 +150,7 @@ export const EmotionPieChart = memo(function EmotionPieChart({
 
             {/* 모바일용 이모티콘 표시 (760px 미만에서만) */}
             <div className="absolute inset-0 md:hidden">
-              {chartData.map((item, index) => {
+              {chartData.map((item, _index) => {
                 // 각 섹션의 중앙 각도 계산
                 const midAngle = (item.startAngle + item.endAngle) / 2;
                 const radians = (midAngle * Math.PI) / 180;

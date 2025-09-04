@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import Image from 'next/image';
 import { FormInput } from '@/components/ui/form-input';
 import { useApiError } from '@/hooks/use-api-error';
 import { apiClient } from '@/lib/api/client';
@@ -172,9 +173,11 @@ export default function SupportForm() {
           {imagePreview ? (
             // 이미지 미리보기
             <div className="mt-2 relative">
-              <img
+              <Image
                 src={imagePreview}
                 alt="업로드된 이미지"
+                width={400}
+                height={192}
                 className="w-full max-w-md h-48 object-cover rounded-lg border border-border-subtle dark:border-border-dark"
               />
               <button
