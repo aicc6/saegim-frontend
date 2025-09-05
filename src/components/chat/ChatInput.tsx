@@ -1,5 +1,6 @@
 import { CiLocationArrow1 } from 'react-icons/ci';
 import type { RefObject, KeyboardEvent } from 'react';
+import { useDarkMode } from '@/hooks/use-dark-mode';
 
 interface ChatInputProps {
   textareaRef: RefObject<HTMLTextAreaElement | null>;
@@ -28,6 +29,7 @@ export const ChatInput = ({
   selectedDate,
   onDateChange,
 }: ChatInputProps) => {
+  const isDarkMode = useDarkMode();
   return (
     <div className="space-y-3">
       {/* 메시지 입력란 */}
@@ -42,7 +44,7 @@ export const ChatInput = ({
             }}
             rows={1}
             placeholder="메시지를 입력하세요..."
-            className="w-full rounded-2xl border border-gray-300 bg-white px-4 py-3 pr-10 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500 shadow-sm resize-none min-h-[44px]"
+            className={`w-full rounded-2xl border border-gray-300 ${isDarkMode ? 'bg-black text-white' : 'bg-white text-gray-900'} px-4 py-3 pr-10 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500 shadow-sm resize-none min-h-[44px]`}
             onKeyDown={onKeyDown}
           />
 

@@ -1,5 +1,6 @@
 import { WritingStyle, LengthOption } from '@/stores/create';
 import { EmotionOption, EmotionConfig } from '@/stores/emotion';
+import { useDarkMode } from '@/hooks/use-dark-mode';
 
 interface ChatOptionsProps {
   config: {
@@ -27,6 +28,7 @@ export const ChatOptions = ({
   onEmotionChange,
   onKeyDown,
 }: ChatOptionsProps) => {
+  const isDarkMode = useDarkMode();
   return (
     <div className="flex items-center gap-2 text-sm">
       <div className="flex gap-2">
@@ -34,10 +36,20 @@ export const ChatOptions = ({
           value={tempStyle}
           onChange={(e) => onStyleChange(e.target.value as WritingStyle)}
           onKeyDown={onKeyDown}
-          className="rounded-lg border border-gray-200 bg-white px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-green-500"
+          className={`saegim-select-darkable rounded-lg border ${
+            isDarkMode
+              ? 'border-gray-600 bg-black text-white'
+              : 'border-gray-200 bg-white text-gray-900'
+          } px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-green-500`}
         >
           {config.styles.map((option) => (
-            <option key={option.value} value={option.value}>
+            <option
+              key={option.value}
+              value={option.value}
+              className={
+                isDarkMode ? 'bg-black text-white' : 'bg-white text-gray-900'
+              }
+            >
               {option.label}
             </option>
           ))}
@@ -46,10 +58,20 @@ export const ChatOptions = ({
           value={tempLength}
           onChange={(e) => onLengthChange(e.target.value as LengthOption)}
           onKeyDown={onKeyDown}
-          className="rounded-lg border border-gray-200 bg-white px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-green-500"
+          className={`saegim-select-darkable rounded-lg border ${
+            isDarkMode
+              ? 'border-gray-600 bg-black text-white'
+              : 'border-gray-200 bg-white text-gray-900'
+          } px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-green-500`}
         >
           {config.lengths.map((option) => (
-            <option key={option.value} value={option.value}>
+            <option
+              key={option.value}
+              value={option.value}
+              className={
+                isDarkMode ? 'bg-black text-white' : 'bg-white text-gray-900'
+              }
+            >
               {option.label}
             </option>
           ))}
