@@ -96,6 +96,7 @@ export const aiApi = {
       file_size: number;
       filename: string;
     }> | null;
+    diary_date?: string;
   }): Promise<Response> => {
     const requestBody: Record<string, unknown> = {
       prompt: data.prompt,
@@ -104,6 +105,7 @@ export const aiApi = {
       emotion: data.emotion || '',
       ...(data.sessionId && { session_id: data.sessionId }),
       ...(data.uploaded_images && { uploaded_images: data.uploaded_images }),
+      ...(data.diary_date && { diary_date: data.diary_date }),
     };
 
     // apiClient의 스트리밍 메소드 사용

@@ -200,6 +200,7 @@ export const useStreaming = () => {
       emotion?: string;
       sessionId?: string;
       images?: File[];
+      diaryDate?: string;
     }) => {
       try {
         // 기존 연결 정리
@@ -278,6 +279,7 @@ export const useStreaming = () => {
           emotion: data.emotion || '',
           sessionId: data.sessionId,
           uploaded_images: uploadedImages,
+          diary_date: data.diaryDate,
         });
 
         if (!response.ok) {

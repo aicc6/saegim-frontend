@@ -18,9 +18,9 @@ import { useSimpleToast } from '@/hooks/use-simple-toast';
 import { enhancedToast } from '@/lib/enhanced-toast';
 import { useTempOptions } from '@/hooks/use-temp-options';
 import { useChatUi } from '@/hooks/use-chat-ui';
-import { ChatInput } from '@/components/chat/ChatInput';
 import { ChatOptions } from '@/components/chat/ChatOptions';
 import { ImagePreview } from '@/components/chat/ImagePreview';
+import { ChatInput } from '../chat/ChatInput';
 import Select from '../ui/custom/Select';
 
 const logger = getLogger('CreateAi');
@@ -76,6 +76,8 @@ interface GeneratedTextCard {
   isEditMode: boolean;
   editedText: string;
   createdAt: Date;
+  // 카드가 생성될 당시 사용자가 선택한 날짜 (YYYY-MM-DD)
+  diaryDate?: string;
   // AI 생성 시 사용된 이미지 정보 (서버 업로드 후 결과)
   uploadedImages?: Array<{
     file_id: string;
@@ -522,6 +524,7 @@ function CreateAi() {
           style: currentStyle,
           length: currentLength,
           emotion: currentEmotion,
+          diaryDate: selectedDate || undefined,
           versions: [initialVersion],
           currentVersionIndex: 0,
           isEditMode: false,
@@ -571,6 +574,7 @@ function CreateAi() {
     length,
     tempEmotion,
     emotion,
+    selectedDate,
     clearNewImages,
     resetState,
     uploadedImages,
@@ -595,6 +599,7 @@ function CreateAi() {
         length,
         emotion: emotion || null,
         sessionId: '', // startStreaming에서 업데이트됨
+        diaryDate: selectedDate || undefined,
         versions: [
           {
             id: `version-${Date.now()}`,
@@ -639,6 +644,7 @@ function CreateAi() {
     showValidationAlert,
     startStreaming,
     selectedImages,
+    selectedDate,
   ]);
 
   // 이미지 선택 상태 관리 함수들
@@ -751,7 +757,7 @@ function CreateAi() {
             currentVersion.keywords.length > 0
               ? currentVersion.keywords
               : undefined,
-          diary_date: selectedDate || undefined, // 선택된 날짜 포함
+          diary_date: card.diaryDate || selectedDate || undefined, // 카드 고유 날짜 우선
           is_public: false,
           // AI 생성 시 사용된 이미지 포함 (이미 서버에 업로드됨)
           uploaded_images:
@@ -876,6 +882,7 @@ function CreateAi() {
         length: tempLength,
         emotion: tempEmotion || undefined,
         images: newSelectedImages.length > 0 ? newSelectedImages : undefined,
+        diaryDate: selectedDate || undefined,
       });
       setTimeout(scrollToBottom, 200);
     } catch (error) {
@@ -888,6 +895,7 @@ function CreateAi() {
     tempLength,
     tempEmotion,
     newSelectedImages,
+    selectedDate,
     validateForm,
     showValidationAlert,
     startStreaming,
@@ -1137,14 +1145,17 @@ function CreateAi() {
                       )}
                     </div>
                     <div className="flex items-center gap-4">
-                      {/* 선택된 날짜 표시 */}
+                      {/* 선택된 날짜 표시 (카드 고유 날짜 사용) */}
                       <span className="text-sage-600 font-medium">
                         선택된날짜:{' '}
-                        {selectedDate
-                          ? new Date(selectedDate).toLocaleDateString('ko-KR', {
-                              month: 'long',
-                              day: 'numeric',
-                            })
+                        {card.diaryDate
+                          ? new Date(card.diaryDate).toLocaleDateString(
+                              'ko-KR',
+                              {
+                                month: 'long',
+                                day: 'numeric',
+                              },
+                            )
                           : '오늘 날짜로 저장'}
                       </span>
                       <span>
@@ -1204,6 +1215,8 @@ function CreateAi() {
                 onGenerate={handleNewFormGenerate}
                 onAddImageClick={handleNewAddImageClick}
                 adjustTextareaHeight={adjustTextareaHeight}
+                selectedDate={selectedDate}
+                onDateChange={setSelectedDate}
               />
 
               <input
