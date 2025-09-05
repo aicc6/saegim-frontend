@@ -1377,9 +1377,13 @@ const ImageOptionsModal = ({
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div
-        className={`${isDarkMode ? 'bg-gray-800' : 'bg-white'} rounded-lg p-6 w-80 max-w-md`}
+        className={`${isDarkMode ? 'bg-gray-800' : 'bg-white'} rounded-lg p-6 w-90 max-w-md`}
       >
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">
+        <h3
+          className={`text-lg font-semibold mb-4 ${
+            isDarkMode ? 'text-white' : 'text-gray-900'
+          }`}
+        >
           이미지 불러오기 옵션
         </h3>
         <div className="space-y-3">
@@ -1394,10 +1398,10 @@ const ImageOptionsModal = ({
               <span className="text-2xl">🔄</span>
               <div>
                 <div className="font-medium">기존 이미지 불러오기</div>
-                <div className="text-sm text-sage-20">
+                <div className="text-sm text-white/90">
                   데이터베이스에서 저장된 이미지
                 </div>
-                <div className="text-xs text-sage-30 mt-1">
+                <div className="text-xs text-white/70 mt-1">
                   삭제된 이미지도 복원됩니다
                 </div>
               </div>
@@ -1409,13 +1413,13 @@ const ImageOptionsModal = ({
               onUploadNew();
               onClose();
             }}
-            className="w-full px-4 py-3 bg-blue-500 hover:bg-blue-600 text-white rounded-md transition-colors text-left"
+            className="w-full px-4 py-3 bg-blue-300 hover:bg-blue-400 text-white rounded-md transition-colors text-left"
           >
             <div className="flex items-center space-x-3">
               <span className="text-2xl">📁</span>
               <div>
                 <div className="font-medium">새 이미지 업로드</div>
-                <div className="text-sm text-blue-200">
+                <div className="text-sm text-white/90">
                   로컬에서 새 이미지 선택
                 </div>
               </div>
@@ -1426,7 +1430,11 @@ const ImageOptionsModal = ({
         <div className="mt-6 flex justify-end">
           <button
             onClick={onClose}
-            className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
+            className={`px-4 py-2 transition-colors ${
+              isDarkMode
+                ? 'text-gray-100 hover:text-gray-500'
+                : 'text-gray-900 hover:text-gray-500'
+            }`}
           >
             취소
           </button>
