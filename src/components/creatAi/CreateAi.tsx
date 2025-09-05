@@ -21,6 +21,7 @@ import { useChatUi } from '@/hooks/use-chat-ui';
 import { ChatOptions } from '@/components/chat/ChatOptions';
 import { ImagePreview } from '@/components/chat/ImagePreview';
 import { TimePicker } from '@/components/ui/custom/TimePicker';
+import { useSidebar } from '@/contexts/sidebar-context';
 import { ChatInput } from '../chat/ChatInput';
 import Select from '../ui/custom/Select';
 
@@ -242,6 +243,7 @@ ImageSelectionUI.displayName = 'ImageSelectionUI';
 // 메인 컴포넌트
 function CreateAi() {
   const router = useRouter();
+  const { isCollapsed } = useSidebar();
   const [showResults, setShowResults] = useState(false);
   const [newPrompt, setNewPrompt] = useState('');
   const [generatedCards, setGeneratedCards] = useState<GeneratedTextCard[]>([]);
@@ -1248,9 +1250,13 @@ function CreateAi() {
           </div>
         </div>
 
-        {/* 하단 고정 입력 영역 - CreateChat 스타일 */}
-        <div className="fixed bottom-19 lg:bottom-0 z-20  w-full max-w-2xl px-4">
-          <div className="mx-auto max-w-2xl">
+        {/* 하단 고정 입력 영역 - 사이드바 제외 중앙 정렬 */}
+        <div
+          className={`fixed bottom-19 lg:bottom-0 z-20 left-0 right-0 px-4 ${
+            isCollapsed ? 'lg:left-16' : 'lg:left-64'
+          }`}
+        >
+          <div className="mx-auto max-w-2xl w-full">
             <div className="border-t border-border-subtle dark:border-border-dark rounded-t-4xl bg-background-primary/95 dark:bg-background-dark-secondary/95 backdrop-blur-sm shadow-lg p-4 space-y-3">
               {/* 선택된 이미지들 미리보기 */}
               <MemoizedImagePreview
