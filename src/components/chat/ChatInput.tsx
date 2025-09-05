@@ -1,6 +1,7 @@
 import { CiLocationArrow1 } from 'react-icons/ci';
 import type { RefObject, KeyboardEvent } from 'react';
 import { useDarkMode } from '@/hooks/use-dark-mode';
+import { TimePicker } from '@/components/ui/custom/TimePicker';
 
 interface ChatInputProps {
   textareaRef: RefObject<HTMLTextAreaElement | null>;
@@ -14,6 +15,9 @@ interface ChatInputProps {
   adjustTextareaHeight: () => void;
   selectedDate?: string;
   onDateChange?: (date: string) => void;
+  selectedTime?: string;
+  onTimeChange?: (time: string) => void;
+  onConfirmDateTime?: () => void;
 }
 
 export const ChatInput = ({
@@ -28,8 +32,16 @@ export const ChatInput = ({
   adjustTextareaHeight,
   selectedDate,
   onDateChange,
+  selectedTime,
+  onTimeChange,
+  onConfirmDateTime,
 }: ChatInputProps) => {
   const isDarkMode = useDarkMode();
+  const isPastOrNotToday = (() => {
+    if (!selectedDate) return false;
+    const todayStr = new Date().toISOString().split('T')[0];
+    return selectedDate < todayStr; // 과거 날짜에서만 시간 노출
+  })();
   return (
     <div className="space-y-3">
       {/* 메시지 입력란 */}
@@ -83,7 +95,7 @@ export const ChatInput = ({
 
       {/* 날짜 선택 */}
       {onDateChange && (
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3 flex-wrap">
           <label
             htmlFor="date-picker"
             className="text-sm text-gray-600 font-medium"
@@ -97,6 +109,19 @@ export const ChatInput = ({
             onChange={(e) => onDateChange(e.target.value)}
             className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
           />
+          {isPastOrNotToday && onTimeChange && (
+            <>
+              <span className="text-sm text-gray-600 font-medium">
+                시간 선택:
+              </span>
+              <TimePicker
+                value={selectedTime || '11:00'}
+                onChange={onTimeChange}
+                onConfirm={onConfirmDateTime}
+                dark={isDarkMode}
+              />
+            </>
+          )}
         </div>
       )}
     </div>

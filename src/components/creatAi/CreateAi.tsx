@@ -20,6 +20,7 @@ import { useTempOptions } from '@/hooks/use-temp-options';
 import { useChatUi } from '@/hooks/use-chat-ui';
 import { ChatOptions } from '@/components/chat/ChatOptions';
 import { ImagePreview } from '@/components/chat/ImagePreview';
+import { TimePicker } from '@/components/ui/custom/TimePicker';
 import { ChatInput } from '../chat/ChatInput';
 import Select from '../ui/custom/Select';
 
@@ -252,6 +253,7 @@ function CreateAi() {
     const today = new Date();
     return today.toISOString().split('T')[0];
   }); // 선택된 날짜 상태
+  const [selectedTime, setSelectedTime] = useState<string>(''); // 과거 날짜 선택 시 시간
   const [isDarkMode, setIsDarkMode] = useState(false); // 다크모드 상태
 
   const {
@@ -276,6 +278,8 @@ function CreateAi() {
 
   // 현재 생성 중인 프롬프트를 저장하는 ref
   const currentGeneratingPromptRef = useRef<string>('');
+  // 스트리밍 시작 시 요청한 일자/시간 기록 (카드 생성 시 사용)
+  const requestedDiaryDateRef = useRef<string | undefined>(undefined);
 
   const {
     selectedImages,
@@ -524,7 +528,10 @@ function CreateAi() {
           style: currentStyle,
           length: currentLength,
           emotion: currentEmotion,
-          diaryDate: selectedDate || undefined,
+          diaryDate:
+            requestedDiaryDateRef.current !== undefined
+              ? requestedDiaryDateRef.current
+              : selectedDate || undefined,
           versions: [initialVersion],
           currentVersionIndex: 0,
           isEditMode: false,
@@ -592,6 +599,12 @@ function CreateAi() {
 
       // ✅ 핵심 수정: 스트리밍 시작과 동시에 빈 카드 즉시 생성
       const newCardId = `card-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
+      const diaryForRequest =
+        selectedTime && selectedDate
+          ? `${selectedDate}T${selectedTime}:00`
+          : selectedDate || undefined;
+      requestedDiaryDateRef.current = diaryForRequest;
+
       const newCard: GeneratedTextCard = {
         id: newCardId,
         prompt,
@@ -599,7 +612,7 @@ function CreateAi() {
         length,
         emotion: emotion || null,
         sessionId: '', // startStreaming에서 업데이트됨
-        diaryDate: selectedDate || undefined,
+        diaryDate: diaryForRequest,
         versions: [
           {
             id: `version-${Date.now()}`,
@@ -627,6 +640,7 @@ function CreateAi() {
         length,
         emotion: emotion || undefined,
         images: selectedImages.length > 0 ? selectedImages : undefined,
+        diaryDate: diaryForRequest,
       });
     } catch (error) {
       logger.error('스트리밍 글 생성 실패', { error });
@@ -645,6 +659,7 @@ function CreateAi() {
     startStreaming,
     selectedImages,
     selectedDate,
+    selectedTime,
   ]);
 
   // 이미지 선택 상태 관리 함수들
@@ -875,6 +890,13 @@ function CreateAi() {
       // 현재 생성 중인 프롬프트 저장
       currentGeneratingPromptRef.current = newPrompt;
 
+      // 요청 시점의 날짜/시간을 고정하여 카드 생성 시 재사용
+      const diaryForRequest =
+        selectedTime && selectedDate
+          ? `${selectedDate}T${selectedTime}:00`
+          : selectedDate || undefined;
+      requestedDiaryDateRef.current = diaryForRequest;
+
       // 새 글 생성 시작 (별도 초기화 불필요)
       await startStreaming({
         prompt: newPrompt,
@@ -882,7 +904,7 @@ function CreateAi() {
         length: tempLength,
         emotion: tempEmotion || undefined,
         images: newSelectedImages.length > 0 ? newSelectedImages : undefined,
-        diaryDate: selectedDate || undefined,
+        diaryDate: diaryForRequest,
       });
       setTimeout(scrollToBottom, 200);
     } catch (error) {
@@ -896,6 +918,7 @@ function CreateAi() {
     tempEmotion,
     newSelectedImages,
     selectedDate,
+    selectedTime,
     validateForm,
     showValidationAlert,
     startStreaming,
@@ -930,6 +953,36 @@ function CreateAi() {
               const currentVersion = card.versions[card.currentVersionIndex];
               const isRegenerating =
                 card.id === regeneratingCardId && isStreaming;
+
+              // 날짜/시간 표시 규칙:
+              // - 과거 날짜: 사용자가 선택한 날짜 + 선택한 시간(card.diaryDate의 시간)
+              // - 오늘 날짜: 현재(생성) 시간
+              const diaryDateStr = card.diaryDate || '';
+              const diaryDateOnly = diaryDateStr
+                ? diaryDateStr.split('T')[0]
+                : '';
+              const todayStr = new Date().toISOString().split('T')[0];
+              const isTodayDate = diaryDateOnly === todayStr;
+
+              const displayDate = diaryDateOnly
+                ? new Date(`${diaryDateOnly}T00:00:00`).toLocaleDateString(
+                    'ko-KR',
+                    {
+                      month: 'long',
+                      day: 'numeric',
+                    },
+                  )
+                : '';
+
+              const displayTime = diaryDateOnly
+                ? isTodayDate
+                  ? new Date(currentVersion.createdAt).toLocaleTimeString()
+                  : new Date(
+                      diaryDateStr.includes('T')
+                        ? diaryDateStr
+                        : `${diaryDateOnly}T11:00:00`,
+                    ).toLocaleTimeString()
+                : '';
               return (
                 <div
                   key={card.id}
@@ -939,6 +992,11 @@ function CreateAi() {
                     <div className="flex items-center gap-3">
                       <h3 className="text-lg font-medium text-text-primary dark:text-text-primary-dark">
                         생성된 글
+                        {card.diaryDate && (
+                          <span className="ml-2 text-sm text-text-secondary dark:text-text-secondary-dark">
+                            {displayDate} {displayTime}
+                          </span>
+                        )}
                       </h3>
                     </div>
                     <div className="flex items-center gap-3">
@@ -1125,44 +1183,42 @@ function CreateAi() {
                   </div>
 
                   {/* 카드 메타 정보 */}
-                  <div className="mt-4 pt-3 border-t border-border-subtle dark:border-border-dark text-xs text-text-secondary dark:text-text-secondary-dark flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                      <span className="max-w-48 truncate" title={card.prompt}>
+                  <div className="mt-4 pt-3 border-t border-border-subtle dark:border-border-dark text-xs text-text-secondary dark:text-text-secondary-dark">
+                    <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
+                      <span
+                        className="max-w-48 sm:max-w-64 md:max-w-96 truncate whitespace-nowrap"
+                        title={card.prompt}
+                      >
                         프롬프트: {card.prompt}
                       </span>
-                      <span>문체: {getStyleLabel(card.style)}</span>
-                      <span>길이: {getLengthLabel(card.length)}</span>
+                      <span className="whitespace-nowrap">
+                        문체: {getStyleLabel(card.style)}
+                      </span>
+                      <span className="whitespace-nowrap">
+                        길이: {getLengthLabel(card.length)}
+                      </span>
                       {currentVersion.aiEmotion && (
-                        <span>
+                        <span className="whitespace-nowrap">
                           감정: {getEmotionLabel(currentVersion.aiEmotion)}
                         </span>
                       )}
-                      {card.versions.length > 1 && (
-                        <span>
-                          버전 {currentVersion.versionNumber}/
-                          {card.versions.length}
-                        </span>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-4">
-                      {/* 선택된 날짜 표시 (카드 고유 날짜 사용) */}
-                      <span className="text-sage-600 font-medium">
-                        선택된날짜:{' '}
-                        {card.diaryDate
-                          ? new Date(card.diaryDate).toLocaleDateString(
-                              'ko-KR',
-                              {
-                                month: 'long',
-                                day: 'numeric',
-                              },
-                            )
-                          : '오늘 날짜로 저장'}
-                      </span>
-                      <span>
-                        {new Date(
-                          currentVersion.createdAt,
-                        ).toLocaleTimeString()}
-                      </span>
+                      {currentVersion.keywords &&
+                        currentVersion.keywords.length > 0 && (
+                          <span className="whitespace-nowrap">
+                            키워드:{' '}
+                            {currentVersion.keywords
+                              .slice(0, 5)
+                              .map((k) => `#${k}`)
+                              .join(', ')}
+                            {currentVersion.keywords.length > 5 && (
+                              <span className="opacity-70">
+                                {' '}
+                                +{currentVersion.keywords.length - 5}
+                              </span>
+                            )}
+                          </span>
+                        )}
+                      {/* 선택된 날짜/시간은 상단 제목에 표기하므로 하단 표기는 제거 */}
                     </div>
                   </div>
 
@@ -1216,7 +1272,19 @@ function CreateAi() {
                 onAddImageClick={handleNewAddImageClick}
                 adjustTextareaHeight={adjustTextareaHeight}
                 selectedDate={selectedDate}
-                onDateChange={setSelectedDate}
+                onDateChange={(d) => {
+                  setSelectedDate(d);
+                  // 미래/오늘 날짜면 시간 초기화
+                  const todayStr = new Date().toISOString().split('T')[0];
+                  if (d >= todayStr) setSelectedTime('');
+                }}
+                selectedTime={selectedTime}
+                onTimeChange={setSelectedTime}
+                onConfirmDateTime={() => {
+                  // 간단한 확인: 값이 없으면 기본값 지정
+                  if (!selectedTime) setSelectedTime('11:00');
+                  // 사용자에게 확정 피드백을 줄 수 있다면 토스트 등으로 표시 가능
+                }}
               />
 
               <input
@@ -1344,17 +1412,40 @@ function CreateAi() {
           {/* 헤더 - 날짜 선택과 이미지 추가 버튼 */}
           <div className="flex items-center justify-between px-4 py-3 bg-sage-5/30 dark:bg-background-dark/30">
             {/* 날짜 선택 - 왼쪽 */}
-            <input
-              type="date"
-              value={selectedDate}
-              onChange={(e) => setSelectedDate(e.target.value)}
-              className="px-3 py-1.5 text-sm border border-sage-30 dark:border-sage-40 rounded-lg text-sage-90 focus:outline-none focus:ring-2 focus:ring-sage-50 dark:text-white dark:focus:ring-sage-40"
-              style={{
-                backgroundColor: isDarkMode ? '#1f2937' : 'white',
-                color: isDarkMode ? 'white' : '#1f2937',
-              }}
-              max={new Date().toISOString().split('T')[0]}
-            />
+            <div className="flex items-center gap-3">
+              <input
+                type="date"
+                value={selectedDate}
+                onChange={(e) => {
+                  const d = e.target.value;
+                  setSelectedDate(d);
+                  const todayStr = new Date().toISOString().split('T')[0];
+                  // 과거가 아니면 시간 초기화
+                  if (d >= todayStr) {
+                    setSelectedTime('');
+                  } else if (!selectedTime) {
+                    setSelectedTime('11:00');
+                  }
+                }}
+                className="px-3 py-1.5 text-sm border border-sage-30 dark:border-sage-40 rounded-lg text-sage-90 focus:outline-none focus:ring-2 focus:ring-sage-50 dark:text-white dark:focus:ring-sage-40"
+                style={{
+                  backgroundColor: isDarkMode ? '#1f2937' : 'white',
+                  color: isDarkMode ? 'white' : '#1f2937',
+                }}
+                max={new Date().toISOString().split('T')[0]}
+              />
+              {/* 과거 날짜일 때 시간 선택 */}
+              {selectedDate < new Date().toISOString().split('T')[0] && (
+                <TimePicker
+                  value={selectedTime || '11:00'}
+                  onChange={setSelectedTime}
+                  onConfirm={() => {
+                    if (!selectedTime) setSelectedTime('11:00');
+                  }}
+                  dark={isDarkMode}
+                />
+              )}
+            </div>
             {/* 이미지 추가 버튼 - 오른쪽 */}
             {canAddMore && (
               <button
