@@ -106,7 +106,7 @@ export const useEmotionStore = create<EmotionState>()(
     (set, get) => ({
       // 초기 상태
       emotions: EMOTION_CONFIGS,
-      selectedEmotion: 'peaceful',
+      selectedEmotion: '',
       recentEmotions: [],
 
       // 기본 액션들
@@ -188,7 +188,7 @@ export const useEmotionStore = create<EmotionState>()(
           lowerText.includes('초조')
         )
           return 'unrest';
-        return 'peaceful'; // 기본값
+        return ''; // 기본값 - 감정 미선택 상태
       },
 
       getEmotionTone: (emotion) => {
