@@ -89,14 +89,13 @@ export default function ResetPasswordForm() {
       // 로그인 페이지로 리다이렉트
       router.push('/login?message=password_changed');
     } catch (error: unknown) {
-      // 백엔드에서 DB 갱신은 되었지만 네트워크/응답 포맷 이슈로 오류가 날 수 있어
-      // 사용자를 불안하게 하지 않도록 오류 토스트는 표시하지 않고 안내 후 이동
-      showSuccess(
-        '처리 안내',
-        '처리 중 문제가 있었지만 변경되었을 수 있습니다. 새 비밀번호로 로그인해보세요.',
-        5000,
+      // 결정적 처리: 실패 시에는 실패로 명확히 안내하고, 페이지에 남겨 재시도 유도
+      handleApiError(
+        error,
+        '비밀번호 변경 실패',
+        '비밀번호 변경 중 오류가 발생했습니다. 다시 시도해주세요.',
       );
-      router.push('/login');
+      return;
     }
   };
 
