@@ -141,7 +141,15 @@ class ApiClient {
         }
       }
 
-      const data = await response.json();
+      // 일부 엔드포인트는 204 No Content 또는 빈 본문을 반환할 수 있음
+      let data: ApiResponse<T> | null = null;
+      let parseError: unknown = null;
+      try {
+        // 콘텐츠가 없더라도 json() 시도. 실패하면 아래에서 보정
+        data = (await response.json()) as ApiResponse<T>;
+      } catch (e) {
+        parseError = e;
+      }
 
       if (!response.ok) {
         // 에러 응답을 포함한 에러 객체 생성
@@ -154,13 +162,27 @@ class ApiClient {
         throw error;
       }
 
+      // 성공이지만 본문 파싱 실패 또는 본문이 비어있는 경우 성공으로 취급 (예: 204)
+      if ((response.status === 204 || data == null) && parseError) {
+        logger.debug('📊 ApiClient: 본문 없음(204/empty), 성공 처리');
+        const fallback: ApiResponse<T> = {
+          success: true,
+          // 빈 응답의 경우 data는 null로 반환
+          data: null as unknown as T,
+          message: null,
+          timestamp: new Date().toISOString(),
+          request_id: '',
+        };
+        return fallback;
+      }
+
       logger.debug('📊 ApiClient: 응답 데이터', {
         hasData: !!data,
         dataType: typeof data,
         success: data?.success,
       });
 
-      return data;
+      return data as ApiResponse<T>;
     } catch (error: unknown) {
       logger.error('❌ ApiClient: 요청 실패', error);
 
