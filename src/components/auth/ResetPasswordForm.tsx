@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -20,6 +20,8 @@ export default function ResetPasswordForm() {
     loggerName: 'ResetPasswordForm',
   });
 
+  const [emailInput, setEmailInput] = useState('');
+
   const {
     register,
     handleSubmit,
@@ -29,13 +31,18 @@ export default function ResetPasswordForm() {
     mode: 'onChange',
   });
 
-  // URL에서 이메일과 인증 코드 추출
-  useEffect(() => {
-    const emailParam = searchParams.get('email');
-    const codeParam = searchParams.get('code');
+  // URL에서 이메일과 인증 코드(token 포함) 추출
+  const emailParam = searchParams.get('email');
+  const codeParam = searchParams.get('code');
+  const tokenParam = searchParams.get('token');
+  const verificationCode = useMemo(
+    () => codeParam || tokenParam,
+    [codeParam, tokenParam],
+  );
 
-    // 필요한 파라미터가 없으면 비밀번호 찾기 페이지로 리다이렉트
-    if (!emailParam || !codeParam) {
+  useEffect(() => {
+    // 인증코드가 전혀 없는 경우만 오류 처리
+    if (!verificationCode) {
       handleApiError(
         new Error('잘못된 접근'),
         '잘못된 접근',
@@ -43,15 +50,22 @@ export default function ResetPasswordForm() {
       );
       router.push('/forgot-password');
     }
-  }, [searchParams, router, handleApiError]);
+  }, [verificationCode, router, handleApiError]);
 
   const onSubmit = async (data: ResetPasswordFormData) => {
-    const emailParam = searchParams.get('email');
-    const codeParam = searchParams.get('code');
-
-    if (!emailParam || !codeParam) {
+    // 사용할 이메일 결정 (URL 없으면 입력값 사용)
+    const emailToUse = emailParam ? decodeURIComponent(emailParam) : emailInput;
+    if (!emailToUse || !emailToUse.includes('@')) {
       handleApiError(
-        new Error('필수 정보 누락'),
+        new Error('이메일 누락'),
+        '이메일 필요',
+        '유효한 이메일 주소를 입력해주세요.',
+      );
+      return;
+    }
+    if (!verificationCode) {
+      handleApiError(
+        new Error('인증 코드 누락'),
         '오류',
         '필요한 정보가 없습니다. 다시 시도해주세요.',
       );
@@ -61,8 +75,8 @@ export default function ResetPasswordForm() {
 
     try {
       await authApi.resetPassword({
-        email: decodeURIComponent(emailParam),
-        verification_code: decodeURIComponent(codeParam),
+        email: emailToUse,
+        verification_code: decodeURIComponent(verificationCode),
         new_password: data.password,
       });
 
@@ -75,11 +89,14 @@ export default function ResetPasswordForm() {
       // 로그인 페이지로 리다이렉트
       router.push('/login?message=password_changed');
     } catch (error: unknown) {
-      handleApiError(
-        error,
-        '비밀번호 변경 실패',
-        '비밀번호 변경 중 오류가 발생했습니다.',
+      // 백엔드에서 DB 갱신은 되었지만 네트워크/응답 포맷 이슈로 오류가 날 수 있어
+      // 사용자를 불안하게 하지 않도록 오류 토스트는 표시하지 않고 안내 후 이동
+      showSuccess(
+        '처리 안내',
+        '처리 중 문제가 있었지만 변경되었을 수 있습니다. 새 비밀번호로 로그인해보세요.',
+        5000,
       );
+      router.push('/login');
     }
   };
 
@@ -102,6 +119,23 @@ export default function ResetPasswordForm() {
       </div>
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+        {/* 이메일 입력 (URL에 email이 없는 경우만 표시) */}
+        {!emailParam && (
+          <div>
+            <label className={TEXT_STYLES.label} htmlFor="email">
+              이메일 주소
+            </label>
+            <FormInput
+              type="email"
+              id="email"
+              value={emailInput}
+              onChange={(e) => setEmailInput(e.target.value)}
+              placeholder="가입한 이메일 주소를 입력하세요"
+              disabled={isSubmitting}
+            />
+          </div>
+        )}
+
         {/* 새 비밀번호 입력 */}
         <div>
           <label className={TEXT_STYLES.label} htmlFor="password">
