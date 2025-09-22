@@ -74,20 +74,39 @@ export default function ResetPasswordForm() {
     }
 
     try {
-      await authApi.resetPassword({
+      // 일부 모바일 메일/인앱 브라우저에서 '+'가 공백으로 변형되는 이슈 보정
+      const normalizedCode = decodeURIComponent(verificationCode).replace(
+        /\s+/g,
+        '+',
+      );
+      const response = await authApi.resetPassword({
         email: emailToUse,
-        verification_code: decodeURIComponent(verificationCode),
+        verification_code: normalizedCode,
         new_password: data.password,
       });
 
-      showSuccess(
-        '🔐 비밀번호 변경 완료',
-        '비밀번호가 성공적으로 변경되었습니다. 새 비밀번호로 로그인해주세요.',
-        5000,
-      );
+      // API 응답이 성공인지 명시적으로 확인 (204 No Content나 success: true 모두 허용)
+      const isSuccess = response?.success !== false; // undefined, true, null 모두 성공으로 처리
 
-      // 로그인 페이지로 리다이렉트
-      router.push('/login?message=password_changed');
+      if (isSuccess) {
+        showSuccess(
+          '🔐 비밀번호 변경 완료',
+          '비밀번호가 성공적으로 변경되었습니다. 새 비밀번호로 로그인해주세요.',
+          5000,
+        );
+
+        // 앱으로 리다이렉트 (앱 사용자) 후 로그인 페이지로 리다이렉트 (웹 사용자)
+        setTimeout(() => {
+          window.location.href = 'saegim://password-reset-success';
+        }, 1500);
+
+        // 로그인 페이지로 리다이렉트
+        router.push('/login?message=password_changed');
+        return;
+      } else {
+        // 명시적으로 success: false인 경우만 실패 처리
+        throw new Error('Password reset failed with success: false');
+      }
     } catch (error: unknown) {
       // 결정적 처리: 실패 시에는 실패로 명확히 안내하고, 페이지에 남겨 재시도 유도
       handleApiError(
