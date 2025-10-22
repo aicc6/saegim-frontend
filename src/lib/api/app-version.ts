@@ -48,6 +48,15 @@ export async function getLatestVersion(
 }
 
 /**
+ * 앱 다운로드 정보
+ */
+export interface AppDownloadInfo {
+  url: string;
+  version: string;
+  fileName: string;
+}
+
+/**
  * 앱 다운로드 URL 가져오기
  * @param platform - 플랫폼 (android, ios)
  * @returns 다운로드 URL 또는 null
@@ -63,6 +72,29 @@ export async function getAppDownloadUrl(
     return null;
   } catch (error) {
     console.error(`Failed to get ${platform} app download URL:`, error);
+    return null;
+  }
+}
+
+/**
+ * 앱 다운로드 정보 가져오기 (URL + 버전 + 파일명)
+ * @param platform - 플랫폼 (android, ios)
+ * @returns 다운로드 정보 또는 null
+ */
+export async function getAppDownloadInfo(
+  platform: PlatformType,
+): Promise<AppDownloadInfo | null> {
+  try {
+    const response = await getLatestVersion(platform);
+    if (response.success && response.data) {
+      const url = response.data.download_url || response.data.file_path;
+      const version = response.data.version_name;
+      const fileName = `saegim-${version}.apk`;
+      return { url, version, fileName };
+    }
+    return null;
+  } catch (error) {
+    console.error(`Failed to get ${platform} app download info:`, error);
     return null;
   }
 }

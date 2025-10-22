@@ -18,7 +18,7 @@ import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { Toaster } from '@/components/ui/toaster';
 import { ToastAction, type ToastActionElement } from '@/components/ui/toast';
-import { getAppDownloadUrl } from '@/lib/api';
+import { getAppDownloadInfo, type AppDownloadInfo } from '@/lib/api';
 
 const features = [
   {
@@ -57,26 +57,25 @@ function LandingWithSearchParams() {
   const searchParams = useSearchParams();
   const { toast } = useToast();
   const statusTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const [androidDownloadUrl, setAndroidDownloadUrl] = useState<string | null>(
-    null,
-  );
+  const [androidDownloadInfo, setAndroidDownloadInfo] =
+    useState<AppDownloadInfo | null>(null);
   const [isLoadingDownload, setIsLoadingDownload] = useState(false);
 
-  // 앱 다운로드 URL 로드
+  // 앱 다운로드 정보 로드
   useEffect(() => {
-    const loadDownloadUrl = async () => {
+    const loadDownloadInfo = async () => {
       setIsLoadingDownload(true);
       try {
-        const url = await getAppDownloadUrl('android');
-        setAndroidDownloadUrl(url);
+        const info = await getAppDownloadInfo('android');
+        setAndroidDownloadInfo(info);
       } catch (error) {
-        console.error('Failed to load Android download URL:', error);
+        console.error('Failed to load Android download info:', error);
       } finally {
         setIsLoadingDownload(false);
       }
     };
 
-    loadDownloadUrl();
+    loadDownloadInfo();
   }, []);
 
   useEffect(() => {
@@ -222,8 +221,16 @@ function LandingWithSearchParams() {
   };
 
   const handleDownloadApp = () => {
-    if (androidDownloadUrl) {
-      window.open(androidDownloadUrl, '_blank', 'noopener,noreferrer');
+    if (androidDownloadInfo) {
+      // 커스텀 파일명으로 다운로드하기 위해 <a> 태그 생성
+      const link = document.createElement('a');
+      link.href = androidDownloadInfo.url;
+      link.download = androidDownloadInfo.fileName;
+      link.target = '_blank';
+      link.rel = 'noopener noreferrer';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
     } else {
       toast({
         title: '다운로드 불가',
@@ -286,7 +293,7 @@ function LandingWithSearchParams() {
                   variant="outline"
                   className="border-sage-30 bg-sage-10 text-sage-100 hover:bg-sage-20 w-full sm:w-auto shadow-sm"
                   onClick={handleDownloadApp}
-                  disabled={isLoadingDownload || !androidDownloadUrl}
+                  disabled={isLoadingDownload || !androidDownloadInfo}
                 >
                   <Smartphone className="w-4 h-4 mr-2" />
                   {isLoadingDownload ? '로딩 중...' : '안드로이드 앱 다운로드'}
@@ -362,7 +369,7 @@ function LandingWithSearchParams() {
                     size="lg"
                     className="bg-sage-50 hover:bg-sage-60 text-white"
                     onClick={handleDownloadApp}
-                    disabled={isLoadingDownload || !androidDownloadUrl}
+                    disabled={isLoadingDownload || !androidDownloadInfo}
                   >
                     <Smartphone className="w-5 h-5 mr-2" />
                     {isLoadingDownload
