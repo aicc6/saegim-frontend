@@ -222,15 +222,38 @@ function LandingWithSearchParams() {
 
   const handleDownloadApp = () => {
     if (androidDownloadInfo) {
-      // 커스텀 파일명으로 다운로드하기 위해 <a> 태그 생성
-      const link = document.createElement('a');
-      link.href = androidDownloadInfo.url;
-      link.download = androidDownloadInfo.fileName;
-      link.target = '_blank';
-      link.rel = 'noopener noreferrer';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+      try {
+        const url = androidDownloadInfo.url;
+
+        let isExternal = true;
+        try {
+          const parsed = new URL(url);
+          isExternal = parsed.origin !== window.location.origin;
+        } catch {
+          isExternal = true;
+        }
+
+        if (isExternal) {
+          window.open(url, '_blank', 'noopener');
+        } else {
+          const link = document.createElement('a');
+          link.href = url;
+          link.download = androidDownloadInfo.fileName;
+          link.target = '_blank';
+          link.rel = 'noopener noreferrer';
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+        }
+      } catch (error) {
+        console.error('Download start failed:', error);
+        toast({
+          title: '다운로드 실패',
+          description:
+            '다운로드를 시작할 수 없습니다. 네트워크 상태를 확인해주세요.',
+          variant: 'destructive',
+        });
+      }
     } else {
       toast({
         title: '다운로드 불가',
