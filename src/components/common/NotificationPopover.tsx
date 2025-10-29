@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Bell, Check, X } from 'lucide-react';
 import { useTheme } from 'next-themes';
+import { useTranslation } from 'react-i18next';
 
 import { formatRelativeTime } from '@/lib/utils';
 
@@ -55,6 +56,7 @@ export default function NotificationPopover({
   onFCMMarkAllAsRead,
 }: NotificationPopoverProps) {
   const router = useRouter();
+  const { t } = useTranslation();
   const { resolvedTheme } = useTheme();
   const [isOpen, setIsOpen] = useState(false);
 
@@ -131,7 +133,14 @@ export default function NotificationPopover({
           <h3
             className={`font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}
           >
-            알림 {totalUnreadCount > 0 && `(${totalUnreadCount})`}
+            {t('notifications.title')}
+            {totalUnreadCount > 0 && (
+              <span className="ml-1">
+                {t('notifications.unreadCountSuffix', {
+                  count: totalUnreadCount,
+                })}
+              </span>
+            )}
           </h3>
           {totalUnreadCount > 0 && (
             <Button
@@ -151,7 +160,7 @@ export default function NotificationPopover({
                   : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
               }`}
             >
-              전체 읽기
+              {t('notifications.markAllAsRead')}
             </Button>
           )}
         </div>
@@ -165,7 +174,7 @@ export default function NotificationPopover({
               <p
                 className={`text-sm mb-4 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}
               >
-                새로운 알림이 없습니다.
+                {t('notifications.noNotifications')}
               </p>
               <Button
                 variant="ghost"
@@ -180,7 +189,7 @@ export default function NotificationPopover({
                     : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
                 }`}
               >
-                전체 알림 보기
+                {t('notifications.viewAll')}
               </Button>
             </div>
           ) : (
@@ -290,7 +299,7 @@ export default function NotificationPopover({
                     : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
                 }`}
               >
-                모든 알림 보기
+                {t('notifications.viewAll')}
               </Button>
             </div>
           </>

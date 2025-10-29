@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useTranslation } from 'react-i18next';
 
 import { useAuthStore } from '@/stores/auth';
 import { useLanguageStore } from '@/stores/language';
@@ -20,6 +21,7 @@ export default function AuthGuard({ children }: AuthGuardProps) {
   const { clearStorage, updateUser } = useAuthStore();
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthorized, setIsAuthorized] = useState(false);
+  const { t, i18n } = useTranslation();
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -117,8 +119,11 @@ export default function AuthGuard({ children }: AuthGuardProps) {
         setIsAuthorized(true);
         setIsLoading(false);
       } catch (error: unknown) {
+        const unknownErrorMessage = i18n.t('auth.guard.unknownError');
         const errorMessage =
-          error instanceof Error ? error.message : '알 수 없는 오류';
+          error instanceof Error && error.message
+            ? error.message
+            : unknownErrorMessage;
         logger.error('서버 인증 실패', { errorMessage });
 
         // 로컬 스토리지 완전 정리
@@ -144,11 +149,17 @@ export default function AuthGuard({ children }: AuthGuardProps) {
           const detail = apiError.response.data.detail;
           if (detail?.restore_available) {
             router.push(
-              `/landing?status=withdraw&message=탈퇴된 계정입니다. ${detail.days_remaining}일 이내에 복구할 수 있습니다.`,
+              `/landing?status=withdraw&message=${encodeURIComponent(
+                i18n.t('auth.guard.withdraw.restorable', {
+                  days: detail.days_remaining ?? 30,
+                }),
+              )}`,
             );
           } else {
             router.push(
-              '/landing?status=withdraw&message=탈퇴 후 30일이 경과되어 복구할 수 없습니다.',
+              `/landing?status=withdraw&message=${encodeURIComponent(
+                i18n.t('auth.guard.withdraw.expired'),
+              )}`,
             );
           }
         } else {
@@ -159,14 +170,16 @@ export default function AuthGuard({ children }: AuthGuardProps) {
     };
 
     checkAuth();
-  }, [router, clearStorage, updateUser]);
+  }, [router, clearStorage, updateUser, i18n]);
 
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-sage-20">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-sage-50 mx-auto mb-4"></div>
-          <p className="text-sage-80 dark:text-gray-300">인증 확인 중...</p>
+          <p className="text-sage-80 dark:text-gray-300">
+            {t('auth.guard.loading')}
+          </p>
         </div>
       </div>
     );

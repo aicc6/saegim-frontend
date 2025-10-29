@@ -173,6 +173,84 @@
       "toastDescription": "We sent a reset link to {{email}}.\n\nPlease check your inbox and click the link.",
       "toastErrorTitle": "Email delivery failed",
       "toastErrorDescription": "An error occurred while sending the email."
+    },
+    "loginForm": {
+      "errors": {
+        "genericTitle": "Login failed",
+        "genericDescription": "Something went wrong while signing you in.",
+        "invalidResponse": "Unexpected response from the server.",
+        "unauthorizedTitle": "Authentication failed",
+        "unauthorizedDescription": "The email or password is incorrect.",
+        "passwordTitle": "Password changed",
+        "passwordDescription": "Your password may have been updated. Please reset it.",
+        "notFoundTitle": "Account not found",
+        "notFoundDescription": "We couldn't find an account with that email. Please sign up first.",
+        "networkTitle": "Network error",
+        "networkDescription": "Unable to reach the server. Check your internet connection and try again.",
+        "timeoutTitle": "Request timed out",
+        "timeoutDescription": "The request took too long. Try again in a moment.",
+        "restorableTitle": "Account deleted",
+        "restorableDescription": "Your account was deleted. You can restore it within {{days}} days.",
+        "permanentTitle": "Account permanently deleted",
+        "permanentDescription": "It has been over 30 days since deletion. The account can no longer be recovered."
+      },
+      "cta": {
+        "restore": "Restore now",
+        "createNew": "Create a new account"
+      },
+      "toast": {
+        "restorable": "⚠️ Account deleted",
+        "restorableInfo": "ℹ️ Your account was deleted. You can restore it within {{days}} days.\n\n🔄 Would you like to restore it now?\nAll of your data will remain intact.",
+        "permanent": "🚫 Account permanently deleted",
+        "permanentInfo": "❌ The recovery period has expired.\n\n💡 Would you like to create a new account with the same email?"
+      }
+    },
+    "changeEmail": {
+      "verifyTitle": "Verify your password",
+      "verifyDescription": "Enter your current password to continue.",
+      "verifyPlaceholder": "Enter current password",
+      "verifyButton": "Verify",
+      "verifySuccessTitle": "Password verified",
+      "verifySuccessDescription": "You can now update your profile information.",
+      "verifyFailureTitle": "Password verification failed",
+      "verifyFailureDescription": "The current password you entered is incorrect.",
+      "formTitle": "Update profile",
+      "formDescription": "Change your nickname and email address.",
+      "nicknameLabel": "Nickname",
+      "nicknamePlaceholder": "Enter your nickname",
+      "emailLabel": "New email address",
+      "emailPlaceholder": "Enter your new email address",
+      "submitLabel": "Update profile",
+      "submittingLabel": "Updating...",
+      "successTitle": "Profile updated",
+      "successDescription": "Your profile information has been updated successfully.",
+      "failureTitle": "Profile update failed",
+      "failureDescription": "Something went wrong while updating your profile."
+    },
+    "changePassword": {
+      "title": "Change password",
+      "description": "Update your password to keep your account secure.",
+      "currentPasswordLabel": "Current password",
+      "currentPasswordPlaceholder": "Enter your current password",
+      "newPasswordLabel": "New password",
+      "newPasswordPlaceholder": "Enter a new password",
+      "newPasswordHelp": "Use at least 9 characters with letters, numbers, and symbols.",
+      "confirmLabel": "Confirm new password",
+      "confirmPlaceholder": "Re-enter your new password",
+      "submitLabel": "Change password",
+      "submittingLabel": "Changing...",
+      "successTitle": "Password updated",
+      "successDescription": "Your password has been updated. Please sign in again for security.",
+      "failureTitle": "Password change failed",
+      "failureDescription": "We couldn't change your password. Please try again."
+    },
+    "guard": {
+      "loading": "Checking authentication...",
+      "unknownError": "An unknown error occurred.",
+      "withdraw": {
+        "restorable": "Your account has been deleted. You can restore it within {{days}} days.",
+        "expired": "The restoration period has expired. You can no longer recover this account."
+      }
     }
   },
   "create": {
@@ -241,13 +319,48 @@
   },
   "calendar": {
     "title": "Calendar",
+    "subtitle": "Review your monthly emotion and keyword trends",
     "today": "Today",
     "month": "Month",
     "year": "Year",
     "noEntriesForDate": "No entries for this date",
     "viewEntry": "View Entry",
     "emotionStats": "Emotion Stats",
-    "keywordStats": "Keyword Stats"
+    "keywordStats": "Keyword Stats",
+    "loading": {
+      "authCheck": "Checking authentication...",
+      "user": "Loading user information..."
+    },
+    "errors": {
+      "loadMonth": "Failed to load monthly data."
+    },
+    "summary": {
+      "title": "Monthly summary",
+      "totalEntriesLabel": "Total entries",
+      "entriesCount": "{{count}} entries",
+      "entriesCount_one": "{{count}} entry",
+      "topEmotionLabel": "Most frequent emotion",
+      "noEmotion": "No records",
+      "keywordsLabel": "Key keywords",
+      "noKeywords": "None"
+    },
+    "empty": {
+      "noImages": "No images",
+      "viewHint": "Click to view →"
+    },
+    "selectedDateTitle": "Entries on {{date}}",
+    "entryAriaLabel": "View entry {{title}}",
+    "imageAlt": "Diary image {{index}}",
+    "emotions": {
+      "happy": "Happy",
+      "sad": "Sad",
+      "angry": "Angry",
+      "peaceful": "Calm",
+      "unrest": "Uneasy"
+    },
+    "weekdays": {
+      "short": ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
+    }
   },
   "landing": {
     "hero": {
@@ -346,7 +459,9 @@
     "noNotifications": "No new notifications",
     "unread": "Unread",
     "settings": "Notification Settings",
-    "enablePush": "Enable Push Notifications"
+    "enablePush": "Enable Push Notifications",
+    "viewAll": "View all notifications",
+    "unreadCountSuffix": "({{count}})"
   },
   "errors": {
     "somethingWentWrong": "Something went wrong",

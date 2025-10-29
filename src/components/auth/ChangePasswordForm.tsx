@@ -49,8 +49,8 @@ export default function ChangePasswordForm() {
 
       // 성공 처리
       showSuccess(
-        '🔐 비밀번호 변경 성공',
-        '비밀번호가 성공적으로 변경되었습니다. 보안을 위해 다시 로그인해주세요.',
+        t('auth.changePassword.successTitle'),
+        t('auth.changePassword.successDescription'),
       );
 
       // 로그아웃 처리
@@ -63,8 +63,8 @@ export default function ChangePasswordForm() {
     } catch (error: unknown) {
       handleApiError(
         error,
-        '비밀번호 변경 실패',
-        '비밀번호 변경 중 오류가 발생했습니다.',
+        t('auth.changePassword.failureTitle'),
+        t('auth.changePassword.failureDescription'),
       );
     }
   };
@@ -72,9 +72,11 @@ export default function ChangePasswordForm() {
   return (
     <div className="space-y-6">
       <div className="text-center">
-        <h1 className={TEXT_STYLES.heading.h1}>비밀번호 변경</h1>
+        <h1 className={TEXT_STYLES.heading.h1}>
+          {t('auth.changePassword.title')}
+        </h1>
         <p className={TEXT_STYLES.description}>
-          계정 보안을 위한 비밀번호를 변경합니다
+          {t('auth.changePassword.description')}
         </p>
       </div>
 
@@ -82,13 +84,13 @@ export default function ChangePasswordForm() {
         {/* 현재 비밀번호 입력 */}
         <div>
           <label className={TEXT_STYLES.label} htmlFor="currentPassword">
-            현재 비밀번호 입력
+            {t('auth.changePassword.currentPasswordLabel')}
           </label>
           <FormInput
             type="password"
             id="currentPassword"
             {...register('currentPassword')}
-            placeholder="현재 비밀번호를 입력하세요"
+            placeholder={t('auth.changePassword.currentPasswordPlaceholder')}
             error={errors.currentPassword?.message}
             disabled={isSubmitting}
           />
@@ -97,31 +99,31 @@ export default function ChangePasswordForm() {
         {/* 새 비밀번호 입력 */}
         <div>
           <label className={TEXT_STYLES.label} htmlFor="newPassword">
-            새 비밀번호 입력
+            {t('auth.changePassword.newPasswordLabel')}
           </label>
           <FormInput
             type="password"
             id="newPassword"
             {...register('newPassword')}
-            placeholder="새 비밀번호를 입력하세요"
+            placeholder={t('auth.changePassword.newPasswordPlaceholder')}
             error={errors.newPassword?.message}
             disabled={isSubmitting}
           />
           <p className={`mt-1 ${TEXT_STYLES.help}`}>
-            9자 이상, 영문, 숫자, 특수문자를 포함해야 합니다.
+            {t('auth.changePassword.newPasswordHelp')}
           </p>
         </div>
 
         {/* 새 비밀번호 확인 */}
         <div>
           <label className={TEXT_STYLES.label} htmlFor="newPasswordConfirm">
-            새 비밀번호 확인
+            {t('auth.changePassword.confirmLabel')}
           </label>
           <FormInput
             type="password"
             id="newPasswordConfirm"
             {...register('newPasswordConfirm')}
-            placeholder="새 비밀번호를 다시 입력하세요"
+            placeholder={t('auth.changePassword.confirmPlaceholder')}
             error={errors.newPasswordConfirm?.message}
             disabled={isSubmitting}
           />
@@ -133,7 +135,9 @@ export default function ChangePasswordForm() {
           disabled={isSubmitting}
           className="w-full saegim-button saegim-button-large disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          {isSubmitting ? '변경 중...' : '비밀번호 변경'}
+          {isSubmitting
+            ? t('auth.changePassword.submittingLabel')
+            : t('auth.changePassword.submitLabel')}
         </button>
       </form>
     </div>

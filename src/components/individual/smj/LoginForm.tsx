@@ -41,21 +41,23 @@ export default function LoginForm({ redirectTo }: LoginFormProps) {
   });
 
   // URL 파라미터로 전달된 에러 처리
+
   useEffect(() => {
     const error = searchParams.get('error');
     const message = searchParams.get('message');
 
     if (error && message) {
-      let errorTitle = '로그인 실패';
+      let errorTitle = t('auth.loginForm.errors.genericTitle');
       let errorDescription = message;
 
       if (error === 'account_permanently_deleted') {
-        errorTitle = '영구 삭제된 계정';
-        errorDescription = '탈퇴 후 30일이 경과되어 복구할 수 없습니다.';
+        errorTitle = t('auth.loginForm.errors.permanentTitle');
+        errorDescription = t('auth.loginForm.errors.permanentDescription');
       } else if (error === 'account_deleted') {
-        errorTitle = '탈퇴된 계정';
+        errorTitle = t('auth.loginForm.errors.restorableTitle');
         errorDescription =
-          '탈퇴된 계정입니다. 복구 페이지에서 계정을 복구할 수 있습니다.';
+          message ||
+          t('auth.loginForm.errors.restorableDescription', { days: 30 });
       }
 
       toast({
@@ -64,7 +66,7 @@ export default function LoginForm({ redirectTo }: LoginFormProps) {
         variant: 'destructive',
       });
     }
-  }, [searchParams, toast]);
+  }, [searchParams, toast, t]);
 
   const onSubmit = async (data: LoginFormData) => {
     try {
@@ -152,7 +154,7 @@ export default function LoginForm({ redirectTo }: LoginFormProps) {
           });
         }
       } else {
-        throw new Error('잘못된 응답 형식입니다.');
+        throw new Error(t('auth.loginForm.errors.invalidResponse'));
       }
 
       toast({
@@ -165,6 +167,7 @@ export default function LoginForm({ redirectTo }: LoginFormProps) {
       const redirectPath = redirectTo === 'records' ? '/list' : '/';
       router.push(redirectPath);
     } catch (error: unknown) {
+      const fallbackMessage = t('auth.guard.unknownError');
       const errorInfo =
         error instanceof Error
           ? {
@@ -172,13 +175,13 @@ export default function LoginForm({ redirectTo }: LoginFormProps) {
               name: error.name,
               stack: error.stack,
             }
-          : { message: '알 수 없는 오류' };
+          : { message: fallbackMessage };
 
       logger.error('로그인 실패', { error, errorInfo });
 
       // 상세한 에러 메시지 처리
-      let errorTitle = '로그인 실패';
-      let errorDescription = '로그인 중 오류가 발생했습니다.';
+      let errorTitle = t('auth.loginForm.errors.genericTitle');
+      let errorDescription = t('auth.loginForm.errors.genericDescription');
 
       if (error instanceof Error && error.message) {
         const errorMessage = error.message.toLowerCase();
@@ -188,33 +191,29 @@ export default function LoginForm({ redirectTo }: LoginFormProps) {
           errorMessage.includes('unauthorized') ||
           errorMessage.includes('이메일 또는 비밀번호')
         ) {
-          errorTitle = '인증 실패';
-          errorDescription = '이메일 또는 비밀번호가 올바르지 않습니다.';
+          errorTitle = t('auth.loginForm.errors.unauthorizedTitle');
+          errorDescription = t('auth.loginForm.errors.unauthorizedDescription');
         } else if (
           errorMessage.includes('password') &&
           !errorMessage.includes('이메일 또는')
         ) {
-          errorTitle = '비밀번호 오류';
-          errorDescription =
-            '비밀번호가 변경되었을 수 있습니다. 비밀번호 찾기를 이용해주세요.';
+          errorTitle = t('auth.loginForm.errors.passwordTitle');
+          errorDescription = t('auth.loginForm.errors.passwordDescription');
         } else if (
           errorMessage.includes('email') ||
           errorMessage.includes('user')
         ) {
-          errorTitle = '계정 오류';
-          errorDescription =
-            '존재하지 않는 이메일 주소입니다. 회원가입을 먼저 진행해주세요.';
+          errorTitle = t('auth.loginForm.errors.notFoundTitle');
+          errorDescription = t('auth.loginForm.errors.notFoundDescription');
         } else if (
           errorMessage.includes('network') ||
           errorMessage.includes('fetch')
         ) {
-          errorTitle = '네트워크 오류';
-          errorDescription =
-            '서버에 연결할 수 없습니다. 인터넷 연결을 확인해주세요.';
+          errorTitle = t('auth.loginForm.errors.networkTitle');
+          errorDescription = t('auth.loginForm.errors.networkDescription');
         } else if (errorMessage.includes('timeout')) {
-          errorTitle = '시간 초과';
-          errorDescription =
-            '요청 시간이 초과되었습니다. 잠시 후 다시 시도해주세요.';
+          errorTitle = t('auth.loginForm.errors.timeoutTitle');
+          errorDescription = t('auth.loginForm.errors.timeoutDescription');
         }
       }
 
@@ -243,13 +242,19 @@ export default function LoginForm({ redirectTo }: LoginFormProps) {
             accountError.error === 'ACCOUNT_DELETED' &&
             accountError.restore_available
           ) {
-            errorTitle = '탈퇴된 계정';
-            errorDescription = `탈퇴된 계정입니다. ${accountError.days_remaining}일 이내에 복구할 수 있습니다.`;
+            errorTitle = t('auth.loginForm.errors.restorableTitle');
+            const daysRemaining = accountError.days_remaining ?? 30;
+            errorDescription = t(
+              'auth.loginForm.errors.restorableDescription',
+              { days: daysRemaining },
+            );
 
             // 복구 가능한 경우 복구 페이지로 이동 옵션 제공
             toast({
-              title: `⚠️ ${errorTitle}`,
-              description: `ℹ️ ${errorDescription}\n\n🔄 계정을 복구하시겠습니까?\n복구 후에도 모든 데이터가 그대로 유지됩니다.`,
+              title: t('auth.loginForm.toast.restorable'),
+              description: t('auth.loginForm.toast.restorableInfo', {
+                days: daysRemaining,
+              }),
               variant: 'default',
               duration: 10000,
               action: (
@@ -257,19 +262,19 @@ export default function LoginForm({ redirectTo }: LoginFormProps) {
                   onClick={() => router.push('/restore-account')}
                   className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md transition-colors text-sm font-medium"
                 >
-                  🔄 지금 복구하기
+                  🔄 {t('auth.loginForm.cta.restore')}
                 </button>
               ),
             });
             return; // 다른 에러 처리 중단
           } else if (accountError.error === 'ACCOUNT_PERMANENTLY_DELETED') {
-            errorTitle = '영구 삭제된 계정';
-            errorDescription = '탈퇴 후 30일이 경과되어 복구할 수 없습니다.';
+            errorTitle = t('auth.loginForm.errors.permanentTitle');
+            errorDescription = t('auth.loginForm.errors.permanentDescription');
 
             // 영구 삭제된 계정에 대한 특별한 토스트 표시
             toast({
-              title: `🚫 ${errorTitle}`,
-              description: `❌ ${errorDescription}\n\n💡 새로운 계정을 만드시겠습니까?\n동일한 이메일로 새 계정을 생성할 수 있습니다.`,
+              title: t('auth.loginForm.toast.permanent'),
+              description: t('auth.loginForm.toast.permanentInfo'),
               variant: 'default',
               duration: 10000,
               action: (
@@ -277,7 +282,7 @@ export default function LoginForm({ redirectTo }: LoginFormProps) {
                   onClick={() => router.push('/register')}
                   className="px-4 py-2 bg-sage-50 hover:bg-sage-60 text-white rounded-md transition-colors text-sm font-medium"
                 >
-                  ✨ 새 계정 만들기
+                  ✨ {t('auth.loginForm.cta.createNew')}
                 </button>
               ),
             });
@@ -291,9 +296,8 @@ export default function LoginForm({ redirectTo }: LoginFormProps) {
           (backendError.includes('비밀번호') ||
             backendError.includes('password'))
         ) {
-          errorTitle = '비밀번호 변경됨';
-          errorDescription =
-            '비밀번호가 변경되었습니다. 비밀번호 찾기를 이용해 새로운 비밀번호를 설정해주세요.';
+          errorTitle = t('auth.loginForm.errors.passwordTitle');
+          errorDescription = t('auth.loginForm.errors.passwordDescription');
         } else if (typeof backendError === 'string') {
           errorDescription = backendError;
         }

@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
+import { useTranslation } from 'react-i18next';
 import { getLogger } from '@/lib/logger';
 import { Calendar, CalendarRef } from '@/components/calendar';
 import { EmotionPieChart } from '@/components/charts/EmotionPieChart';
@@ -28,6 +29,7 @@ const logger = getLogger('calendar');
 
 export default function CalendarPage() {
   const router = useRouter();
+  const { t } = useTranslation();
   const {
     diaries,
     fetchDiaries: _fetchDiaries,
@@ -133,11 +135,11 @@ export default function CalendarPage() {
     } catch (error) {
       logger.error('API 호출 실패', error);
       useDiaryStore.setState({
-        error: '월별 데이터를 불러오는데 실패했습니다.',
+        error: t('calendar.errors.loadMonth'),
         isLoading: false,
       });
     }
-  }, [isAuthenticated, viewDate, dateRange, router]);
+  }, [isAuthenticated, viewDate, dateRange, router, t]);
 
   // 현재 보고 있는 월의 데이터
   const currentMonthData = useMemo(() => {
@@ -226,12 +228,12 @@ export default function CalendarPage() {
       .sort(([_, a], [__, b]) => b - a)[0];
 
     const emotionLabels = {
-      happy: { emoji: '😊', name: '행복' },
-      sad: { emoji: '', name: '슬픔' },
-      angry: { emoji: '😡', name: '화남' },
-      peaceful: { emoji: '😌', name: '평온' },
-      unrest: { emoji: '😡', name: '불안' }, // worried를 unrest로 통일
-    };
+      happy: { emoji: '😊', name: t('calendar.emotions.happy') },
+      sad: { emoji: '', name: t('calendar.emotions.sad') },
+      angry: { emoji: '😡', name: t('calendar.emotions.angry') },
+      peaceful: { emoji: '😌', name: t('calendar.emotions.peaceful') },
+      unrest: { emoji: '😡', name: t('calendar.emotions.unrest') }, // worried를 unrest로 통일
+    } as const;
 
     const topEmotion = maxEmotion
       ? emotionLabels[maxEmotion[0] as keyof typeof emotionLabels]
@@ -251,7 +253,7 @@ export default function CalendarPage() {
       totalEntries,
       topEmotion,
     };
-  }, [diaries, viewDate]);
+  }, [diaries, viewDate, t]);
 
   // 필터링된 다이어리 목록 (삭제된 이미지 제외)
   const filteredDiaries = useMemo(() => {
@@ -524,7 +526,9 @@ export default function CalendarPage() {
       <div className="min-h-screen bg-background-primary flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-sage-500 mx-auto mb-4"></div>
-          <p className="text-text-secondary">인증 확인 중...</p>
+          <p className="text-text-secondary">
+            {t('calendar.loading.authCheck')}
+          </p>
         </div>
       </div>
     );
@@ -536,7 +540,7 @@ export default function CalendarPage() {
       <div className="min-h-screen bg-background-primary flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-sage-500 mx-auto mb-4"></div>
-          <p className="text-text-secondary">사용자 정보를 불러오는 중...</p>
+          <p className="text-text-secondary">{t('calendar.loading.user')}</p>
         </div>
       </div>
     );
@@ -546,8 +550,8 @@ export default function CalendarPage() {
     <div className="h-full bg-background-primary flex flex-col">
       {/* 페이지 헤더 */}
       <PageHeader
-        title="캘린더"
-        subtitle="월간 감정 분포와 주요 키워드 확인 가능합니다"
+        title={t('calendar.title')}
+        subtitle={t('calendar.subtitle')}
       />
 
       <div className="flex flex-1 min-h-0">
@@ -590,7 +594,7 @@ export default function CalendarPage() {
                 >
                   <div className="flex items-center justify-between mb-4">
                     <h3 className="text-h4 font-bold text-text-primary">
-                      {selectedDate} 기록
+                      {t('calendar.selectedDateTitle', { date: selectedDate })}
                     </h3>
                     <Button variant="ghost" size="sm" onClick={clearSelection}>
                       ✕
@@ -611,7 +615,9 @@ export default function CalendarPage() {
                           }}
                           tabIndex={0}
                           role="button"
-                          aria-label={`${entry.title} 기록 보기`}
+                          aria-label={t('calendar.entryAriaLabel', {
+                            title: entry.title,
+                          })}
                         >
                           <div className="flex items-center justify-between mb-2">
                             <h4 className="text-h4 font-bold text-text-primary">
@@ -681,7 +687,9 @@ export default function CalendarPage() {
                                             ? `${process.env.NEXT_PUBLIC_API_BASE_URL || (process.env.NODE_ENV === 'development' ? 'http://localhost:8000' : '')}/api/public/image-proxy?url=${encodeURIComponent(image.thumbnail_path)}`
                                             : ''
                                         }
-                                        alt={`다이어리 이미지 ${index + 1}`}
+                                        alt={t('calendar.imageAlt', {
+                                          index: index + 1,
+                                        })}
                                         className="rounded-md border border-border-subtle shadow-sm hover:shadow-md transition-all duration-200"
                                         width={70}
                                         height={70}
@@ -726,7 +734,7 @@ export default function CalendarPage() {
                           {(!entry.images || entry.images.length === 0) && (
                             <div className="mb-3 text-center py-3 border border-dashed border-border-subtle rounded-md bg-background-hover">
                               <p className="text-caption text-text-secondary">
-                                📷 이미지 없음
+                                📷 {t('calendar.empty.noImages')}
                               </p>
                             </div>
                           )}
@@ -734,7 +742,7 @@ export default function CalendarPage() {
                           {/* 클릭 안내 메시지 */}
                           <div className="text-right">
                             <span className="text-caption text-interactive-primary">
-                              클릭하여 상세 보기 →
+                              {t('calendar.empty.viewHint')}
                             </span>
                           </div>
                         </div>
@@ -744,7 +752,7 @@ export default function CalendarPage() {
                     <div className="text-center py-8">
                       <div className="text-4xl mb-2">📝</div>
                       <p className="text-text-secondary">
-                        이 날에는 기록이 없습니다
+                        {t('calendar.noEntriesForDate')}
                       </p>
                     </div>
                   )}
@@ -765,35 +773,38 @@ export default function CalendarPage() {
                 {/* 월간 요약 */}
                 <div className="bg-background-primary rounded-lg border border-border-subtle p-6">
                   <h3 className="text-h4 font-bold text-text-primary mb-4">
-                    이달의 요약
+                    {t('calendar.summary.title')}
                   </h3>
 
                   <div className="space-y-3">
                     <div className="flex justify-between items-center">
                       <span className="text-body-small text-text-secondary">
-                        총 기록 수
+                        {t('calendar.summary.totalEntriesLabel')}
                       </span>
                       <span className="text-body font-medium text-text-primary">
-                        {currentMonthData.totalEntries}개
+                        {t('calendar.summary.entriesCount', {
+                          count: currentMonthData.totalEntries,
+                        })}
                       </span>
                     </div>
 
                     <div className="flex justify-between items-center">
                       <span className="text-body-small text-text-secondary">
-                        가장 많은 감정
+                        {t('calendar.summary.topEmotionLabel')}
                       </span>
                       <span className="text-body font-medium text-text-primary">
-                        {currentMonthData.topEmotion?.name || '기록 없음'}
+                        {currentMonthData.topEmotion?.name ||
+                          t('calendar.summary.noEmotion')}
                       </span>
                     </div>
 
                     <div className="flex justify-between items-center">
                       <span className="text-body-small text-text-secondary">
-                        주요 키워드
+                        {t('calendar.summary.keywordsLabel')}
                       </span>
                       <span className="text-body font-medium text-text-primary">
                         {currentMonthData.keywordDistribution[0]?.word ||
-                          '없음'}
+                          t('calendar.summary.noKeywords')}
                       </span>
                     </div>
                   </div>
@@ -813,35 +824,38 @@ export default function CalendarPage() {
                     {/* 월간 요약 */}
                     <div className="bg-background-primary rounded-lg border border-border-subtle p-6">
                       <h3 className="text-h4 font-bold text-text-primary mb-4">
-                        이달의 요약
+                        {t('calendar.summary.title')}
                       </h3>
 
                       <div className="space-y-3">
                         <div className="flex justify-between items-center">
                           <span className="text-body-small text-text-secondary">
-                            총 기록 수
+                            {t('calendar.summary.totalEntriesLabel')}
                           </span>
                           <span className="text-body font-medium text-text-primary">
-                            {currentMonthData.totalEntries}개
+                            {t('calendar.summary.entriesCount', {
+                              count: currentMonthData.totalEntries,
+                            })}
                           </span>
                         </div>
 
                         <div className="flex justify-between items-center">
                           <span className="text-body-small text-text-secondary">
-                            가장 많은 감정
+                            {t('calendar.summary.topEmotionLabel')}
                           </span>
                           <span className="text-body font-medium text-text-primary">
-                            {currentMonthData.topEmotion?.name || '기록 없음'}
+                            {currentMonthData.topEmotion?.name ||
+                              t('calendar.summary.noEmotion')}
                           </span>
                         </div>
 
                         <div className="flex justify-between items-center">
                           <span className="text-body-small text-text-secondary">
-                            주요 키워드
+                            {t('calendar.summary.keywordsLabel')}
                           </span>
                           <span className="text-body font-medium text-text-primary">
                             {currentMonthData.keywordDistribution[0]?.word ||
-                              '없음'}
+                              t('calendar.summary.noKeywords')}
                           </span>
                         </div>
                       </div>

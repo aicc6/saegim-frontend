@@ -173,6 +173,84 @@
       "toastDescription": "{{email}}로 비밀번호 재설정 링크를 발송했습니다.\n\n이메일을 확인하여 링크를 클릭해주세요.",
       "toastErrorTitle": "이메일 발송 실패",
       "toastErrorDescription": "이메일 발송 중 오류가 발생했습니다."
+    },
+    "loginForm": {
+      "errors": {
+        "genericTitle": "로그인 실패",
+        "genericDescription": "로그인 처리 중 문제가 발생했습니다.",
+        "invalidResponse": "서버에서 예상하지 못한 응답을 받았습니다.",
+        "unauthorizedTitle": "인증 실패",
+        "unauthorizedDescription": "이메일 또는 비밀번호가 올바르지 않습니다.",
+        "passwordTitle": "비밀번호 변경됨",
+        "passwordDescription": "비밀번호가 변경된 것 같습니다. 비밀번호 찾기를 이용해 주세요.",
+        "notFoundTitle": "계정을 찾을 수 없음",
+        "notFoundDescription": "해당 이메일로 등록된 계정을 찾을 수 없습니다. 먼저 회원가입을 진행해 주세요.",
+        "networkTitle": "네트워크 오류",
+        "networkDescription": "서버에 연결할 수 없습니다. 인터넷 연결을 확인한 뒤 다시 시도해 주세요.",
+        "timeoutTitle": "시간 초과",
+        "timeoutDescription": "요청 시간이 초과되었습니다. 잠시 후 다시 시도해 주세요.",
+        "restorableTitle": "탈퇴된 계정",
+        "restorableDescription": "탈퇴된 계정입니다. {{days}}일 이내에 복구할 수 있습니다.",
+        "permanentTitle": "영구 삭제된 계정",
+        "permanentDescription": "탈퇴 후 30일이 지나 복구할 수 없습니다."
+      },
+      "cta": {
+        "restore": "지금 복구하기",
+        "createNew": "새 계정 만들기"
+      },
+      "toast": {
+        "restorable": "⚠️ 탈퇴된 계정",
+        "restorableInfo": "ℹ️ 탈퇴된 계정입니다. {{days}}일 이내에 복구할 수 있습니다.\n\n🔄 지금 복구하시겠습니까?\n복구 후에도 모든 데이터가 그대로 유지됩니다.",
+        "permanent": "🚫 영구 삭제된 계정",
+        "permanentInfo": "❌ 복구 가능 기간이 만료되었습니다.\n\n💡 동일한 이메일로 새 계정을 만들어 보시겠습니까?"
+      }
+    },
+    "changeEmail": {
+      "verifyTitle": "현재 비밀번호 확인",
+      "verifyDescription": "프로필을 변경하려면 현재 비밀번호를 입력해주세요.",
+      "verifyPlaceholder": "현재 비밀번호를 입력하세요",
+      "verifyButton": "확인",
+      "verifySuccessTitle": "비밀번호 확인 완료",
+      "verifySuccessDescription": "프로필 정보를 수정할 수 있습니다.",
+      "verifyFailureTitle": "비밀번호 확인 실패",
+      "verifyFailureDescription": "현재 비밀번호가 올바르지 않습니다.",
+      "formTitle": "프로필 업데이트",
+      "formDescription": "닉네임과 이메일 주소를 변경할 수 있습니다.",
+      "nicknameLabel": "닉네임",
+      "nicknamePlaceholder": "닉네임을 입력하세요",
+      "emailLabel": "새 이메일 주소",
+      "emailPlaceholder": "새 이메일을 입력하세요",
+      "submitLabel": "프로필 업데이트",
+      "submittingLabel": "업데이트 중...",
+      "successTitle": "프로필 업데이트 완료",
+      "successDescription": "프로필 정보가 성공적으로 변경되었습니다.",
+      "failureTitle": "프로필 업데이트 실패",
+      "failureDescription": "프로필을 업데이트하는 중 오류가 발생했습니다."
+    },
+    "changePassword": {
+      "title": "비밀번호 변경",
+      "description": "계정 보안을 위해 비밀번호를 변경하세요.",
+      "currentPasswordLabel": "현재 비밀번호",
+      "currentPasswordPlaceholder": "현재 비밀번호를 입력하세요",
+      "newPasswordLabel": "새 비밀번호",
+      "newPasswordPlaceholder": "새 비밀번호를 입력하세요",
+      "newPasswordHelp": "9자 이상, 영문·숫자·특수문자를 포함해야 합니다.",
+      "confirmLabel": "새 비밀번호 확인",
+      "confirmPlaceholder": "새 비밀번호를 다시 입력하세요",
+      "submitLabel": "비밀번호 변경",
+      "submittingLabel": "변경 중...",
+      "successTitle": "비밀번호 변경 완료",
+      "successDescription": "비밀번호가 변경되었습니다. 보안을 위해 다시 로그인해주세요.",
+      "failureTitle": "비밀번호 변경 실패",
+      "failureDescription": "비밀번호를 변경하는 중 오류가 발생했습니다."
+    },
+    "guard": {
+      "loading": "인증 확인 중...",
+      "unknownError": "알 수 없는 오류가 발생했습니다.",
+      "withdraw": {
+        "restorable": "탈퇴된 계정입니다. {{days}}일 이내에 복구할 수 있습니다.",
+        "expired": "탈퇴 후 30일이 경과되어 복구할 수 없습니다."
+      }
     }
   },
   "create": {
@@ -241,13 +319,47 @@
   },
   "calendar": {
     "title": "캘린더",
+    "subtitle": "월간 감정 분포와 주요 키워드를 한눈에 확인하세요",
     "today": "오늘",
     "month": "월",
     "year": "년",
     "noEntriesForDate": "해당 날짜에 일기가 없습니다",
     "viewEntry": "일기 보기",
     "emotionStats": "감정 통계",
-    "keywordStats": "키워드 통계"
+    "keywordStats": "키워드 통계",
+    "loading": {
+      "authCheck": "인증 확인 중...",
+      "user": "사용자 정보를 불러오는 중..."
+    },
+    "errors": {
+      "loadMonth": "월별 데이터를 불러오는데 실패했습니다."
+    },
+    "summary": {
+      "title": "이달의 요약",
+      "totalEntriesLabel": "총 기록 수",
+      "entriesCount": "{{count}}개",
+      "topEmotionLabel": "가장 많은 감정",
+      "noEmotion": "기록 없음",
+      "keywordsLabel": "주요 키워드",
+      "noKeywords": "없음"
+    },
+    "empty": {
+      "noImages": "이미지 없음",
+      "viewHint": "클릭하여 상세 보기 →"
+    },
+    "selectedDateTitle": "{{date}} 기록",
+    "entryAriaLabel": "{{title}} 기록 보기",
+    "imageAlt": "다이어리 이미지 {{index}}",
+    "emotions": {
+      "happy": "행복",
+      "sad": "슬픔",
+      "angry": "화남",
+      "peaceful": "평온",
+      "unrest": "불안"
+    },
+    "weekdays": {
+      "short": ["일", "월", "화", "수", "목", "금", "토"]
+    }
   },
   "landing": {
     "hero": {
@@ -346,7 +458,9 @@
     "noNotifications": "새로운 알림이 없습니다",
     "unread": "읽지 않음",
     "settings": "알림 설정",
-    "enablePush": "푸시 알림 활성화"
+    "enablePush": "푸시 알림 활성화",
+    "viewAll": "전체 알림 보기",
+    "unreadCountSuffix": "({{count}})"
   },
   "errors": {
     "somethingWentWrong": "문제가 발생했습니다",

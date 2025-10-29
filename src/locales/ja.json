@@ -173,6 +173,84 @@
       "toastDescription": "{{email}} に再設定用リンクを送信しました。\n\nメールを確認し、リンクをクリックしてください。",
       "toastErrorTitle": "メール送信に失敗しました",
       "toastErrorDescription": "メール送信中にエラーが発生しました。"
+    },
+    "loginForm": {
+      "errors": {
+        "genericTitle": "ログインに失敗しました",
+        "genericDescription": "ログイン処理中に問題が発生しました。",
+        "invalidResponse": "サーバーから予期しない応答が返されました。",
+        "unauthorizedTitle": "認証に失敗しました",
+        "unauthorizedDescription": "メールアドレスまたはパスワードが正しくありません。",
+        "passwordTitle": "パスワードが変更されました",
+        "passwordDescription": "パスワードが変更された可能性があります。パスワード再設定をご利用ください。",
+        "notFoundTitle": "アカウントが見つかりません",
+        "notFoundDescription": "そのメールアドレスで登録されたアカウントは存在しません。先に新規登録を行ってください。",
+        "networkTitle": "ネットワークエラー",
+        "networkDescription": "サーバーに接続できません。インターネット接続を確認して再度お試しください。",
+        "timeoutTitle": "タイムアウト",
+        "timeoutDescription": "リクエストがタイムアウトしました。しばらくしてからもう一度お試しください。",
+        "restorableTitle": "削除済みアカウント",
+        "restorableDescription": "このアカウントは削除されています。{{days}}日以内であれば復元できます。",
+        "permanentTitle": "完全に削除されたアカウント",
+        "permanentDescription": "削除から30日以上経過したため、復元できません。"
+      },
+      "cta": {
+        "restore": "今すぐ復元する",
+        "createNew": "新しいアカウントを作成する"
+      },
+      "toast": {
+        "restorable": "⚠️ 削除済みアカウント",
+        "restorableInfo": "ℹ️ このアカウントは削除されています。{{days}}日以内で復元できます。\n\n🔄 今すぐ復元しますか？\n復元してもデータはそのまま保持されます。",
+        "permanent": "🚫 完全に削除されたアカウント",
+        "permanentInfo": "❌ 復元可能期間が終了しました。\n\n💡 同じメールアドレスで新しいアカウントを作成しますか？"
+      }
+    },
+    "changeEmail": {
+      "verifyTitle": "現在のパスワードを確認",
+      "verifyDescription": "プロフィールを変更するには現在のパスワードを入力してください。",
+      "verifyPlaceholder": "現在のパスワードを入力",
+      "verifyButton": "確認する",
+      "verifySuccessTitle": "パスワードを確認しました",
+      "verifySuccessDescription": "プロフィール情報を更新できます。",
+      "verifyFailureTitle": "パスワード確認に失敗しました",
+      "verifyFailureDescription": "現在のパスワードが正しくありません。",
+      "formTitle": "プロフィールを更新",
+      "formDescription": "ニックネームとメールアドレスを変更できます。",
+      "nicknameLabel": "ニックネーム",
+      "nicknamePlaceholder": "ニックネームを入力してください",
+      "emailLabel": "新しいメールアドレス",
+      "emailPlaceholder": "新しいメールアドレスを入力してください",
+      "submitLabel": "プロフィールを更新",
+      "submittingLabel": "更新中...",
+      "successTitle": "プロフィールを更新しました",
+      "successDescription": "プロフィール情報が正常に変更されました。",
+      "failureTitle": "プロフィール更新に失敗しました",
+      "failureDescription": "プロフィールの更新中にエラーが発生しました。"
+    },
+    "changePassword": {
+      "title": "パスワードを変更",
+      "description": "アカウントを安全に保つためパスワードを更新してください。",
+      "currentPasswordLabel": "現在のパスワード",
+      "currentPasswordPlaceholder": "現在のパスワードを入力してください",
+      "newPasswordLabel": "新しいパスワード",
+      "newPasswordPlaceholder": "新しいパスワードを入力してください",
+      "newPasswordHelp": "9文字以上で、英字・数字・記号を含めてください。",
+      "confirmLabel": "新しいパスワードの確認",
+      "confirmPlaceholder": "新しいパスワードを再入力してください",
+      "submitLabel": "パスワードを変更",
+      "submittingLabel": "変更中...",
+      "successTitle": "パスワードを更新しました",
+      "successDescription": "パスワードが更新されました。セキュリティのため再度ログインしてください。",
+      "failureTitle": "パスワードの変更に失敗しました",
+      "failureDescription": "パスワードの変更中にエラーが発生しました。もう一度お試しください。"
+    },
+    "guard": {
+      "loading": "認証を確認しています...",
+      "unknownError": "不明なエラーが発生しました。",
+      "withdraw": {
+        "restorable": "アカウントは削除されました。{{days}}日以内であれば復元できます。",
+        "expired": "復元可能期間が過ぎたため、アカウントを復元できません。"
+      }
     }
   },
   "create": {
@@ -240,14 +318,48 @@
     "maxImagesReached": "Maximum image limit reached"
   },
   "calendar": {
-    "title": "Calendar",
-    "today": "Today",
-    "month": "Month",
-    "year": "Year",
-    "noEntriesForDate": "No entries for this date",
-    "viewEntry": "View Entry",
-    "emotionStats": "Emotion Stats",
-    "keywordStats": "Keyword Stats"
+    "title": "カレンダー",
+    "subtitle": "月ごとの感情分布と主要キーワードを一目で確認できます",
+    "today": "今日",
+    "month": "月",
+    "year": "年",
+    "noEntriesForDate": "この日に記録はありません",
+    "viewEntry": "記録を見る",
+    "emotionStats": "感情統計",
+    "keywordStats": "キーワード統計",
+    "loading": {
+      "authCheck": "認証を確認しています...",
+      "user": "ユーザー情報を読み込み中です..."
+    },
+    "errors": {
+      "loadMonth": "月別データの読み込みに失敗しました。"
+    },
+    "summary": {
+      "title": "今月のサマリー",
+      "totalEntriesLabel": "総記録数",
+      "entriesCount": "{{count}}件",
+      "topEmotionLabel": "最も多かった感情",
+      "noEmotion": "記録なし",
+      "keywordsLabel": "主要キーワード",
+      "noKeywords": "なし"
+    },
+    "empty": {
+      "noImages": "画像なし",
+      "viewHint": "クリックして詳細を見る →"
+    },
+    "selectedDateTitle": "{{date}}の記録",
+    "entryAriaLabel": "{{title}}の記録を見る",
+    "imageAlt": "日記の画像 {{index}}",
+    "emotions": {
+      "happy": "幸せ",
+      "sad": "悲しみ",
+      "angry": "怒り",
+      "peaceful": "穏やか",
+      "unrest": "不安"
+    },
+    "weekdays": {
+      "short": ["日", "月", "火", "水", "木", "金", "土"]
+    }
   },
   "landing": {
     "hero": {
@@ -341,12 +453,14 @@
     "defaultDisplayName": "User"
   },
   "notifications": {
-    "title": "Notifications",
-    "markAllAsRead": "Mark All as Read",
-    "noNotifications": "No new notifications",
-    "unread": "Unread",
-    "settings": "Notification Settings",
-    "enablePush": "Enable Push Notifications"
+    "title": "通知",
+    "markAllAsRead": "すべて既読にする",
+    "noNotifications": "新しい通知はありません",
+    "unread": "未読",
+    "settings": "通知設定",
+    "enablePush": "プッシュ通知を有効にする",
+    "viewAll": "通知をすべて表示",
+    "unreadCountSuffix": "({{count}})"
   },
   "errors": {
     "somethingWentWrong": "Something went wrong",
