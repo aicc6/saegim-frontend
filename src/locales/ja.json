@@ -285,7 +285,21 @@
       "errorTitle": "Download failed",
       "errorDescription": "We couldn’t start the download. Please check your network connection and try again.",
       "loadingTitle": "Preparing download",
-      "loadingDescription": "We’re fetching the app download link. Please try again in a moment."
+      "loadingDescription": "We’re fetching the app download link. Please try again in a moment.",
+      "loadingButton": "Loading...",
+      "androidButton": "Download Android App"
+    },
+    "mobile": {
+      "badge": "Mobile App Release",
+      "titleLine1": "Anytime, Anywhere",
+      "titleLine2": "With Saegim",
+      "description": "Download the Saegim Android app and record your feelings wherever you are. The mobile-optimized UI makes writing your diary easier than ever.",
+      "iosComingSoon": "iOS app coming soon",
+      "notice": "✨ The Android version is available now. The iOS version is coming soon.",
+      "preview": {
+        "name": "Saegim",
+        "subtitle": "Emotional AI Diary"
+      }
     },
     "features": {
       "title": "What Makes Saegim Special",

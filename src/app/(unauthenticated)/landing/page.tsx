@@ -260,6 +260,9 @@ function LandingWithSearchParams() {
   };
 
   const quoteLines = t('landing.hero.quoteText').split('\n');
+  const androidButtonLabel = isLoadingDownload
+    ? t('landing.download.loadingButton')
+    : t('landing.download.androidButton');
 
   return (
     <>
@@ -314,7 +317,7 @@ function LandingWithSearchParams() {
                   disabled={isLoadingDownload || !androidDownloadInfo}
                 >
                   <Smartphone className="w-4 h-4 mr-2" />
-                  {isLoadingDownload ? '로딩 중...' : '안드로이드 앱 다운로드'}
+                  {androidButtonLabel}
                 </Button>
               </div>
             </div>
@@ -373,17 +376,17 @@ function LandingWithSearchParams() {
               <div className="p-8 lg:p-12 space-y-6">
                 <div className="inline-flex items-center gap-2 bg-sage-20 text-sage-100 px-4 py-2 rounded-full text-sm font-medium">
                   <Smartphone className="w-4 h-4" />
-                  모바일 앱 출시
+                  {t('landing.mobile.badge')}
                 </div>
                 <h2 className="text-3xl lg:text-4xl font-bold text-sage-100">
-                  언제 어디서나
+                  {t('landing.mobile.titleLine1')}
                   <br />
-                  <span className="text-sage-70">새김과 함께</span>
+                  <span className="text-sage-70">
+                    {t('landing.mobile.titleLine2')}
+                  </span>
                 </h2>
                 <p className="text-lg text-sage-80 leading-relaxed">
-                  새김 안드로이드 앱을 다운로드하고 언제 어디서나 당신의 감정을
-                  기록하세요. 모바일에 최적화된 UI로 더욱 편리하게 일기를 작성할
-                  수 있습니다.
+                  {t('landing.mobile.description')}
                 </p>
                 <div className="flex flex-col sm:flex-row gap-4">
                   <Button
@@ -393,9 +396,7 @@ function LandingWithSearchParams() {
                     disabled={isLoadingDownload || !androidDownloadInfo}
                   >
                     <Smartphone className="w-5 h-5 mr-2" />
-                    {isLoadingDownload
-                      ? '로딩 중...'
-                      : '안드로이드 앱 다운로드'}
+                    {androidButtonLabel}
                   </Button>
                   <Button
                     size="lg"
@@ -403,12 +404,11 @@ function LandingWithSearchParams() {
                     className="border-sage-30 text-sage-100 hover:bg-sage-10"
                     disabled
                   >
-                    iOS 앱 준비 중
+                    {t('landing.mobile.iosComingSoon')}
                   </Button>
                 </div>
                 <p className="text-sm text-sage-60">
-                  ✨ 현재 안드로이드 버전이 제공됩니다. iOS 버전도 곧 출시될
-                  예정입니다.
+                  {t('landing.mobile.notice')}
                 </p>
               </div>
 
@@ -423,9 +423,11 @@ function LandingWithSearchParams() {
                           <Heart className="w-6 h-6 text-sage-70" />
                         </div>
                         <div>
-                          <h3 className="font-bold text-sage-100">새김</h3>
+                          <h3 className="font-bold text-sage-100">
+                            {t('landing.mobile.preview.name')}
+                          </h3>
                           <p className="text-sm text-sage-70">
-                            감성 AI 다이어리
+                            {t('landing.mobile.preview.subtitle')}
                           </p>
                         </div>
                       </div>
