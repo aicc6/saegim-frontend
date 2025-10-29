@@ -9,7 +9,9 @@ import { authApi } from '@/lib/api/auth';
 import { useToast } from '@/hooks/use-toast';
 import { getLogger } from '@/lib/logger';
 import { useAuthStore } from '@/stores/auth';
+import { useLanguageStore } from '@/stores/language';
 import { apiClient } from '@/lib/api/client';
+import { DEFAULT_LANGUAGE, isSupportedLanguage } from '@/types/language';
 
 const logger = getLogger('ProfileForm');
 
@@ -84,6 +86,14 @@ export default function ProfileForm() {
       setIsLoading(true);
       const response = await authApi.getCurrentUser();
       const profile = response.data;
+      const languageStore = useLanguageStore.getState();
+      languageStore.setLanguageFromServer(
+        isSupportedLanguage(profile.preferred_language)
+          ? profile.preferred_language
+          : null,
+      );
+      const resolvedLanguage =
+        useLanguageStore.getState().language ?? DEFAULT_LANGUAGE;
 
       // 프로필 이미지 우선순위: localStorage > 서버 데이터 > 전역 상태
       let profileImage = profile.profile_image || authUser?.profileImage || '';
@@ -141,6 +151,7 @@ export default function ProfileForm() {
       updateUser({
         nickname: profile.nickname,
         profileImage: profileImage,
+        preferredLanguage: resolvedLanguage,
       });
     } catch (error) {
       logger.error('프로필 로드 실패', { error });

@@ -5,6 +5,7 @@ import { persist } from 'zustand/middleware';
 import { immer } from 'zustand/middleware/immer';
 import { aiApi } from '@/lib/api/ai';
 import { getLogger } from '../lib/logger';
+import { useLanguageStore } from './language';
 
 const logger = getLogger('create');
 
@@ -163,12 +164,14 @@ export const useCreateStore = create<CreateState>()(
         });
 
         try {
+          const { language } = useLanguageStore.getState();
           const response = await aiApi.generateText({
             prompt: prompt.trim(),
             style,
             length,
             emotion: emotion || '',
             regeneration_count: 1,
+            language,
           });
 
           if (response.success && response.data) {

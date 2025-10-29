@@ -43,6 +43,7 @@ interface DiaryState {
       user_emotion?: string;
       is_public?: boolean;
       keywords?: string[];
+      category_id?: string | null;
     },
   ) => Promise<void>;
   deleteDiary: (id: string) => Promise<void>;
@@ -91,6 +92,7 @@ export const useDiaryStore = create<DiaryState>((set, get) => ({
       if (filters?.start_date) params.start_date = filters.start_date;
       if (filters?.end_date) params.end_date = filters.end_date;
       if (filters?.sort_order) params.sort_order = filters.sort_order;
+      if (filters?.category_id) params.category_id = filters.category_id;
 
       const response = await diaryApi.getDiaries(params);
 
@@ -209,6 +211,7 @@ export const useDiaryStore = create<DiaryState>((set, get) => ({
       user_emotion?: string;
       is_public?: boolean;
       keywords?: string[];
+      category_id?: string | null;
     },
   ) => {
     try {

@@ -7,7 +7,9 @@ import type {
   UserProfileResponse,
   EmailTokenVerificationResponse,
   EmailChangeResponse,
+  UserSettingsResponse,
 } from '@/types/api';
+import type { LanguageCode } from '@/types/language';
 import { apiClient, API_BASE_URL } from './client';
 
 export interface LoginResponse {
@@ -93,6 +95,11 @@ export const authApi = {
   // 현재 사용자 정보 조회
   getCurrentUser: async () => {
     return apiClient.get<UserProfileResponse>('/api/auth/me');
+  },
+
+  // 사용자 설정 업데이트 (언어 등)
+  updateSettings: async (data: { preferred_language: LanguageCode }) => {
+    return apiClient.patch<UserSettingsResponse>('/api/auth/me/settings', data);
   },
 
   // 프로필 업데이트

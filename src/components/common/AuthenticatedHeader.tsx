@@ -4,12 +4,16 @@ import { useEffect, useState } from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useTheme } from 'next-themes';
+import { useTranslation } from 'react-i18next';
 import { useNotifications } from '@/hooks/use-notifications';
 import { useFCMStore } from '@/stores/fcm';
 import { useAuthStore } from '@/stores/auth';
+import { useLanguageStore } from '@/stores/language';
 import { authApi } from '@/lib/api/auth';
 import { getLogger } from '@/lib/logger';
+import { DEFAULT_LANGUAGE, isSupportedLanguage } from '@/types/language';
 import ThemeToggle from '../ui/custom/ThemeToggle';
+import LanguageToggle from '../ui/custom/LanguageToggle';
 import NotificationPopover from './NotificationPopover';
 
 const logger = getLogger('AuthenticatedHeader');
@@ -23,6 +27,7 @@ interface UserInfo {
 export default function AuthenticatedHeader() {
   const router = useRouter();
   const { resolvedTheme } = useTheme();
+  const { t } = useTranslation();
   const { clearStorage } = useAuthStore();
   const [mounted, setMounted] = useState(false);
   const [_userInfo, setUserInfo] = useState<UserInfo | null>(null);
@@ -50,7 +55,20 @@ export default function AuthenticatedHeader() {
       try {
         const response = await authApi.getCurrentUser();
         if (response.data) {
-          setUserInfo(response.data as UserInfo);
+          const userData = response.data as UserInfo & {
+            preferred_language?: string | null;
+          };
+          const languageStore = useLanguageStore.getState();
+          const serverLanguage = userData.preferred_language;
+          languageStore.setLanguageFromServer(
+            isSupportedLanguage(serverLanguage) ? serverLanguage : null,
+          );
+          const resolvedLanguage =
+            useLanguageStore.getState().language ?? DEFAULT_LANGUAGE;
+          setUserInfo(userData);
+          useAuthStore.getState().updateUser({
+            preferredLanguage: resolvedLanguage,
+          });
         }
       } catch (error) {
         logger.error('사용자 정보 가져오기 실패', { error });
@@ -91,7 +109,7 @@ export default function AuthenticatedHeader() {
           <div className="w-18 h-18 rounded-full flex items-center justify-center">
             <Image
               src="/images/logoop.png"
-              alt="새김 로고"
+              alt={t('common.logoAlt')}
               width={72}
               height={72}
               className="w-18 h-18"
@@ -99,7 +117,7 @@ export default function AuthenticatedHeader() {
           </div>
         </button>
 
-        {/* 우측: 알림, 테마 토글, 프로필 */}
+        {/* 우측: 알림, 언어 토글, 테마 토글, 프로필 */}
         <div className="flex items-center space-x-4">
           <NotificationPopover
             notifications={notifications}
@@ -112,6 +130,7 @@ export default function AuthenticatedHeader() {
             onFCMMarkAllAsRead={fcmMarkAllAsRead}
           />
 
+          <LanguageToggle variant="segment" className="min-w-[6.5rem]" />
           <ThemeToggle />
         </div>
       </div>

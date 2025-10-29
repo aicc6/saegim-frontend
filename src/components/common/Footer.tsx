@@ -1,10 +1,12 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from 'next-themes';
 
 export default function Footer() {
   const [mounted, setMounted] = useState(false);
+  const { t } = useTranslation();
   const { resolvedTheme } = useTheme();
 
   useEffect(() => setMounted(true), []);
@@ -23,11 +25,11 @@ export default function Footer() {
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center">
-          <h3 className="text-lg font-semibold mb-4">연락처</h3>
-          <p className="text-sm mb-2">이메일: alswlalswl58@naver.com</p>
-          <p className="text-xs opacity-80">
-            * 직접 이메일로 문의하시면 빠른 답변을 받으실 수 있습니다.
+          <h3 className="text-lg font-semibold mb-4">{t('footer.contact')}</h3>
+          <p className="text-sm mb-2">
+            {t('footer.email')}: alswlalswl58@naver.com
           </p>
+          <p className="text-xs opacity-80">{t('footer.emailNote')}</p>
         </div>
       </div>
     </footer>

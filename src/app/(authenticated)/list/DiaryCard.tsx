@@ -2,6 +2,7 @@
 
 import { forwardRef } from 'react';
 import Image from 'next/image';
+import { NotebookPen } from 'lucide-react';
 import { formatDate } from '@/lib/utils';
 
 const emotionConfig = {
@@ -46,6 +47,7 @@ interface DiaryCardProps {
     date: string;
     keywords: string[];
     thumbnail: string;
+    categoryName?: string | null;
   };
   onClick?: () => void;
   onDelete?: (id: number) => void;
@@ -133,6 +135,13 @@ const DiaryCard = forwardRef<HTMLDivElement, DiaryCardProps>(
           <h3 className="text-h4 font-semibold text-text-primary group-hover:text-sage-100 transition-colors mb-3 line-clamp-2">
             {diary.title}
           </h3>
+
+          <div className="mb-3">
+            <span className="inline-flex items-center gap-1 rounded-full bg-sage-10 px-2 py-1 text-xs font-medium text-sage-100">
+              <NotebookPen className="h-3 w-3" />
+              {diary.categoryName ?? '분류 없음'}
+            </span>
+          </div>
 
           {/* ai 생성 문구 */}
           <p className="text-body text-text-secondary mb-4 line-clamp-3">

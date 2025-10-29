@@ -1,22 +1,26 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import Image from 'next/image';
+import { useTranslation } from 'react-i18next';
 import { FormInput } from '@/components/ui/form-input';
 import { useApiError } from '@/hooks/use-api-error';
 import { apiClient } from '@/lib/api/client';
-import { supportSchema, type SupportFormData } from '@/schemas/auth';
+import { createSupportSchema, type SupportFormData } from '@/schemas/auth';
 import { TEXT_STYLES } from '@/constants';
 
 export default function SupportForm() {
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [imageBase64, setImageBase64] = useState<string | null>(null);
+  const { t } = useTranslation();
   const { handleApiError, showSuccess } = useApiError({
     loggerName: 'SupportForm',
   });
+
+  const schema = useMemo(() => createSupportSchema(t), [t]);
 
   const {
     register,
@@ -24,7 +28,7 @@ export default function SupportForm() {
     formState: { errors, isSubmitting },
     reset,
   } = useForm<SupportFormData>({
-    resolver: zodResolver(supportSchema),
+    resolver: zodResolver(schema),
     mode: 'onBlur',
   });
 

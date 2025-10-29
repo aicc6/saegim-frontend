@@ -1,13 +1,15 @@
 'use client';
 
+import { useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { useRouter } from 'next/navigation';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { useTranslation } from 'react-i18next';
 import { apiClient } from '@/lib/api/client';
 import { useApiError } from '@/hooks/use-api-error';
 import { FormInput } from '@/components/ui/form-input';
 import {
-  changePasswordSchema,
+  createChangePasswordSchema,
   type ChangePasswordFormData,
 } from '@/schemas/auth';
 import { TEXT_STYLES } from '@/constants';
@@ -20,16 +22,19 @@ interface ChangePasswordRequest {
 
 export default function ChangePasswordForm() {
   const router = useRouter();
+  const { t } = useTranslation();
   const { handleApiError, showSuccess } = useApiError({
     loggerName: 'ChangePasswordForm',
   });
+
+  const schema = useMemo(() => createChangePasswordSchema(t), [t]);
 
   const {
     register,
     handleSubmit,
     formState: { errors, isSubmitting },
   } = useForm<ChangePasswordFormData>({
-    resolver: zodResolver(changePasswordSchema),
+    resolver: zodResolver(schema),
     mode: 'onBlur',
   });
 

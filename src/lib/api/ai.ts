@@ -2,6 +2,7 @@
  * AI 관련 API
  */
 
+import { DEFAULT_LANGUAGE, type LanguageCode } from '@/types/language';
 import { apiClient } from './client';
 
 export interface AIGenerationResult {
@@ -50,6 +51,7 @@ export const aiApi = {
     emotion?: string;
     regeneration_count?: number;
     sessionId?: string;
+    language?: LanguageCode;
     uploaded_images?: Array<{
       file_id: string;
       original_url: string;
@@ -65,6 +67,7 @@ export const aiApi = {
       length: data.length,
       emotion: data.emotion || '',
       regeneration_count: data.regeneration_count || 0,
+      language: data.language || DEFAULT_LANGUAGE,
     };
 
     // sessionId가 있을 때만 추가
@@ -88,6 +91,7 @@ export const aiApi = {
     length: string;
     emotion?: string;
     sessionId?: string;
+    language?: LanguageCode;
     uploaded_images?: Array<{
       file_id: string;
       original_url: string;
@@ -103,6 +107,7 @@ export const aiApi = {
       style: data.style,
       length: data.length,
       emotion: data.emotion || '',
+      language: data.language || DEFAULT_LANGUAGE,
       ...(data.sessionId && { session_id: data.sessionId }),
       ...(data.uploaded_images && { uploaded_images: data.uploaded_images }),
       ...(data.diary_date && { diary_date: data.diary_date }),

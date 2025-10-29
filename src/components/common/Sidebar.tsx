@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
@@ -16,6 +16,7 @@ import {
   ChevronRight,
   LogOut,
 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 import { Button } from '@/components/ui/button';
 import { useSidebar } from '@/contexts/sidebar-context';
@@ -25,17 +26,13 @@ import { useAuthStore } from '@/stores/auth';
 import { useFCMStore } from '@/stores/fcm';
 import { authApi, getLogger } from '@/lib';
 import ThemeToggle from '../ui/custom/ThemeToggle';
+import LanguageToggle from '../ui/custom/LanguageToggle';
 import NotificationPopover from './NotificationPopover';
 
 const logger = getLogger('Sidebar');
 
-const navigation = [
-  { name: '글쓰기', href: '/', icon: PenTool },
-  { name: '글목록', href: '/list', icon: Grid3X3 },
-  { name: '캘린더', href: '/calendar', icon: Calendar },
-];
-
 export function Sidebar() {
+  const { t } = useTranslation();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [forceUpdate, setForceUpdate] = useState(0); // 강제 리렌더링을 위한 상태
@@ -45,6 +42,12 @@ export function Sidebar() {
   const router = useRouter();
   const { logout, user: authUser } = useAuthStore();
   const { toast } = useToast();
+
+  const navigation = [
+    { name: t('nav.write'), href: '/', icon: PenTool },
+    { name: t('nav.list'), href: '/list', icon: Grid3X3 },
+    { name: t('nav.calendar'), href: '/calendar', icon: Calendar },
+  ];
 
   // 알림 관련 상태
   const { notifications, markAsRead, markAllAsRead, deleteNotification } =
@@ -163,8 +166,8 @@ export function Sidebar() {
 
       // 성공 토스트 표시
       toast({
-        title: '로그아웃 완료',
-        description: '안전하게 로그아웃되었습니다.',
+        title: t('auth.logoutSuccess'),
+        description: t('auth.logoutSuccess'),
         variant: 'default',
       });
 
@@ -195,8 +198,8 @@ export function Sidebar() {
 
       // 에러 토스트 표시
       toast({
-        title: '로그아웃 완료',
-        description: '클라이언트 상태가 정리되었습니다.',
+        title: t('auth.logoutSuccess'),
+        description: t('auth.logoutSuccess'),
         variant: 'default',
       });
 
@@ -217,7 +220,8 @@ export function Sidebar() {
   const isDark = resolvedTheme === 'dark';
 
   // 사용자 표시 이름 (닉네임이 있으면 닉네임, 없으면 이메일)
-  const displayName = authUser?.nickname || authUser?.email || '사용자';
+  const displayName =
+    authUser?.nickname || authUser?.email || t('profile.defaultDisplayName');
 
   // 프로필 이미지 우선순위: 전역 상태 > localStorage > 백업 > 추가 백업들
   const getProfileImage = () => {
@@ -298,7 +302,7 @@ export function Sidebar() {
                     {profileImage ? (
                       <Image
                         src={profileImage}
-                        alt="프로필 이미지"
+                        alt={t('profile.profileImageAlt')}
                         width={20}
                         height={20}
                         className="h-5 w-5 rounded-full object-cover"
@@ -339,7 +343,7 @@ export function Sidebar() {
                     {profileImage ? (
                       <Image
                         src={profileImage}
-                        alt="프로필 이미지"
+                        alt={t('profile.profileImageAlt')}
                         width={20}
                         height={20}
                         className="mr-3 h-5 w-5 rounded-full object-cover"
@@ -359,7 +363,7 @@ export function Sidebar() {
                       ? 'text-gray-300 hover:text-red-400'
                       : 'text-sage-70 hover:text-red-500'
                   }`}
-                  title="로그아웃"
+                  title={t('nav.logout')}
                 >
                   <LogOut className="h-4 w-4" />
                 </Button>
@@ -396,6 +400,23 @@ export function Sidebar() {
               );
             })}
           </nav>
+
+          {/* 하단 설정 영역 */}
+          <div
+            className={`border-t px-2 py-3 ${
+              isDark ? 'border-gray-700' : 'border-sage-20'
+            }`}
+          >
+            <div
+              className={`flex ${isCollapsed ? 'flex-col space-y-2' : 'justify-around'} items-center`}
+            >
+              <LanguageToggle
+                variant="segment"
+                className={isCollapsed ? 'w-full' : 'min-w-[6.5rem]'}
+              />
+              <ThemeToggle />
+            </div>
+          </div>
         </div>
       </div>
 
@@ -431,7 +452,7 @@ export function Sidebar() {
           <div className="flex items-center">
             <Image
               src="/images/logoop.png"
-              alt="새김 로고"
+              alt={t('common.logoAlt')}
               width={48}
               height={48}
               className="w-12 h-12"
@@ -449,6 +470,9 @@ export function Sidebar() {
               onFCMMarkAsRead={fcmMarkAsRead}
               onFCMMarkAllAsRead={fcmMarkAllAsRead}
             />
+
+            <LanguageToggle variant="segment" className="min-w-[6.5rem]" />
+            <ThemeToggle />
 
             <Button
               variant="ghost"
@@ -492,7 +516,7 @@ export function Sidebar() {
                 {profileImage ? (
                   <Image
                     src={profileImage}
-                    alt="프로필 이미지"
+                    alt={t('profile.profileImageAlt')}
                     width={24}
                     height={24}
                     className="mr-4 h-6 w-6 rounded-full object-cover"
@@ -504,6 +528,7 @@ export function Sidebar() {
               </Link>
 
               <div className="flex items-center space-x-2">
+                <LanguageToggle variant="segment" className="min-w-[6.5rem]" />
                 <ThemeToggle />
                 <button
                   onClick={() => {
@@ -515,7 +540,7 @@ export function Sidebar() {
                       ? 'text-gray-300 hover:bg-gray-800 hover:text-red-400'
                       : 'text-sage-70 hover:bg-sage-10 hover:text-red-500'
                   }`}
-                  title="로그아웃"
+                  title={t('nav.logout')}
                 >
                   <LogOut className="h-6 w-6" />
                 </button>

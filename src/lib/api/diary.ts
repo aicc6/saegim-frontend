@@ -15,11 +15,13 @@ export const diaryApi = {
     start_date?: string;
     end_date?: string;
     sort_order?: string;
+    category_id?: string | null;
+    searchTerm?: string;
   }) => {
     const stringParams: Record<string, string> = {};
     if (params) {
       Object.entries(params).forEach(([key, value]) => {
-        if (value !== undefined) {
+        if (value !== undefined && value !== null) {
           stringParams[key] = String(value);
         }
       });
@@ -39,6 +41,7 @@ export const diaryApi = {
       user_emotion?: string;
       is_public?: boolean;
       keywords?: string[];
+      category_id?: string | null;
     },
   ) => apiClient.put(`/api/diary/${id}`, data),
 
@@ -60,6 +63,7 @@ export const diaryApi = {
     keywords?: string[];
     diary_date?: string; // 다이어리 작성 날짜 (YYYY-MM-DD 형식)
     is_public?: boolean;
+    category_id?: string | null;
     uploaded_images?: Array<{
       file_id: string;
       original_url: string;

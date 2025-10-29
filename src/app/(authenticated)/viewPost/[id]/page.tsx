@@ -3,7 +3,7 @@
 import { useState, useEffect, use } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
-import { ArrowLeft, ArrowRight } from 'lucide-react';
+import { ArrowLeft, ArrowRight, NotebookPen } from 'lucide-react';
 import { getLogger } from '@/lib/logger';
 import { useDiaryStore } from '@/stores/diary';
 import {
@@ -18,6 +18,8 @@ import { useToast } from '@/hooks/use-toast';
 import { showSuccess, showError } from '@/hooks/use-modal';
 import { useDarkMode } from '@/hooks/use-dark-mode';
 import DeleteConfirmModal from '@/components/diary/DeleteConfirmModal';
+import { CategorySelector } from '@/components/diary/CategorySelector';
+import { useCategoryStore } from '@/stores/category';
 
 const emotionLabels = {
   happy: { emoji: '😊', name: '행복', color: 'text-emotion-happy' },
@@ -65,6 +67,10 @@ export default function ViewPostPage({
   const [editedContent, setEditedContent] = useState('');
   const [editedEmotion, setEditedEmotion] = useState('');
   const [editedKeywords, setEditedKeywords] = useState<string[]>([]);
+  const [editedCategoryId, setEditedCategoryId] = useState<string | null>(null);
+  const [editedCategoryName, setEditedCategoryName] = useState<string | null>(
+    null,
+  );
   const [editedImages, setEditedImages] = useState<ImageInfo[]>([]);
   const [showImageOptionsModal, setShowImageOptionsModal] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -85,6 +91,9 @@ export default function ViewPostPage({
 
   // 이전 페이지 경로 추적 (쿼리 파라미터 우선, referrer 폴백)
   const [previousPath, setPreviousPath] = useState<string>('/calendar');
+
+  const categories = useCategoryStore((state) => state.categories);
+  const fetchCategories = useCategoryStore((state) => state.fetchCategories);
 
   // localStorage에서 삭제된 이미지 ID 복원
   useEffect(() => {
@@ -246,6 +255,17 @@ export default function ViewPostPage({
     }
   }, [isEditing, entry]);
 
+  useEffect(() => {
+    if (entry) {
+      setEditedCategoryId(entry.category_id ?? entry.category?.id ?? null);
+      setEditedCategoryName(entry.category?.name ?? null);
+    }
+  }, [entry]);
+
+  useEffect(() => {
+    fetchCategories();
+  }, [fetchCategories]);
+
   // editedUserEmotion 상태 변화 추적
   useEffect(() => {
     logger.debug('editedUserEmotion 상태 변화:', {
@@ -274,6 +294,7 @@ export default function ViewPostPage({
           content: editedContent,
           user_emotion: editedEmotion || undefined,
           keywords: editedKeywords,
+          category_id: editedCategoryId || undefined,
         });
 
         logger.info('다이어리 수정 완료 (백엔드 동기화 및 로컬 상태 업데이트)');
@@ -285,16 +306,26 @@ export default function ViewPostPage({
         logger.debug('편집 완료');
 
         // 로컬 상태 즉시 업데이트 (UI 반응성 향상)
+        const matchedCategory = editedCategoryId
+          ? categories.find((category) => category.id === editedCategoryId) ||
+            (entry.category && entry.category.id === editedCategoryId
+              ? entry.category
+              : null)
+          : null;
+
         const updatedEntry: DiaryEntry = {
           ...entry,
           title: editedTitle,
           content: editedContent,
           user_emotion: editedEmotion,
           keywords: editedKeywords,
+          category_id: editedCategoryId,
+          category: matchedCategory,
           // 이미지는 현재 상태 유지 (삭제된 이미지 상태 보존)
           images: editedImages,
         };
         setEntry(updatedEntry);
+        setEditedCategoryName(matchedCategory?.name ?? null);
 
         // 목록 데이터도 즉시 반영 (Calendar 등과 동기화)
         const store = useDiaryStore.getState();
@@ -327,6 +358,8 @@ export default function ViewPostPage({
       setEditedEmotion(entry.user_emotion || '');
       setEditedKeywords(entry.keywords || []);
       setEditedImages(entry.images || []);
+      setEditedCategoryId(entry.category_id ?? entry.category?.id ?? null);
+      setEditedCategoryName(entry.category?.name ?? null);
     }
   };
 
@@ -906,6 +939,27 @@ export default function ViewPostPage({
           <div
             className={`${isDarkMode ? '' : 'bg-white'} rounded-lg border-2 border-sage-30 p-8 shadow-sm`}
           >
+            <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
+              <div className="inline-flex items-center gap-2">
+                <NotebookPen className="h-5 w-5 text-sage-100" />
+                {isEditing ? (
+                  <CategorySelector
+                    value={editedCategoryId}
+                    onChange={(categoryId, category) => {
+                      setEditedCategoryId(categoryId);
+                      setEditedCategoryName(category?.name ?? null);
+                    }}
+                    placeholder="다이어리 선택"
+                    triggerClassName="h-10 min-w-[200px]"
+                  />
+                ) : (
+                  <span className="inline-flex items-center gap-2 rounded-full bg-sage-10 px-3 py-1 text-sm font-medium text-sage-100">
+                    {entry.category?.name || editedCategoryName || '분류 없음'}
+                  </span>
+                )}
+              </div>
+            </div>
+
             {/* 감정 및 키워드 섹션 - 수평 배치 */}
             <div className="flex gap-6 mb-6">
               {/* 감정 섹션 - 크기 축소 */}

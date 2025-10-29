@@ -1,23 +1,31 @@
 import type { Metadata } from 'next';
+import { cookies } from 'next/headers';
+
 import { Providers } from '@/components/providers/theme-provider';
 import { Toaster } from '@/components/ui/toaster';
 import { Toaster as SonnerToaster } from '@/components/ui/sonner';
 import { DEFAULT_METADATA } from '@/constants/metadata';
 import { createWebsiteSchema, createJsonLdScript } from '@/lib/structured-data';
+import { DEFAULT_LANGUAGE, isSupportedLanguage } from '@/types/language';
 import '@/lib/env-validation';
 import './globals.css';
 
 export const metadata: Metadata = DEFAULT_METADATA;
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const cookieStore = await cookies();
+  const languageCookie = cookieStore.get('language')?.value;
+  const initialLanguage = isSupportedLanguage(languageCookie)
+    ? languageCookie
+    : DEFAULT_LANGUAGE;
   const websiteSchema = createWebsiteSchema();
 
   return (
-    <html lang="ko" suppressHydrationWarning>
+    <html lang={initialLanguage} suppressHydrationWarning>
       <head>
         <script
           dangerouslySetInnerHTML={{
@@ -37,7 +45,7 @@ export default function RootLayout({
         />
       </head>
       <body suppressHydrationWarning>
-        <Providers>{children}</Providers>
+        <Providers initialLanguage={initialLanguage}>{children}</Providers>
         <Toaster />
         <SonnerToaster
           position="top-right"

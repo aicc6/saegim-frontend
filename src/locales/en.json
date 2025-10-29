@@ -1,0 +1,348 @@
+{
+  "common": {
+    "loading": "Loading...",
+    "save": "Save",
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "delete": "Delete",
+    "edit": "Edit",
+    "close": "Close",
+    "copy": "Copy",
+    "retry": "Retry",
+    "regenerate": "Regenerate",
+    "back": "Back",
+    "next": "Next",
+    "submit": "Submit",
+    "search": "Search",
+    "filter": "Filter",
+    "select": "Select",
+    "language": "Language",
+    "logoAlt": "Saegim logo",
+    "languageOptions": {
+      "ko": {
+        "native": "한국어",
+        "full": "한국어 (Korean)"
+      },
+      "en": {
+        "native": "English",
+        "full": "English"
+      },
+      "ja": {
+        "native": "日本語",
+        "full": "日本語 (Japanese)"
+      }
+    },
+    "languageToggleLabel": "Language selection"
+  },
+  "footer": {
+    "contact": "Contact",
+    "email": "Email",
+    "emailNote": "* Email us directly for the fastest response."
+  },
+  "nav": {
+    "write": "Write",
+    "list": "List",
+    "calendar": "Calendar",
+    "profile": "Profile",
+    "login": "Login",
+    "signup": "Sign Up",
+    "logout": "Logout",
+    "notifications": "Notifications"
+  },
+  "auth": {
+    "email": "Email",
+    "password": "Password",
+    "confirmPassword": "Confirm Password",
+    "nickname": "Nickname",
+    "forgotPassword": "Forgot Password",
+    "resetPassword": "Reset Password",
+    "changePassword": "Change Password",
+    "currentPassword": "Current Password",
+    "newPassword": "New Password",
+    "loginSuccess": "Login successful",
+    "logoutSuccess": "Logout successful",
+    "signupSuccess": "Sign up successful",
+    "loginRequired": "Login required",
+    "invalidCredentials": "Invalid email or password",
+    "passwordMismatch": "Passwords do not match",
+    "emailAlreadyExists": "Email already exists",
+    "googleLogin": "Login with Google",
+    "or": "or",
+    "accountSettings": "Account Settings",
+    "changeEmail": "Change Email",
+    "deleteAccount": "Delete Account",
+    "welcome": "Welcome to Saegim",
+    "welcomeSubtitle1": "Capture your daily emotions",
+    "welcomeSubtitle2": "with AI-powered diary",
+    "emailPlaceholder": "Enter your email",
+    "emailHelp": "Please enter your email address",
+    "passwordPlaceholder": "Enter password",
+    "passwordHelp": "Please enter your password",
+    "loginButton": "Login",
+    "loggingIn": "Logging in...",
+    "signup": {
+      "title": "Join Saegim",
+      "subtitleLine1": "Keep an emotional diary with AI",
+      "subtitleLine2": "Capture your everyday moments",
+      "emailPlaceholder": "Enter email",
+      "sendCode": "Send Code",
+      "sendingCode": "Sending...",
+      "codeVerified": "Verified",
+      "codePlaceholder": "Enter the {{length}}-digit code",
+      "verify": "Verify",
+      "verifying": "Verifying...",
+      "codeHelper": "Enter the {{length}}-digit verification code we sent to your email.",
+      "passwordPlaceholder": "Enter a password (at least {{min}} characters with letters, numbers, and symbols)",
+      "passwordConfirmPlaceholder": "Confirm password",
+      "nicknamePlaceholder": "Choose a nickname ({{min}}-{{max}} characters, Korean or English letters)",
+      "nicknameCheck": "Check Availability",
+      "nicknameChecked": "Available",
+      "submit": "Sign Up",
+      "submitting": "Signing Up...",
+      "incompleteTitle": "Check required steps",
+      "incompleteDescription": "Please complete email verification and nickname check.",
+      "successDescription": "Thank you for joining Saegim!",
+      "failureTitle": "Sign up failed",
+      "failureDescription": "An error occurred while signing up.",
+      "emailUnavailableTitle": "Email unavailable",
+      "emailUnavailableDescription": "This email address is already in use.",
+      "codeSentTitle": "Verification email sent",
+      "codeSentDescription": "We sent a verification code to your email.",
+      "codeSendErrorTitle": "Failed to send verification code",
+      "codeSendErrorDescription": "An error occurred while sending the verification email.",
+      "emailVerifiedTitle": "Email verified",
+      "emailVerifiedDescription": "Your email has been verified successfully.",
+      "verificationFailedTitle": "Verification failed",
+      "verificationFailedDescription": "The verification code is incorrect.",
+      "nicknameAvailableTitle": "Nickname available",
+      "nicknameAvailableDescription": "You can use this nickname.",
+      "nicknameUnavailableTitle": "Nickname unavailable",
+      "nicknameUnavailableDescription": "This nickname is already taken.",
+      "nicknameCheckFailedTitle": "Nickname check failed",
+      "nicknameCheckFailedDescription": "An error occurred while checking the nickname."
+    },
+    "validation": {
+      "email": {
+        "required": "Please enter your email.",
+        "invalid": "Please enter a valid email address."
+      },
+      "password": {
+        "required": "Please enter your password.",
+        "min": "Password must be at least {{count}} characters.",
+        "max": "Password must be {{count}} characters or fewer.",
+        "mustIncludeLetter": "Password must include at least one letter.",
+        "mustIncludeNumber": "Password must include at least one number.",
+        "mustIncludeSymbol": "Password must include at least one special character.",
+        "confirmRequired": "Please confirm your password.",
+        "mismatch": "The passwords you entered do not match.",
+        "currentRequired": "Please enter your current password.",
+        "newConfirmRequired": "Please confirm your new password.",
+        "newMismatch": "New passwords do not match.",
+        "newMustDiffer": "New password must be different from the current password."
+      },
+      "nickname": {
+        "required": "Please enter a nickname.",
+        "min": "Nickname must be at least {{count}} characters.",
+        "max": "Nickname must be {{count}} characters or fewer.",
+        "pattern": "Nickname can only include Korean or English letters."
+      },
+      "verification": {
+        "required": "Please enter the verification code.",
+        "length": "Verification code must be {{count}} digits.",
+        "numeric": "Verification code can contain digits only."
+      },
+      "support": {
+        "titleRequired": "Please enter a title.",
+        "titleMin": "Title must be at least {{count}} characters.",
+        "titleMax": "Title must be {{count}} characters or fewer.",
+        "contentRequired": "Please enter the content.",
+        "contentMin": "Content must be at least {{count}} characters.",
+        "contentMax": "Content must be {{count}} characters or fewer."
+      }
+    },
+    "forgotPasswordForm": {
+      "title": "🔐 Reset your password",
+      "descriptionLine1": "Enter the email address you used to sign up",
+      "descriptionLine2": "We'll send you a password reset link.",
+      "emailLabel": "Email address",
+      "emailPlaceholder": "example@email.com",
+      "submit": "Send password reset email",
+      "submitLoading": "Sending...",
+      "backToLogin": "Return to login page",
+      "toastTitle": "📧 Password reset email sent!",
+      "toastDescription": "We sent a reset link to {{email}}.\n\nPlease check your inbox and click the link.",
+      "toastErrorTitle": "Email delivery failed",
+      "toastErrorDescription": "An error occurred while sending the email."
+    }
+  },
+  "create": {
+    "validation": {
+      "promptRequired": "Please enter the text.",
+      "styleRequired": "Please select a writing style.",
+      "lengthRequired": "Please select a length."
+    }
+  },
+  "diary": {
+    "write": "Write Diary",
+    "writeNew": "Write New Diary",
+    "list": "Diary List",
+    "detail": "Diary Detail",
+    "edit": "Edit Diary",
+    "delete": "Delete Diary",
+    "deleteConfirm": "Are you sure you want to delete this diary entry?",
+    "savedSuccessfully": "Diary saved successfully",
+    "deletedSuccessfully": "Diary deleted successfully",
+    "noEntries": "No diary entries",
+    "date": "Date",
+    "selectDate": "Select Date",
+    "selectTime": "Select Time",
+    "content": "Content"
+  },
+  "ai": {
+    "generate": "Generate",
+    "generating": "Generating...",
+    "regenerate": "Regenerate",
+    "regenerating": "Regenerating...",
+    "prompt": "Prompt",
+    "promptPlaceholder": "Tell me about your day...",
+    "style": "Style",
+    "length": "Length",
+    "emotion": "Emotion",
+    "keywords": "Keywords",
+    "generatedText": "Generated Text",
+    "aiGenerated": "AI Generated",
+    "selectStyle": "Select Style",
+    "selectLength": "Select Length",
+    "selectEmotion": "Select Emotion",
+    "styles": {
+      "poem": "Poem",
+      "short_story": "Short Story"
+    },
+    "lengths": {
+      "short": "Short",
+      "medium": "Medium",
+      "long": "Long"
+    },
+    "emotions": {
+      "happiness": "Happiness",
+      "sadness": "Sadness",
+      "anger": "Anger",
+      "peace": "Peace",
+      "anxiety": "Anxiety",
+      "neutral": "Neutral"
+    },
+    "copySuccess": "Copied to clipboard",
+    "copyFailed": "Failed to copy",
+    "generationFailed": "Generation failed",
+    "maxRegenerationReached": "Maximum regeneration limit reached",
+    "uploadImage": "Upload Image",
+    "removeImage": "Remove Image",
+    "maxImagesReached": "Maximum image limit reached"
+  },
+  "calendar": {
+    "title": "Calendar",
+    "today": "Today",
+    "month": "Month",
+    "year": "Year",
+    "noEntriesForDate": "No entries for this date",
+    "viewEntry": "View Entry",
+    "emotionStats": "Emotion Stats",
+    "keywordStats": "Keyword Stats"
+  },
+  "landing": {
+    "hero": {
+      "badge": "AI-Powered Emotional Diary",
+      "titleLine1": "Engrave Your Heart",
+      "titleLine2": "A Special Journey",
+      "descriptionMain": "Saegim is an AI-powered emotional diary inspired by nature. Share your story and AI will understand your feelings and craft beautiful prose for you.",
+      "descriptionSub": "Record your precious emotions and find your inner peace.",
+      "startNow": "Start Now",
+      "viewRecords": "View Records",
+      "quoteTitle": "Today's Emotion",
+      "quoteSubtitle": "A Calm Day",
+      "quoteText": "Like leaves swaying in the breeze\nMy heart flows gently along\nReceiving the gift called today\nI engrave it with gratitude",
+      "generatedLabel": "AI Generated Quote",
+      "sampleDate": "2025.01.16"
+    },
+    "status": {
+      "logout": {
+        "title": "You have been logged out",
+        "description": "You signed out safely. You can log back in anytime."
+      },
+      "withdraw": {
+        "title": "✅ Account deletion complete",
+        "description": "Your account has been deleted successfully. You can restore it within 30 days; after that all data will be permanently removed."
+      },
+      "tokenExpired": {
+        "title": "Session expired",
+        "description": "For your security, please sign in again."
+      }
+    },
+    "toastAction": {
+      "loginAlt": "Go to login page"
+    },
+    "features": {
+      "title": "What Makes Saegim Special",
+      "subtitle": "Experience an emotional journaling journey where AI meets the healing power of nature",
+      "items": {
+        "ai": {
+          "title": "AI Emotional Writing",
+          "description": "Enter a few keywords and AI will craft heartfelt poems or prose that reflect your feelings."
+        },
+        "analysis": {
+          "title": "Emotion Analysis & Reports",
+          "description": "AI analyzes your moods and visualizes monthly emotional patterns."
+        },
+        "calendar": {
+          "title": "Emotion Calendar",
+          "description": "See each day's emotions at a glance and trace how they change over time."
+        },
+        "privacy": {
+          "title": "Complete Privacy",
+          "description": "Every entry is encrypted and kept safe so only you can read it."
+        }
+      }
+    }
+  },
+  "profile": {
+    "title": "Profile",
+    "editProfile": "Edit Profile",
+    "profileImage": "Profile Image",
+    "profileImageAlt": "Profile image",
+    "changeProfileImage": "Change Profile Image",
+    "updateSuccess": "Profile updated successfully",
+    "updateFailed": "Failed to update profile",
+    "settings": "Settings",
+    "theme": "Theme",
+    "language": "Language",
+    "lightMode": "Light Mode",
+    "darkMode": "Dark Mode",
+    "systemMode": "System",
+    "defaultDisplayName": "User"
+  },
+  "notifications": {
+    "title": "Notifications",
+    "markAllAsRead": "Mark All as Read",
+    "noNotifications": "No new notifications",
+    "unread": "Unread",
+    "settings": "Notification Settings",
+    "enablePush": "Enable Push Notifications"
+  },
+  "errors": {
+    "somethingWentWrong": "Something went wrong",
+    "networkError": "Network error occurred",
+    "serverError": "Server error occurred",
+    "unauthorized": "Authentication required",
+    "forbidden": "Access denied",
+    "notFound": "Page not found",
+    "validationError": "Please check your input",
+    "tryAgain": "Please try again",
+    "contactSupport": "Contact support if the problem persists"
+  },
+  "support": {
+    "title": "Support",
+    "contactUs": "Contact Us",
+    "faq": "FAQ",
+    "help": "Help"
+  }
+}

@@ -1,4 +1,5 @@
 import { useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { WritingStyle, LengthOption } from '@/stores/create';
 
 interface ValidationResult {
@@ -7,6 +8,8 @@ interface ValidationResult {
 }
 
 export const useFormValidation = () => {
+  const { t } = useTranslation();
+
   const validateForm = useCallback(
     (
       prompt: string,
@@ -14,20 +17,29 @@ export const useFormValidation = () => {
       length: LengthOption,
     ): ValidationResult => {
       if (!prompt.trim()) {
-        return { isValid: false, errorMessage: '텍스트를 입력해주세요' };
+        return {
+          isValid: false,
+          errorMessage: t('create.validation.promptRequired'),
+        };
       }
 
       if (!style) {
-        return { isValid: false, errorMessage: '문체를 선택해주세요' };
+        return {
+          isValid: false,
+          errorMessage: t('create.validation.styleRequired'),
+        };
       }
 
       if (!length) {
-        return { isValid: false, errorMessage: '길이를 선택해주세요' };
+        return {
+          isValid: false,
+          errorMessage: t('create.validation.lengthRequired'),
+        };
       }
 
       return { isValid: true };
     },
-    [],
+    [t],
   );
 
   const showValidationAlert = useCallback(async (errorMessage: string) => {

@@ -4,8 +4,10 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
 import { useAuthStore } from '@/stores/auth';
+import { useLanguageStore } from '@/stores/language';
 import { authApi, getLogger } from '@/lib';
 import { AuthUserResponse } from '@/types/api';
+import { DEFAULT_LANGUAGE, isSupportedLanguage } from '@/types/language';
 
 const logger = getLogger('AuthGuard');
 
@@ -36,6 +38,13 @@ export default function AuthGuard({ children }: AuthGuardProps) {
         if (!userData.user_id || !userData.email) {
           throw new Error('Invalid user data: missing required fields');
         }
+
+        const languageStore = useLanguageStore.getState();
+        const serverLanguage = userData.preferred_language;
+        languageStore.setLanguageFromServer(serverLanguage ?? null);
+        const resolvedLanguage = isSupportedLanguage(serverLanguage)
+          ? serverLanguage
+          : (useLanguageStore.getState().language ?? DEFAULT_LANGUAGE);
 
         // localStorage에서 프로필 이미지 복원 (우선순위: localStorage > 백업들 > 서버 데이터)
         let profileImage = userData.profile_image || '';
@@ -101,6 +110,7 @@ export default function AuthGuard({ children }: AuthGuardProps) {
           profileImage: profileImage,
           provider: provider,
           createdAt: new Date().toISOString(),
+          preferredLanguage: resolvedLanguage,
         });
 
         // 서버 인증 및 데이터 검증 모두 통과

@@ -10,6 +10,7 @@ import {
   CalendarDays,
   SortAsc,
   SortDesc,
+  NotebookPen,
 } from 'lucide-react';
 
 import DeleteConfirmModal from '@/components/diary/DeleteConfirmModal';
@@ -18,6 +19,7 @@ import { useDiaryStore } from '@/stores/diary';
 import { logger } from '@/lib';
 import { type DiaryFilters } from '@/types/diary';
 import { addDays, addMonths, toDateString } from '@/lib/utils';
+import { useCategoryStore } from '@/stores/category';
 import DiaryCard from './DiaryCard';
 
 export default function DiaryListView() {
@@ -25,6 +27,7 @@ export default function DiaryListView() {
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedEmotion, setSelectedEmotion] = useState('all');
+  const [selectedCategoryId, setSelectedCategoryId] = useState('all');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
   // 날짜 검색 관련 상태
@@ -54,6 +57,22 @@ export default function DiaryListView() {
   // 무한스크롤용 Observer
   const observer = useRef<IntersectionObserver | null>(null);
 
+  const { categories, fetchCategories } = useCategoryStore();
+
+  useEffect(() => {
+    fetchCategories();
+  }, [fetchCategories]);
+
+  useEffect(() => {
+    if (selectedCategoryId === 'all') return;
+    const exists = categories.some(
+      (category) => category.id === selectedCategoryId,
+    );
+    if (!exists) {
+      setSelectedCategoryId('all');
+    }
+  }, [categories, selectedCategoryId]);
+
   // 필터 객체 생성 함수
   const buildFilters = useCallback(
     (page: number = 1): DiaryFilters => {
@@ -71,6 +90,10 @@ export default function DiaryListView() {
       // 감정 필터
       if (selectedEmotion !== 'all') {
         filters.emotion = selectedEmotion;
+      }
+
+      if (selectedCategoryId !== 'all') {
+        filters.category_id = selectedCategoryId;
       }
 
       // 날짜 필터
@@ -102,7 +125,15 @@ export default function DiaryListView() {
 
       return filters;
     },
-    [searchTerm, selectedEmotion, sortOrder, dateFilter, startDate, endDate],
+    [
+      searchTerm,
+      selectedEmotion,
+      selectedCategoryId,
+      sortOrder,
+      dateFilter,
+      startDate,
+      endDate,
+    ],
   );
 
   // 간단한 무한스크롤 로드 함수 (Store의 fetchDiaries만 사용)
@@ -119,6 +150,12 @@ export default function DiaryListView() {
 
   // hasNextPage 로직을 올바르게 계산
   const hasNextPage = diaries.length < totalCount;
+
+  const selectedCategory =
+    selectedCategoryId === 'all'
+      ? null
+      : (categories.find((category) => category.id === selectedCategoryId) ??
+        null);
 
   const lastDiaryElementRef = useCallback(
     (node: HTMLDivElement) => {
@@ -191,6 +228,7 @@ export default function DiaryListView() {
     applyFilters();
   }, [
     selectedEmotion,
+    selectedCategoryId,
     dateFilter,
     startDate,
     endDate,
@@ -281,6 +319,23 @@ export default function DiaryListView() {
               <option value="angry">😡 화남</option>
               <option value="peaceful">😌 평온</option>
               <option value="unrest">� 불안</option>
+            </select>
+          </div>
+
+          {/* 카테고리 필터 */}
+          <div className="flex items-center gap-2">
+            <NotebookPen className="w-5 h-5 text-text-tertiary" />
+            <select
+              value={selectedCategoryId}
+              onChange={(e) => setSelectedCategoryId(e.target.value)}
+              className="px-4 py-3 bg-background-primary border border-border-subtle rounded-xl text-text-primary focus:outline-none focus:ring-2 focus:ring-sage-100 min-w-[160px]"
+            >
+              <option value="all">모든 다이어리</option>
+              {categories.map((category) => (
+                <option key={category.id} value={category.id}>
+                  {category.name}
+                </option>
+              ))}
             </select>
           </div>
 
@@ -409,6 +464,17 @@ export default function DiaryListView() {
               </button>
             </span>
           )}
+          {selectedCategoryId !== 'all' && (
+            <span className="px-3 py-1 bg-sage-10 text-sage-100 rounded-full text-sm flex items-center gap-1">
+              카테고리: {selectedCategory?.name || '분류 없음'}
+              <button
+                onClick={() => setSelectedCategoryId('all')}
+                className="ml-1 text-sage-80 hover:text-sage-100"
+              >
+                ×
+              </button>
+            </span>
+          )}
           {dateFilter !== 'all' && (
             <span className="px-3 py-1 bg-sage-10 text-sage-100 rounded-full text-sm flex items-center gap-1">
               기간: {getDateRangeText()}
@@ -448,6 +514,7 @@ export default function DiaryListView() {
                 'peaceful',
               date: diary.diary_date || diary.created_at || '',
               keywords: diary.keywords || [],
+              categoryName: diary.category?.name || null,
               thumbnail:
                 diary.images && diary.images.length > 0
                   ? diary.images[0].thumbnail_path || diary.images[0].file_path

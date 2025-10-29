@@ -1,20 +1,27 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { FormInput } from '@/components/ui/form-input';
 import { useApiError } from '@/hooks/use-api-error';
 import { apiClient } from '@/lib/api/client';
-import { changeEmailSchema, type ChangeEmailFormData } from '@/schemas/auth';
+import {
+  createChangeEmailSchema,
+  type ChangeEmailFormData,
+} from '@/schemas/auth';
 import { TEXT_STYLES } from '@/constants';
 
 export default function ChangeEmailForm() {
   const [isVerified, setIsVerified] = useState(false);
+  const { t } = useTranslation();
   const { handleApiError, showSuccess } = useApiError({
     loggerName: 'ChangeEmailForm',
   });
+
+  const schema = useMemo(() => createChangeEmailSchema(t), [t]);
 
   const {
     register,
@@ -22,7 +29,7 @@ export default function ChangeEmailForm() {
     formState: { errors, isSubmitting },
     getValues,
   } = useForm<ChangeEmailFormData>({
-    resolver: zodResolver(changeEmailSchema),
+    resolver: zodResolver(schema),
     mode: 'onBlur',
     defaultValues: {
       nickname: '새김사용자',

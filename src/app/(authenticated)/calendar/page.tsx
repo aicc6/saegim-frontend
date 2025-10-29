@@ -11,6 +11,7 @@ import PageHeader from '@/components/common/PageHeader';
 import { Button } from '@/components/ui/button';
 import { useDiaryStore } from '@/stores/diary';
 import { useAuthStore } from '@/stores/auth';
+import { useLanguageStore } from '@/stores/language';
 import {
   EmotionType,
   EMOTION_COLORS,
@@ -21,6 +22,7 @@ import { cn } from '@/lib/utils';
 import { calendarApi } from '@/lib/api/calendar';
 import { authApi } from '@/lib/api/auth';
 import { UserProvider } from '@/types';
+import { DEFAULT_LANGUAGE, isSupportedLanguage } from '@/types/language';
 
 const logger = getLogger('calendar');
 
@@ -372,6 +374,7 @@ export default function CalendarPage() {
               nickname?: string;
               provider?: string;
               created_at?: string;
+              preferred_language?: string | null;
             };
             logger.info(
               '서버 인증 성공:',
@@ -384,6 +387,13 @@ export default function CalendarPage() {
 
             // Zustand 스토어에 로그인 정보 저장
             const { login } = useAuthStore.getState();
+            const languageStore = useLanguageStore.getState();
+            const serverLanguage = userInfo.preferred_language;
+            languageStore.setLanguageFromServer(
+              isSupportedLanguage(serverLanguage) ? serverLanguage : null,
+            );
+            const resolvedLanguage =
+              useLanguageStore.getState().language ?? DEFAULT_LANGUAGE;
             login({
               id: userInfo.user_id || '',
               email: userInfo.email || '',
@@ -391,6 +401,7 @@ export default function CalendarPage() {
               profileImage: '',
               provider: (userInfo.provider as UserProvider) || 'email',
               createdAt: userInfo.created_at || new Date().toISOString(),
+              preferredLanguage: resolvedLanguage,
             });
 
             // 로딩 완료

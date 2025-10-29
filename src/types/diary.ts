@@ -9,6 +9,8 @@ export interface ImageInfo {
   mime_type: string | null;
 }
 
+import { DiaryCategory } from './category';
+
 export interface DiaryEntry {
   id: string;
   title: string | null;
@@ -23,6 +25,8 @@ export interface DiaryEntry {
   diary_date: string | null; // 다이어리 작성 날짜 (사용자가 선택한 날짜)
   created_at: string;
   updated_at: string | null;
+  category_id?: string | null;
+  category?: DiaryCategory | null;
   images?: ImageInfo[]; // 이미지 정보 추가
   uploaded_images?: Array<{
     file_id: string;
@@ -45,6 +49,8 @@ export interface DiaryListEntry {
   created_at: string;
   is_public: boolean;
   keywords: string[] | null; // keywords를 리스트 타입으로 수정
+  category_id?: string | null;
+  category?: DiaryCategory | null;
   images?: ImageInfo[]; // 이미지 정보 추가
 }
 
@@ -57,6 +63,7 @@ export interface DiaryFilters {
   start_date?: string;
   end_date?: string;
   sort_order?: 'asc' | 'desc';
+  category_id?: string | null;
 }
 
 export interface CalendarDateRange {

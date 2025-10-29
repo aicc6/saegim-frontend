@@ -4,6 +4,7 @@ import { useState, useCallback, useRef, useEffect, useTransition } from 'react';
 import { getLogger } from '@/lib/logger';
 import { imageApi } from '@/lib/api/image';
 import { aiApi } from '@/lib/api/ai';
+import { useLanguageStore, type Language } from '@/stores/language';
 
 const logger = getLogger('useStreaming');
 
@@ -87,6 +88,7 @@ export interface StreamChunk {
 // ✅ Best Practice: 복잡한 큐 시스템 제거로 상수 불필요
 
 export const useStreaming = () => {
+  const { language } = useLanguageStore();
   const [state, setState] = useState<StreamingState>({
     isStreaming: false,
     streamedText: '',
@@ -201,6 +203,7 @@ export const useStreaming = () => {
       sessionId?: string;
       images?: File[];
       diaryDate?: string;
+      language?: Language;
     }) => {
       try {
         // 기존 연결 정리
@@ -278,6 +281,7 @@ export const useStreaming = () => {
           length: data.length,
           emotion: data.emotion || '',
           sessionId: data.sessionId,
+          language: data.language || language,
           uploaded_images: uploadedImages,
           diary_date: data.diaryDate,
         });
@@ -452,7 +456,7 @@ export const useStreaming = () => {
         }));
       }
     },
-    [appendStreamText, state.accumulatedText],
+    [appendStreamText, language, state.accumulatedText],
   );
 
   // 최적화된 스트리밍 중단 함수

@@ -1,27 +1,30 @@
 'use client';
 
-import { useCallback, useEffect, useState, memo, useMemo, useRef } from 'react';
-import { useRouter } from 'next/navigation';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Image from 'next/image';
-import { X, Copy, RotateCcw, Save, Edit3 } from 'lucide-react';
-import { useCreateStore, WritingStyle, LengthOption } from '@/stores/create';
-import { EmotionOption, useEmotionStore } from '@/stores/emotion';
-import { getLogger } from '@/lib/logger';
-import { useFormValidation } from '@/hooks/use-form-validation';
-import { useImageHandler } from '@/hooks/use-image-handler';
-import { useErrorManagement } from '@/hooks/use-error-management';
-import { useFormOptions } from '@/hooks/use-form-options';
-import { useStreaming } from '@/hooks/use-streaming';
-import { useClipboard } from '@/hooks/use-clipboard';
-import { diaryApi } from '@/lib/api/diary';
-import { useSimpleToast } from '@/hooks/use-simple-toast';
-import { enhancedToast } from '@/lib/enhanced-toast';
-import { useTempOptions } from '@/hooks/use-temp-options';
-import { useChatUi } from '@/hooks/use-chat-ui';
+import { useRouter } from 'next/navigation';
+import { Copy, Edit3, RotateCcw, Save, X } from 'lucide-react';
+import { CategorySelector } from '@/components/diary/CategorySelector';
 import { ChatOptions } from '@/components/chat/ChatOptions';
 import { ImagePreview } from '@/components/chat/ImagePreview';
 import { TimePicker } from '@/components/ui/custom/TimePicker';
 import { useSidebar } from '@/contexts/sidebar-context';
+import { diaryApi } from '@/lib/api/diary';
+import { enhancedToast } from '@/lib/enhanced-toast';
+import { getLogger } from '@/lib/logger';
+import { useChatUi } from '@/hooks/use-chat-ui';
+import { useClipboard } from '@/hooks/use-clipboard';
+import { useErrorManagement } from '@/hooks/use-error-management';
+import { useFormOptions } from '@/hooks/use-form-options';
+import { useFormValidation } from '@/hooks/use-form-validation';
+import { useImageHandler } from '@/hooks/use-image-handler';
+import { useSimpleToast } from '@/hooks/use-simple-toast';
+import { useStreaming } from '@/hooks/use-streaming';
+import { useTempOptions } from '@/hooks/use-temp-options';
+import { DiaryCategory } from '@/types/category';
+import { useCategoryStore } from '@/stores/category';
+import { useCreateStore, WritingStyle, LengthOption } from '@/stores/create';
+import { EmotionOption, useEmotionStore } from '@/stores/emotion';
 import { ChatInput } from '../chat/ChatInput';
 import Select from '../ui/custom/Select';
 
@@ -80,6 +83,8 @@ interface GeneratedTextCard {
   createdAt: Date;
   // 카드가 생성될 당시 사용자가 선택한 날짜 (YYYY-MM-DD)
   diaryDate?: string;
+  categoryId: string | null;
+  categoryName: string | null;
   // AI 생성 시 사용된 이미지 정보 (서버 업로드 후 결과)
   uploadedImages?: Array<{
     file_id: string;
@@ -257,6 +262,12 @@ function CreateAi() {
   }); // 선택된 날짜 상태
   const [selectedTime, setSelectedTime] = useState<string>(''); // 과거 날짜 선택 시 시간
   const [isDarkMode, setIsDarkMode] = useState(false); // 다크모드 상태
+  const [defaultCategory, setDefaultCategory] = useState<{
+    id: string | null;
+    name: string | null;
+  }>({ id: null, name: null });
+
+  const categories = useCategoryStore((state) => state.categories);
 
   const {
     config,
@@ -282,6 +293,10 @@ function CreateAi() {
   const currentGeneratingPromptRef = useRef<string>('');
   // 스트리밍 시작 시 요청한 일자/시간 기록 (카드 생성 시 사용)
   const requestedDiaryDateRef = useRef<string | undefined>(undefined);
+  const requestedCategoryRef = useRef<{
+    id: string | null;
+    name: string | null;
+  }>({ id: null, name: null });
 
   const {
     selectedImages,
@@ -534,6 +549,8 @@ function CreateAi() {
             requestedDiaryDateRef.current !== undefined
               ? requestedDiaryDateRef.current
               : selectedDate || undefined,
+          categoryId: requestedCategoryRef.current.id,
+          categoryName: requestedCategoryRef.current.name,
           versions: [initialVersion],
           currentVersionIndex: 0,
           isEditMode: false,
@@ -606,6 +623,14 @@ function CreateAi() {
           ? `${selectedDate}T${selectedTime}:00`
           : selectedDate || undefined;
       requestedDiaryDateRef.current = diaryForRequest;
+      requestedCategoryRef.current = {
+        id: defaultCategory.id,
+        name: defaultCategory.name,
+      };
+      requestedCategoryRef.current = {
+        id: defaultCategory.id,
+        name: defaultCategory.name,
+      };
 
       const newCard: GeneratedTextCard = {
         id: newCardId,
@@ -615,6 +640,8 @@ function CreateAi() {
         emotion: emotion || null,
         sessionId: '', // startStreaming에서 업데이트됨
         diaryDate: diaryForRequest,
+        categoryId: defaultCategory.id,
+        categoryName: defaultCategory.name,
         versions: [
           {
             id: `version-${Date.now()}`,
@@ -662,6 +689,7 @@ function CreateAi() {
     selectedImages,
     selectedDate,
     selectedTime,
+    defaultCategory,
   ]);
 
   // 이미지 선택 상태 관리 함수들
@@ -702,6 +730,46 @@ function CreateAi() {
       );
     },
     [],
+  );
+
+  const handleCardCategoryChange = useCallback(
+    (
+      cardId: string,
+      categoryId: string | null,
+      category?: DiaryCategory | null,
+    ) => {
+      setGeneratedCards((prev) =>
+        prev.map((card) =>
+          card.id === cardId
+            ? {
+                ...card,
+                categoryId,
+                categoryName: category?.name ?? null,
+              }
+            : card,
+        ),
+      );
+    },
+    [],
+  );
+
+  const handleDefaultCategoryChange = useCallback(
+    (categoryId: string | null, category?: DiaryCategory | null) => {
+      setDefaultCategory({
+        id: categoryId,
+        name: category?.name ?? null,
+      });
+    },
+    [],
+  );
+
+  const resolveCategoryName = useCallback(
+    (categoryId: string | null, fallbackName: string | null) => {
+      if (!categoryId) return fallbackName;
+      const found = categories.find((category) => category.id === categoryId);
+      return found?.name ?? fallbackName;
+    },
+    [categories],
   );
 
   // 카드별 액션 핸들러들
@@ -776,6 +844,7 @@ function CreateAi() {
               : undefined,
           diary_date: card.diaryDate || selectedDate || undefined, // 카드 고유 날짜 우선
           is_public: false,
+          category_id: card.categoryId || undefined,
           // AI 생성 시 사용된 이미지 포함 (이미 서버에 업로드됨)
           uploaded_images:
             card.uploadedImages && card.uploadedImages.length > 0
@@ -985,6 +1054,10 @@ function CreateAi() {
                         : `${diaryDateOnly}T11:00:00`,
                     ).toLocaleTimeString()
                 : '';
+              const resolvedCategoryName = resolveCategoryName(
+                card.categoryId,
+                card.categoryName,
+              );
               return (
                 <div
                   key={card.id}
@@ -1001,7 +1074,20 @@ function CreateAi() {
                         )}
                       </h3>
                     </div>
-                    <div className="flex items-center gap-3">
+                    <div className="flex flex-wrap items-center gap-3 justify-end">
+                      <CategorySelector
+                        value={card.categoryId}
+                        onChange={(categoryId, category) =>
+                          handleCardCategoryChange(
+                            card.id,
+                            categoryId,
+                            category,
+                          )
+                        }
+                        placeholder="다이어리 선택"
+                        triggerClassName="h-9 min-w-[160px]"
+                      />
+
                       {/* 버전 선택 버튼들 */}
                       {card.versions.length > 1 && (
                         <div className="flex items-center gap-2">
@@ -1199,6 +1285,9 @@ function CreateAi() {
                       <span className="whitespace-nowrap">
                         길이: {getLengthLabel(card.length)}
                       </span>
+                      <span className="whitespace-nowrap max-w-[180px] truncate">
+                        카테고리: {resolvedCategoryName || '(분류 없음)'}
+                      </span>
                       {currentVersion.aiEmotion && (
                         <span className="whitespace-nowrap">
                           감정: {getEmotionLabel(currentVersion.aiEmotion)}
@@ -1262,6 +1351,13 @@ function CreateAi() {
               <MemoizedImagePreview
                 selectedImages={newSelectedImages}
                 onRemove={handleNewImageRemove}
+              />
+
+              <CategorySelector
+                value={defaultCategory.id}
+                onChange={handleDefaultCategoryChange}
+                placeholder="저장할 다이어리 선택"
+                triggerClassName="h-10"
               />
 
               {/* ✅ 로딩 블록 제거: 실제 카드에서 실시간 스트리밍 표시 */}
@@ -1569,6 +1665,14 @@ function CreateAi() {
             </span>
           </p>
         </div>
+
+        <CategorySelector
+          value={defaultCategory.id}
+          onChange={handleDefaultCategoryChange}
+          placeholder="저장할 다이어리 선택"
+          label="저장할 다이어리"
+          triggerClassName="h-11"
+        />
       </div>
 
       <button

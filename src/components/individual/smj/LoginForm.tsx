@@ -1,17 +1,20 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { useTranslation } from 'react-i18next';
 
 import GoogleLoginButton from '@/components/ui/custom/GoogleLoginButton';
 import { FormInput } from '@/components/ui/form-input';
 import { useToast } from '@/hooks/use-toast';
 import { useAuthStore } from '@/stores/auth';
+import { useLanguageStore } from '@/stores/language';
 import { authApi, getLogger } from '@/lib';
 import { BRAND_COLORS } from '@/constants';
-import { loginSchema, type LoginFormData } from '@/schemas/auth';
+import { createLoginSchema, type LoginFormData } from '@/schemas/auth';
+import { DEFAULT_LANGUAGE, isSupportedLanguage } from '@/types/language';
 
 interface LoginFormProps {
   redirectTo?: string | null;
@@ -20,17 +23,20 @@ interface LoginFormProps {
 const logger = getLogger('LoginForm');
 
 export default function LoginForm({ redirectTo }: LoginFormProps) {
+  const { t } = useTranslation();
   const router = useRouter();
   const searchParams = useSearchParams();
   const { toast } = useToast();
   const { login } = useAuthStore();
+
+  const schema = useMemo(() => createLoginSchema(t), [t]);
 
   const {
     register,
     handleSubmit,
     formState: { errors, isSubmitting },
   } = useForm<LoginFormData>({
-    resolver: zodResolver(loginSchema),
+    resolver: zodResolver(schema),
     mode: 'onBlur',
   });
 
@@ -75,6 +81,12 @@ export default function LoginForm({ redirectTo }: LoginFormProps) {
           const currentUserResponse = await authApi.getCurrentUser();
           if (currentUserResponse.success && currentUserResponse.data) {
             const currentUser = currentUserResponse.data;
+            const languageStore = useLanguageStore.getState();
+            const serverLanguage = currentUser.preferred_language;
+            languageStore.setLanguageFromServer(
+              isSupportedLanguage(serverLanguage) ? serverLanguage : null,
+            );
+            const resolvedLanguage = useLanguageStore.getState().language;
 
             // 백엔드의 최신 정보로 로그인
             // provider 타입 안전성 검증
@@ -104,9 +116,12 @@ export default function LoginForm({ redirectTo }: LoginFormProps) {
               profileImage: currentUser.profile_image || '',
               provider: provider,
               createdAt: new Date().toISOString(),
+              preferredLanguage: resolvedLanguage,
             });
           } else {
             // 백엔드 조회 실패 시 기본 정보로 로그인
+            const fallbackLanguage =
+              useLanguageStore.getState().language ?? DEFAULT_LANGUAGE;
             login({
               id: userData.user_id as string,
               email: userData.email as string,
@@ -115,6 +130,7 @@ export default function LoginForm({ redirectTo }: LoginFormProps) {
               profileImage: '',
               provider: 'email',
               createdAt: new Date().toISOString(),
+              preferredLanguage: fallbackLanguage,
             });
           }
         } catch (userInfoError) {
@@ -122,6 +138,8 @@ export default function LoginForm({ redirectTo }: LoginFormProps) {
             userInfoError,
           });
           // 백엔드 조회 실패 시 기본 정보로 로그인
+          const fallbackLanguage =
+            useLanguageStore.getState().language ?? DEFAULT_LANGUAGE;
           login({
             id: userData.user_id as string,
             email: userData.email as string,
@@ -130,6 +148,7 @@ export default function LoginForm({ redirectTo }: LoginFormProps) {
             profileImage: '',
             provider: 'email',
             createdAt: new Date().toISOString(),
+            preferredLanguage: fallbackLanguage,
           });
         }
       } else {
@@ -137,8 +156,8 @@ export default function LoginForm({ redirectTo }: LoginFormProps) {
       }
 
       toast({
-        title: '로그인 성공',
-        description: '새김에 오신 것을 환영합니다!',
+        title: t('auth.loginSuccess'),
+        description: t('auth.loginSuccess'),
         variant: 'default',
       });
 
@@ -305,17 +324,17 @@ export default function LoginForm({ redirectTo }: LoginFormProps) {
           className="text-3xl font-serif mb-5 tracking-tight"
           style={{ color: BRAND_COLORS.PRIMARY }}
         >
-          새김에 오신 것을 환영합니다
+          {t('auth.welcome', '새김에 오신 것을 환영합니다')}
         </h2>
         <div
           className="mb-10 space-y-2"
           style={{ color: BRAND_COLORS.SECONDARY }}
         >
           <p className="text-base font-light tracking-wide">
-            AI와 함께하는 감성 다이어리로
+            {t('auth.welcomeSubtitle1', 'AI와 함께하는 감성 다이어리로')}
           </p>
           <p className="text-base font-light tracking-wide">
-            일상을 기록해보세요
+            {t('auth.welcomeSubtitle2', '일상을 기록해보세요')}
           </p>
         </div>
       </div>
@@ -326,7 +345,7 @@ export default function LoginForm({ redirectTo }: LoginFormProps) {
           <FormInput
             type="email"
             id="email"
-            placeholder="아이디(메일계정) 입력"
+            placeholder={t('auth.emailPlaceholder', '아이디(메일계정) 입력')}
             aria-describedby="email-help"
             {...register('email')}
           />
@@ -336,7 +355,7 @@ export default function LoginForm({ redirectTo }: LoginFormProps) {
             </p>
           )}
           <p id="email-help" className="sr-only">
-            이메일 주소를 입력해주세요
+            {t('auth.emailHelp', '이메일 주소를 입력해주세요')}
           </p>
         </div>
 
@@ -345,7 +364,7 @@ export default function LoginForm({ redirectTo }: LoginFormProps) {
           <FormInput
             type="password"
             id="password"
-            placeholder="비밀번호 입력"
+            placeholder={t('auth.passwordPlaceholder', '비밀번호 입력')}
             aria-describedby="password-help"
             {...register('password')}
           />
@@ -355,7 +374,7 @@ export default function LoginForm({ redirectTo }: LoginFormProps) {
             </p>
           )}
           <p id="password-help" className="sr-only">
-            비밀번호를 입력해주세요
+            {t('auth.passwordHelp', '비밀번호를 입력해주세요')}
           </p>
         </div>
 
@@ -365,7 +384,9 @@ export default function LoginForm({ redirectTo }: LoginFormProps) {
           disabled={isSubmitting}
           className="w-full saegim-button saegim-button-large disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          {isSubmitting ? '로그인 중...' : '로그인하기'}
+          {isSubmitting
+            ? t('auth.loggingIn', '로그인 중...')
+            : t('auth.loginButton', '로그인하기')}
         </button>
 
         {/* 구글 로그인 버튼 */}
@@ -377,9 +398,9 @@ export default function LoginForm({ redirectTo }: LoginFormProps) {
             type="button"
             onClick={handleFindPassword}
             className="text-gray-600 dark:text-text-dark-primary hover:text-sage-50 dark:hover:text-text-dark-inverse font-light text-sm tracking-wide transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-sage-50 dark:focus:ring-border-dark-focus focus:ring-offset-2 dark:focus:ring-offset-background-dark-secondary rounded-lg px-3 py-1 hover:bg-gray-100 dark:hover:bg-background-dark-hover"
-            aria-label="비밀번호 찾기"
+            aria-label={t('auth.forgotPassword')}
           >
-            비밀번호 찾기
+            {t('auth.forgotPassword')}
           </button>
         </div>
       </form>

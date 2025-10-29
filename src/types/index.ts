@@ -1,5 +1,6 @@
 // 공통 타입 정의
 import type { EmotionType } from './diary';
+import type { LanguageCode } from './language';
 
 export type UserProvider = 'google' | 'kakao' | 'naver' | 'email';
 
@@ -11,6 +12,7 @@ export interface User {
   profileImage?: string;
   provider: UserProvider;
   createdAt: string;
+  preferredLanguage?: LanguageCode;
 }
 
 export interface AIStyle {

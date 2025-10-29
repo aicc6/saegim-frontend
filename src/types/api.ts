@@ -2,6 +2,8 @@
  * API 관련 공통 타입 정의
  */
 
+import type { LanguageCode } from './language';
+
 export interface ApiError {
   response?: {
     data?: {
@@ -40,6 +42,7 @@ export interface UserProfileResponse {
   provider?: string;
   is_active: boolean;
   profile_image?: string;
+  preferred_language?: LanguageCode | null;
 }
 
 export interface AuthUserResponse {
@@ -49,6 +52,13 @@ export interface AuthUserResponse {
   account_type?: string;
   profile_image?: string;
   provider?: string;
+  preferred_language?: LanguageCode | null;
+}
+
+export interface UserSettingsResponse {
+  user_id: string;
+  preferred_language: LanguageCode;
+  updated_at: string;
 }
 
 export interface EmailTokenVerificationResponse {

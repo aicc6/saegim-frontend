@@ -1,24 +1,28 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useRouter } from 'next/navigation';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { useTranslation } from 'react-i18next';
 
 import { FormInput } from '@/components/ui/form-input';
 import { useApiError } from '@/hooks/use-api-error';
 import { authApi } from '@/lib/api/auth';
 import { BRAND_COLORS, VALIDATION, TEXT_STYLES } from '@/constants';
-import { signupSchema, type SignupFormData } from '@/schemas/auth';
+import { createSignupSchema, type SignupFormData } from '@/schemas/auth';
 import { NicknameAvailabilityResponse } from '@/types/api';
 import { getLogger } from '@/lib/logger';
 
 export default function SignupForm() {
   const router = useRouter();
   const logger = getLogger('SignupForm');
+  const { t } = useTranslation();
   const { handleApiError, showSuccess } = useApiError({
     loggerName: 'SignupForm',
   });
+
+  const schema = useMemo(() => createSignupSchema(t), [t]);
 
   const {
     register,
@@ -29,7 +33,7 @@ export default function SignupForm() {
     setError,
     clearErrors,
   } = useForm<SignupFormData>({
-    resolver: zodResolver(signupSchema),
+    resolver: zodResolver(schema),
     mode: 'onBlur',
   });
 
@@ -59,9 +63,9 @@ export default function SignupForm() {
   const onSubmit = async (data: SignupFormData) => {
     if (!emailVerified || !nicknameChecked) {
       handleApiError(
-        new Error('입력 확인 필요'),
-        '입력 확인 필요',
-        '이메일 인증과 닉네임 중복 확인을 완료해주세요.',
+        new Error(t('auth.signup.incompleteTitle')),
+        t('auth.signup.incompleteTitle'),
+        t('auth.signup.incompleteDescription'),
       );
       return;
     }
@@ -80,15 +84,15 @@ export default function SignupForm() {
     try {
       await authApi.signup(signupData);
 
-      showSuccess('회원가입 성공', '새김에 가입해주셔서 감사합니다!');
+      showSuccess(t('auth.signupSuccess'), t('auth.signup.successDescription'));
       router.push('/login');
     } catch (error: unknown) {
       logger.error('🚨 회원가입 에러 발생', { error });
       handleApiError(
         error,
-        '회원가입 실패',
-        '회원가입 중 오류가 발생했습니다.',
-        setError, // 서버 검증 에러를 필드별로 설정
+        t('auth.signup.failureTitle'),
+        t('auth.signup.failureDescription'),
+        setError,
       );
     }
   };
@@ -113,9 +117,9 @@ export default function SignupForm() {
 
       if (!emailCheckData.available) {
         handleApiError(
-          new Error('이메일 중복'),
-          '이메일 사용 불가',
-          '이미 사용 중인 이메일입니다.',
+          new Error(t('auth.signup.emailUnavailableTitle')),
+          t('auth.signup.emailUnavailableTitle'),
+          t('auth.signup.emailUnavailableDescription'),
         );
         return;
       }
@@ -124,12 +128,15 @@ export default function SignupForm() {
       await authApi.sendVerificationEmail({ email });
 
       setCodeSent(true);
-      showSuccess('인증 코드 발송', '이메일로 인증 코드가 발송되었습니다.');
+      showSuccess(
+        t('auth.signup.codeSentTitle'),
+        t('auth.signup.codeSentDescription'),
+      );
     } catch (error: unknown) {
       handleApiError(
         error,
-        '인증 코드 발송 실패',
-        '인증 코드 발송 중 오류가 발생했습니다.',
+        t('auth.signup.codeSendErrorTitle'),
+        t('auth.signup.codeSendErrorDescription'),
         setError, // 서버 검증 에러를 필드별로 설정
       );
     } finally {
@@ -153,12 +160,15 @@ export default function SignupForm() {
       });
 
       setEmailVerified(true);
-      showSuccess('이메일 인증 완료', '이메일 인증이 완료되었습니다.');
+      showSuccess(
+        t('auth.signup.emailVerifiedTitle'),
+        t('auth.signup.emailVerifiedDescription'),
+      );
     } catch (error: unknown) {
       handleApiError(
         error,
-        '인증 실패',
-        '인증 코드가 올바르지 않습니다.',
+        t('auth.signup.verificationFailedTitle'),
+        t('auth.signup.verificationFailedDescription'),
         setError,
       );
     } finally {
@@ -180,20 +190,23 @@ export default function SignupForm() {
 
       if (responseData.available) {
         setNicknameChecked(true);
-        showSuccess('닉네임 확인 완료', '사용 가능한 닉네임입니다.');
+        showSuccess(
+          t('auth.signup.nicknameAvailableTitle'),
+          t('auth.signup.nicknameAvailableDescription'),
+        );
       } else {
         handleApiError(
-          new Error('닉네임 중복'),
-          '닉네임 사용 불가',
-          '이미 사용 중인 닉네임입니다.',
+          new Error(t('auth.signup.nicknameUnavailableTitle')),
+          t('auth.signup.nicknameUnavailableTitle'),
+          t('auth.signup.nicknameUnavailableDescription'),
           setError,
         );
       }
     } catch (error: unknown) {
       handleApiError(
         error,
-        '닉네임 확인 실패',
-        '닉네임 확인 중 오류가 발생했습니다.',
+        t('auth.signup.nicknameCheckFailedTitle'),
+        t('auth.signup.nicknameCheckFailedDescription'),
         setError,
       );
     }
@@ -229,17 +242,17 @@ export default function SignupForm() {
           className="text-3xl font-serif mb-5 tracking-tight"
           style={{ color: BRAND_COLORS.PRIMARY }}
         >
-          새김에 가입하세요
+          {t('auth.signup.title')}
         </h2>
         <div
           className="mb-10 space-y-2"
           style={{ color: BRAND_COLORS.SECONDARY }}
         >
           <p className="text-base font-light tracking-wide">
-            AI와 함께하는 감성 다이어리로
+            {t('auth.signup.subtitleLine1')}
           </p>
           <p className="text-base font-light tracking-wide">
-            일상을 기록해보세요
+            {t('auth.signup.subtitleLine2')}
           </p>
         </div>
       </div>
@@ -257,7 +270,7 @@ export default function SignupForm() {
                     resetEmailVerification();
                   },
                 })}
-                placeholder="이메일 입력"
+                placeholder={t('auth.signup.emailPlaceholder')}
                 error={errors.email?.message}
                 required
                 disabled={emailVerified || isSubmitting}
@@ -270,10 +283,10 @@ export default function SignupForm() {
               className="saegim-button saegim-button-small"
             >
               {isSendingCode
-                ? '발송중...'
+                ? t('auth.signup.sendingCode')
                 : emailVerified
-                  ? '인증완료'
-                  : '인증'}
+                  ? t('auth.signup.codeVerified')
+                  : t('auth.signup.sendCode')}
             </button>
           </div>
         </div>
@@ -287,7 +300,9 @@ export default function SignupForm() {
                   type="text"
                   id="verificationCode"
                   {...register('verificationCode')}
-                  placeholder={`인증 코드 ${VALIDATION.VERIFICATION_CODE_LENGTH}자리 입력`}
+                  placeholder={t('auth.signup.codePlaceholder', {
+                    length: VALIDATION.VERIFICATION_CODE_LENGTH,
+                  })}
                   error={errors.verificationCode?.message}
                   maxLength={VALIDATION.VERIFICATION_CODE_LENGTH}
                   disabled={isVerifyingCode || isSubmitting}
@@ -304,11 +319,15 @@ export default function SignupForm() {
                 }
                 className="saegim-button saegim-button-small"
               >
-                {isVerifyingCode ? '확인중...' : '확인'}
+                {isVerifyingCode
+                  ? t('auth.signup.verifying')
+                  : t('auth.signup.verify')}
               </button>
             </div>
             <p className={`text-sm ${TEXT_STYLES.secondary}`}>
-              이메일로 발송된 6자리 인증 코드를 입력해주세요.
+              {t('auth.signup.codeHelper', {
+                length: VALIDATION.VERIFICATION_CODE_LENGTH,
+              })}
             </p>
           </div>
         )}
@@ -318,7 +337,9 @@ export default function SignupForm() {
           type="password"
           id="password"
           {...register('password')}
-          placeholder={`비밀번호 입력 (영문, 숫자, 특수문자 포함 9자 이상)`}
+          placeholder={t('auth.signup.passwordPlaceholder', {
+            min: VALIDATION.PASSWORD_MIN_LENGTH,
+          })}
           error={errors.password?.message}
           required
           disabled={isSubmitting}
@@ -329,7 +350,7 @@ export default function SignupForm() {
           type="password"
           id="passwordConfirm"
           {...register('passwordConfirm')}
-          placeholder="비밀번호 확인"
+          placeholder={t('auth.signup.passwordConfirmPlaceholder')}
           error={errors.passwordConfirm?.message}
           required
           disabled={isSubmitting}
@@ -348,7 +369,10 @@ export default function SignupForm() {
                   },
                 })}
                 maxLength={VALIDATION.NICKNAME_MAX_LENGTH}
-                placeholder={`닉네임 입력 (${VALIDATION.NICKNAME_MIN_LENGTH}-${VALIDATION.NICKNAME_MAX_LENGTH}자, 한글/영문만)`}
+                placeholder={t('auth.signup.nicknamePlaceholder', {
+                  min: VALIDATION.NICKNAME_MIN_LENGTH,
+                  max: VALIDATION.NICKNAME_MAX_LENGTH,
+                })}
                 error={errors.nickname?.message}
                 required
                 disabled={nicknameChecked || isSubmitting}
@@ -360,7 +384,9 @@ export default function SignupForm() {
               disabled={!nickname || nicknameChecked}
               className="saegim-button saegim-button-small"
             >
-              {nicknameChecked ? '확인완료' : '중복확인'}
+              {nicknameChecked
+                ? t('auth.signup.nicknameChecked')
+                : t('auth.signup.nicknameCheck')}
             </button>
           </div>
         </div>
@@ -372,7 +398,7 @@ export default function SignupForm() {
           className="w-full text-white dark:text-text-dark-on-color py-3 px-4 rounded-lg hover:opacity-90 active:opacity-100 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 font-medium text-base tracking-wide shadow-sm hover:shadow-md focus:outline-none focus:ring-2 focus:ring-sage-50 dark:focus:ring-border-dark-focus focus:ring-offset-2 dark:focus:ring-offset-background-dark-secondary"
           style={{ backgroundColor: '#5C8D89' }}
         >
-          {isSubmitting ? '회원가입 중...' : '회원가입하기'}
+          {isSubmitting ? t('auth.signup.submitting') : t('auth.signup.submit')}
         </button>
       </form>
     </div>

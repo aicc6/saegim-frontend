@@ -4,6 +4,7 @@
 
 import { User } from '@/types';
 import { DiaryEntry, DiaryListEntry } from '@/types/diary';
+import { DiaryCategory } from '@/types/category';
 
 // 기본 타입 검증 유틸리티
 export function isString(value: unknown): value is string {
@@ -20,6 +21,24 @@ export function isBoolean(value: unknown): value is boolean {
 
 export function isObject(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === 'object';
+}
+
+// Category 타입 가드
+export function isValidDiaryCategory(data: unknown): data is DiaryCategory {
+  if (!isObject(data)) return false;
+
+  return (
+    isString(data.id) &&
+    isString(data.name) &&
+    isString(data.created_at) &&
+    isString(data.updated_at)
+  );
+}
+
+export function isValidDiaryCategoryList(
+  data: unknown,
+): data is DiaryCategory[] {
+  return Array.isArray(data) && data.every(isValidDiaryCategory);
 }
 
 // User 타입 가드
@@ -74,7 +93,13 @@ export function isValidDiaryEntry(data: unknown): data is DiaryEntry {
       Array.isArray(data.images)) &&
     (data.user_id === null ||
       data.user_id === undefined ||
-      isString(data.user_id))
+      isString(data.user_id)) &&
+    (data.category_id === null ||
+      data.category_id === undefined ||
+      isString(data.category_id)) &&
+    (data.category === null ||
+      data.category === undefined ||
+      isValidDiaryCategory(data.category))
   );
 }
 
@@ -104,7 +129,13 @@ export function isValidDiaryListEntry(data: unknown): data is DiaryListEntry {
       Array.isArray(data.keywords)) &&
     (data.images === null ||
       data.images === undefined ||
-      Array.isArray(data.images))
+      Array.isArray(data.images)) &&
+    (data.category_id === null ||
+      data.category_id === undefined ||
+      isString(data.category_id)) &&
+    (data.category === null ||
+      data.category === undefined ||
+      isValidDiaryCategory(data.category))
   );
 }
 

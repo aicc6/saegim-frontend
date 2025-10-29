@@ -2,6 +2,7 @@
 
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useRef, Suspense } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Heart,
   Sparkles,
@@ -21,30 +22,26 @@ import { ToastAction, type ToastActionElement } from '@/components/ui/toast';
 const features = [
   {
     icon: Sparkles,
-    title: 'AI 감성 글귀 생성',
-    description:
-      '키워드만 입력하면 AI가 당신의 감정을 담은 아름다운 시와 산문을 만들어드려요',
+    titleKey: 'landing.features.items.ai.title',
+    descriptionKey: 'landing.features.items.ai.description',
     color: 'bg-purple-100 text-purple-600',
   },
   {
     icon: Heart,
-    title: '감정 분석 & 리포트',
-    description:
-      'AI가 당신의 감정을 분석하고 월간 감정 패턴을 시각적으로 보여드려요',
+    titleKey: 'landing.features.items.analysis.title',
+    descriptionKey: 'landing.features.items.analysis.description',
     color: 'bg-pink-100 text-pink-600',
   },
   {
     icon: Calendar,
-    title: '감정 캘린더',
-    description:
-      '매일의 감정을 캘린더에서 한눈에 확인하고 감정의 변화를 추적해보세요',
+    titleKey: 'landing.features.items.calendar.title',
+    descriptionKey: 'landing.features.items.calendar.description',
     color: 'bg-blue-100 text-blue-600',
   },
   {
     icon: Shield,
-    title: '완전한 프라이버시',
-    description:
-      '모든 기록은 암호화되어 안전하게 보관되며, 오직 당신만 볼 수 있어요',
+    titleKey: 'landing.features.items.privacy.title',
+    descriptionKey: 'landing.features.items.privacy.description',
     color: 'bg-green-100 text-green-600',
   },
 ];
@@ -54,6 +51,7 @@ function LandingWithSearchParams() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { toast } = useToast();
+  const { t } = useTranslation();
   const statusTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
@@ -72,24 +70,23 @@ function LandingWithSearchParams() {
       > = {
         logout: {
           type: 'success',
-          title: '로그아웃되었습니다',
-          description:
-            '안전하게 로그아웃되었습니다. 언제든지 다시 로그인하실 수 있습니다.',
+          title: t('landing.status.logout.title'),
+          description: t('landing.status.logout.description'),
           icon: CheckCircle,
         },
         withdraw: {
           type: 'success',
-          title: '✅ 계정 탈퇴가 완료되었습니다',
+          title: t('landing.status.withdraw.title'),
           description:
             searchParams.get('message') ||
-            '계정이 성공적으로 탈퇴되었습니다. 30일 이내에 복구할 수 있으며, 그 이후에는 모든 데이터가 영구적으로 삭제됩니다.',
+            t('landing.status.withdraw.description'),
           icon: CheckCircle,
         },
 
         token_expired: {
           type: 'warning',
-          title: '세션이 만료되었습니다',
-          description: '보안을 위해 다시 로그인해주세요.',
+          title: t('landing.status.tokenExpired.title'),
+          description: t('landing.status.tokenExpired.description'),
           icon: AlertCircle,
         },
       };
@@ -130,7 +127,7 @@ function LandingWithSearchParams() {
         if (status === 'token_expired') {
           toastConfig.action = (
             <ToastAction
-              altText="로그인 페이지로 이동"
+              altText={t('landing.toastAction.loginAlt')}
               onClick={() => {
                 // 타이머가 있으면 정리
                 if (statusTimerRef.current) {
@@ -142,7 +139,7 @@ function LandingWithSearchParams() {
                 router.push('/login');
               }}
             >
-              로그인하기
+              {t('auth.loginButton')}
             </ToastAction>
           );
         }
@@ -174,7 +171,7 @@ function LandingWithSearchParams() {
         clearTimeout(statusTimerRef.current);
       }
     };
-  }, [searchParams, router, toast]);
+  }, [searchParams, router, toast, t]);
 
   const handleStartNow = () => {
     // 타이머가 있으면 정리하고 URL 파라미터도 정리
@@ -198,6 +195,8 @@ function LandingWithSearchParams() {
     router.push('/login?redirect=records');
   };
 
+  const quoteLines = t('landing.hero.quoteText').split('\n');
+
   return (
     <>
       <section className="relative overflow-hidden py-20 lg:py-32 bg-sage-20 transition-colors">
@@ -208,22 +207,20 @@ function LandingWithSearchParams() {
             <div className="space-y-4">
               <Badge className="bg-sage-20 text-sage-100 hover:bg-sage-30">
                 <Sparkles className="w-3 h-3 mr-1" />
-                AI 기반 감성 다이어리
+                {t('landing.hero.badge')}
               </Badge>
               <h1 className="text-2xl sm:text-4xl lg:text-6xl font-bold text-sage-100 leading-tight">
                 <span className="block sm:whitespace-nowrap">
-                  마음을 새기는
+                  {t('landing.hero.titleLine1')}
                 </span>
                 <span className="block sm:whitespace-nowrap text-sage-70">
-                  특별한 여정
+                  {t('landing.hero.titleLine2')}
                 </span>
               </h1>
               <p className="text-base sm:text-lg text-sage-80 leading-relaxed max-w-2xl">
-                마음에 새기는 감성 AI 다이어리. 자연에서 얻는 치유와 성장의 기록
-                공간에서 AI가 당신의 감정을 이해하고 아름다운 글귀로
-                표현해드려요.
+                {t('landing.hero.descriptionMain')}
                 <span className="block mt-2">
-                  당신의 소중한 감정을 기록하고, 마음의 평화를 찾아보세요.
+                  {t('landing.hero.descriptionSub')}
                 </span>
               </p>
 
@@ -234,7 +231,7 @@ function LandingWithSearchParams() {
                   onClick={handleStartNow}
                 >
                   <Heart className="w-4 h-4 mr-2" />
-                  지금 바로 시작하기
+                  {t('landing.hero.startNow')}
                 </Button>
                 <Button
                   size="lg"
@@ -243,7 +240,7 @@ function LandingWithSearchParams() {
                   onClick={handleViewRecords}
                 >
                   <Play className="w-4 h-4 mr-2" />
-                  기록 보기
+                  {t('landing.hero.viewRecords')}
                 </Button>
               </div>
             </div>
@@ -259,25 +256,28 @@ function LandingWithSearchParams() {
                       </div>
                       <div>
                         <h3 className="font-medium text-sage-100">
-                          오늘의 감정
+                          {t('landing.hero.quoteTitle')}
                         </h3>
-                        <p className="text-sm text-sage-70">평온한 하루</p>
+                        <p className="text-sm text-sage-70">
+                          {t('landing.hero.quoteSubtitle')}
+                        </p>
                       </div>
                     </div>
                     <div className="bg-sage-30 p-4 rounded-lg">
                       <p className="text-sage-80 font-serif leading-relaxed text-center">
-                        &quot;바람에 흔들리는 나뭇잎처럼
-                        <br />
-                        마음도 자연스럽게 흘러가네
-                        <br />
-                        오늘이라는 선물을 받아
-                        <br />
-                        감사의 마음으로 새김하며&quot;
+                        &quot;
+                        {quoteLines.map((line, index) => (
+                          <span key={`${line}-${index}`}>
+                            {line}
+                            {index < quoteLines.length - 1 && <br />}
+                          </span>
+                        ))}
+                        &quot;
                       </p>
                     </div>
                     <div className="flex justify-between items-center text-xs text-sage-60">
-                      <span>AI 생성 글귀</span>
-                      <span>2025.01.16</span>
+                      <span>{t('landing.hero.generatedLabel')}</span>
+                      <span>{t('landing.hero.sampleDate')}</span>
                     </div>
                   </CardContent>
                 </Card>
@@ -295,11 +295,10 @@ function LandingWithSearchParams() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center space-y-4 mb-16">
             <h2 className="text-3xl lg:text-4xl font-bold text-sage-100">
-              새김만의 특별한 기능
+              {t('landing.features.title')}
             </h2>
             <p className="text-lg text-sage-70 max-w-2xl mx-auto">
-              AI 기술과 자연 치유의 만남으로 당신만의 특별한 감정 기록 경험을
-              제공합니다
+              {t('landing.features.subtitle')}
             </p>
           </div>
 
@@ -318,10 +317,10 @@ function LandingWithSearchParams() {
                       <Icon className="w-6 h-6" />
                     </div>
                     <h3 className="text-lg font-semibold text-sage-100">
-                      {feature.title}
+                      {t(feature.titleKey)}
                     </h3>
                     <p className="text-sage-70 text-sm leading-relaxed">
-                      {feature.description}
+                      {t(feature.descriptionKey)}
                     </p>
                   </CardContent>
                 </Card>
@@ -338,8 +337,10 @@ function LandingWithSearchParams() {
 
 // 기본 export는 Suspense로 감싼 컴포넌트
 export default function LandingPage() {
+  const { t } = useTranslation();
+
   return (
-    <Suspense fallback={<div>Loading...</div>}>
+    <Suspense fallback={<div>{t('common.loading')}</div>}>
       <LandingWithSearchParams />
     </Suspense>
   );

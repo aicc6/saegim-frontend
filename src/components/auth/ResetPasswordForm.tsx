@@ -4,11 +4,13 @@ import { useEffect, useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { useTranslation } from 'react-i18next';
+
 import { authApi } from '@/lib/api/auth';
 import { useApiError } from '@/hooks/use-api-error';
 import { FormInput } from '@/components/ui/form-input';
 import {
-  resetPasswordSchema,
+  createResetPasswordSchema,
   type ResetPasswordFormData,
 } from '@/schemas/auth';
 import { TEXT_STYLES } from '@/constants';
@@ -16,18 +18,20 @@ import { TEXT_STYLES } from '@/constants';
 export default function ResetPasswordForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { t } = useTranslation();
   const { handleApiError, showSuccess } = useApiError({
     loggerName: 'ResetPasswordForm',
   });
 
   const [emailInput, setEmailInput] = useState('');
+  const schema = useMemo(() => createResetPasswordSchema(t), [t]);
 
   const {
     register,
     handleSubmit,
     formState: { errors, isSubmitting },
   } = useForm<ResetPasswordFormData>({
-    resolver: zodResolver(resetPasswordSchema),
+    resolver: zodResolver(schema),
     mode: 'onChange',
   });
 

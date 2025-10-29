@@ -6,14 +6,17 @@ import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useTheme } from 'next-themes';
 import { Menu, X } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 import { useAuthStore } from '@/stores/auth';
 import { BRAND_ASSETS, BRAND_COLORS } from '@/constants';
 import { Button } from '../ui/button';
 import ThemeToggle from '../ui/custom/ThemeToggle';
+import LanguageToggle from '../ui/custom/LanguageToggle';
 
 export default function Header() {
   const router = useRouter();
+  const { t } = useTranslation();
   const { resolvedTheme } = useTheme();
   const { isAuthenticated, clearStorage } = useAuthStore();
   const [mounted, setMounted] = useState(false);
@@ -57,7 +60,7 @@ export default function Header() {
             <div className="w-18 h-18 rounded-full flex items-center justify-center">
               <Image
                 src={BRAND_ASSETS.LOGO}
-                alt="새김 로고"
+                alt={t('common.logoAlt')}
                 width={72}
                 height={72}
                 className="w-18 h-18"
@@ -75,7 +78,7 @@ export default function Header() {
                   : `text-[${BRAND_COLORS.SAGE_80}] hover:text-[${BRAND_COLORS.SAGE_100}]`
               }`}
             >
-              로그인
+              {t('nav.login')}
             </Link>
             <Link
               href="/signup"
@@ -85,8 +88,9 @@ export default function Header() {
                   : `text-[${BRAND_COLORS.SAGE_80}] hover:text-[${BRAND_COLORS.SAGE_100}]`
               }`}
             >
-              회원가입
+              {t('nav.signup')}
             </Link>
+            <LanguageToggle variant="segment" className="min-w-[6.5rem]" />
             <ThemeToggle />
           </div>
 
@@ -123,7 +127,7 @@ export default function Header() {
                 }`}
                 onClick={() => setIsMenuOpen(false)}
               >
-                로그인
+                {t('nav.login')}
               </Link>
               <Link
                 href="/signup"
@@ -134,9 +138,10 @@ export default function Header() {
                 }`}
                 onClick={() => setIsMenuOpen(false)}
               >
-                회원가입
+                {t('nav.signup')}
               </Link>
-              <div className="flex justify-start">
+              <div className="flex justify-start space-x-2">
+                <LanguageToggle variant="segment" className="min-w-[6.5rem]" />
                 <ThemeToggle />
               </div>
             </div>
