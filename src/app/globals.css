@@ -30,6 +30,7 @@
   --color-sage-100: var(--sage-100);
 
   /* Semantic background tokens */
+  --color-background: var(--background-primary);
   --color-background-primary: var(--background-primary);
   --color-background-secondary: var(--background-secondary);
   --color-background-tertiary: var(--background-tertiary);
@@ -40,10 +41,12 @@
   /* Semantic text tokens */
   --color-text-primary: var(--text-primary);
   --color-text-secondary: var(--text-secondary);
+  --color-text-tertiary: var(--text-tertiary);
   --color-text-placeholder: var(--text-placeholder);
   --color-text-on-color: var(--text-on-color);
   --color-text-on-brand: var(--text-on-brand);
   --color-text-inverse: var(--text-inverse);
+  --color-muted-foreground: var(--text-muted);
 
   /* Semantic border tokens */
   --color-border-subtle: var(--border-subtle);
@@ -51,6 +54,11 @@
   --color-border-interactive: var(--border-interactive);
   --color-border-focus: var(--border-focus);
   --color-border-inverse: var(--border-inverse);
+  --color-border-dark: var(--border-dark);
+
+  /* Popover tokens */
+  --color-popover: var(--popover-background);
+  --color-popover-foreground: var(--popover-text);
 
   /* Emotion color tokens */
   --color-emotion-happy: var(--emotion-happy);
@@ -111,6 +119,8 @@
   /* Text 토큰 */
   --text-primary: var(--medium-gray);
   --text-secondary: #6b7280; /* 개선: 4.5:1 대비 충족 (기존 #9ca3af에서 변경) */
+  --text-tertiary: #9ca3af; /* 더 밝은 텍스트 색상 */
+  --text-muted: #9ca3af; /* muted 텍스트 색상 */
   --text-placeholder: #9ca3af; /* 개선: placeholder를 기존 secondary로 조정 */
   --text-on-color: #ffffff;
   --text-on-brand: var(--sage-100);
@@ -124,6 +134,10 @@
   --border-focus-ring: var(--sage-70); /* 개선: focus indicator 추가 */
   --border-focus-ring-offset: #ffffff; /* 개선: focus ring offset 색상 */
   --border-inverse: var(--sage-100);
+
+  /* Popover 토큰 */
+  --popover-background: var(--background-primary);
+  --popover-text: var(--text-primary);
 
   /* ==========  감정별 색상 시스템  ========== */
 
@@ -178,9 +192,15 @@
   --background-hover: #2d3748;
   --background-selected: #374151;
 
+  /* 다크모드 배경 별칭 */
+  --background-dark: #0f1419;
+  --background-dark-secondary: #1a1f2e;
+
   /* 텍스트 시스템 */
   --text-primary: #e2e8f0;
   --text-secondary: #a0aec0;
+  --text-tertiary: #718096; /* 더 밝은 텍스트 색상 (다크모드) */
+  --text-muted: #718096; /* muted 텍스트 색상 (다크모드) */
   --text-placeholder: #718096;
   --text-inverse: #ffffff;
 
@@ -197,6 +217,11 @@
   --border-focus: #8fb59c;
   --border-focus-ring: #8fb59c; /* 개선: 다크 모드 focus ring */
   --border-focus-ring-offset: #0f1419; /* 개선: 다크 모드 focus ring offset */
+  --border-dark: #374151; /* 다크모드 일반 border */
+
+  /* Popover 다크 모드 토큰 */
+  --popover-background: var(--background-secondary);
+  --popover-text: var(--text-primary);
 
   /* 감정별 다크 모드 색상 조정 */
   --emotion-happy: #f6d55c; /* 더 밝게 */
@@ -333,22 +358,16 @@ input:focus,
 textarea:focus,
 select:focus,
 button:focus {
-  outline: 2px solid var(--border-focus-ring);
-  outline-offset: 2px;
-  box-shadow:
-    0 0 0 2px var(--border-focus-ring-offset),
-    0 0 0 4px var(--border-focus-ring);
+  outline: 1px solid var(--border-focus-ring);
+  outline-offset: 1px;
 }
 
 /* 인터랙티브 요소들을 위한 향상된 focus 스타일 */
 [role='button']:focus,
 [tabindex]:focus,
 a:focus {
-  outline: 2px solid var(--border-focus-ring);
-  outline-offset: 2px;
-  box-shadow:
-    0 0 0 2px var(--border-focus-ring-offset),
-    0 0 0 4px var(--border-focus-ring);
+  outline: 1px solid var(--border-focus-ring);
+  outline-offset: 1px;
 }
 
 /* 스크롤바 스타일 */
