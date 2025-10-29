@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
+import { useTranslation } from 'react-i18next';
 import ConfirmModal from '@/components/ui/custom/ConfirmModal';
 import { FormInput } from '@/components/ui/form-input';
 import { authApi } from '@/lib/api/auth';
@@ -18,6 +19,7 @@ const logger = getLogger('ProfileForm');
 export default function ProfileForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { t } = useTranslation();
   const { toast } = useToast();
   const { updateUser, user: authUser } = useAuthStore();
   const [profileData, setProfileData] = useState({
@@ -64,21 +66,21 @@ export default function ProfileForm() {
           setIsEmailChangeModalOpen(true);
         } else {
           toast({
-            title: '오류',
-            description: '유효하지 않은 인증 링크입니다.',
+            title: t('auth.profileForm.errors.invalidTokenTitle'),
+            description: t('auth.profileForm.errors.invalidTokenDescription'),
             variant: 'destructive',
           });
         }
       } catch (error) {
         logger.error('토큰 검증 실패', { error });
         toast({
-          title: '오류',
-          description: '인증 링크가 유효하지 않습니다.',
+          title: t('auth.profileForm.errors.invalidTokenTitle'),
+          description: t('auth.profileForm.errors.tokenVerifyFailed'),
           variant: 'destructive',
         });
       }
     },
-    [toast],
+    [toast, t],
   );
 
   const loadProfile = useCallback(async () => {
@@ -156,14 +158,14 @@ export default function ProfileForm() {
     } catch (error) {
       logger.error('프로필 로드 실패', { error });
       toast({
-        title: '오류',
-        description: '프로필 정보를 불러오는데 실패했습니다.',
+        title: t('auth.profileForm.errors.errorTitle'),
+        description: t('auth.profileForm.errors.profileLoadFailed'),
         variant: 'destructive',
       });
     } finally {
       setIsLoading(false);
     }
-  }, [toast, authUser?.profileImage, updateUser]);
+  }, [toast, authUser?.profileImage, updateUser, t]);
 
   // 프로필 정보 로드
   useEffect(() => {
@@ -196,8 +198,8 @@ export default function ProfileForm() {
       // 파일 크기 검증 (5MB 제한)
       if (file.size > 5 * 1024 * 1024) {
         toast({
-          title: '오류',
-          description: '파일 크기는 5MB 이하여야 합니다.',
+          title: t('auth.profileForm.errors.errorTitle'),
+          description: t('auth.profileForm.errors.fileSizeExceeded'),
           variant: 'destructive',
         });
         return;
@@ -206,8 +208,8 @@ export default function ProfileForm() {
       // 파일 형식 검증
       if (!file.type.startsWith('image/')) {
         toast({
-          title: '오류',
-          description: '이미지 파일만 업로드 가능합니다.',
+          title: t('auth.profileForm.errors.errorTitle'),
+          description: t('auth.profileForm.errors.invalidFileType'),
           variant: 'destructive',
         });
         return;
@@ -422,9 +424,8 @@ export default function ProfileForm() {
 
         // 성공 안내 토스트 표시
         toast({
-          title: '✅ 프로필 이미지 업로드 완료',
-          description:
-            '프로필 이미지가 성공적으로 업로드되었습니다. 사이드바에도 반영됩니다.',
+          title: t('auth.profileForm.imageUploadSuccessTitle'),
+          description: t('auth.profileForm.imageUploadSuccessDescription'),
           duration: 3000,
         });
 
@@ -498,8 +499,8 @@ export default function ProfileForm() {
           }
 
           toast({
-            title: '✅ 프로필 이미지 업로드 완료',
-            description: '프로필 이미지가 성공적으로 업로드되었습니다.',
+            title: t('auth.profileForm.imageUploadSuccessTitle'),
+            description: t('auth.profileForm.imageUploadSuccessDescriptionAlt'),
             duration: 3000,
           });
 
@@ -532,8 +533,8 @@ export default function ProfileForm() {
     } catch (error) {
       logger.error('프로필 사진 업로드 실패:', error);
       toast({
-        title: '오류',
-        description: '프로필 사진 업로드에 실패했습니다.',
+        title: t('auth.profileForm.errors.errorTitle'),
+        description: t('auth.profileForm.errors.imageUploadFailed'),
         variant: 'destructive',
       });
     } finally {
@@ -547,8 +548,8 @@ export default function ProfileForm() {
       profileData.profileImage === originalProfileImage
     ) {
       toast({
-        title: '알림',
-        description: '변경된 내용이 없습니다.',
+        title: t('auth.profileForm.noticeTitle'),
+        description: t('auth.profileForm.noChanges'),
       });
       return;
     }
@@ -601,12 +602,15 @@ export default function ProfileForm() {
       toast({
         title:
           profileData.nickname !== originalNickname
-            ? `✅ 닉네임 변경 완료`
-            : '✅ 프로필 업데이트 완료',
+            ? t('auth.profileForm.nicknameChangeSuccessTitle')
+            : t('auth.profileForm.profileUpdateSuccessTitle'),
         description:
           profileData.nickname !== originalNickname
-            ? `닉네임이 "${originalNickname}"에서 "${profileData.nickname}"으로 변경되었습니다.`
-            : '프로필이 성공적으로 업데이트되었습니다.',
+            ? t('auth.profileForm.nicknameChangeSuccessDescription', {
+                oldNickname: originalNickname,
+                newNickname: profileData.nickname,
+              })
+            : t('auth.profileForm.profileUpdateSuccessDescription'),
         duration: 4000,
       });
 
@@ -614,8 +618,8 @@ export default function ProfileForm() {
     } catch (error) {
       logger.error('프로필 업데이트 실패:', error);
       toast({
-        title: '오류',
-        description: '프로필 업데이트에 실패했습니다.',
+        title: t('auth.profileForm.errors.errorTitle'),
+        description: t('auth.profileForm.errors.profileUpdateFailed'),
         variant: 'destructive',
       });
     } finally {
@@ -624,7 +628,7 @@ export default function ProfileForm() {
   };
 
   const handleEmailChange = async () => {
-    const newEmail = prompt('변경할 이메일 주소를 입력하세요:');
+    const newEmail = prompt(t('auth.profileForm.emailChangePrompt'));
 
     if (!newEmail) {
       return;
@@ -634,8 +638,8 @@ export default function ProfileForm() {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(newEmail)) {
       toast({
-        title: '오류',
-        description: '올바른 이메일 형식을 입력해주세요.',
+        title: t('auth.profileForm.errors.errorTitle'),
+        description: t('auth.profileForm.errors.invalidEmailFormat'),
         variant: 'destructive',
       });
       return;
@@ -650,8 +654,10 @@ export default function ProfileForm() {
       });
 
       toast({
-        title: '📧 인증 이메일 발송 완료!',
-        description: `새로운 이메일(${newEmail})로 인증 링크를 발송했습니다.\n\n이메일을 확인하여 링크를 클릭해주세요.`,
+        title: t('auth.profileForm.emailChangeSentTitle'),
+        description: t('auth.profileForm.emailChangeSentDescription', {
+          email: newEmail,
+        }),
         duration: 5000,
       });
     } catch (error: unknown) {
@@ -663,9 +669,10 @@ export default function ProfileForm() {
       };
       logger.error('이메일 변경 요청 실패', { error });
       const errorMsg =
-        apiError.response?.data?.detail || '이메일 변경 요청에 실패했습니다.';
+        apiError.response?.data?.detail ||
+        t('auth.profileForm.errors.emailChangeRequestFailed');
       toast({
-        title: '오류',
+        title: t('auth.profileForm.errors.errorTitle'),
         description: errorMsg,
         variant: 'destructive',
       });
@@ -677,8 +684,8 @@ export default function ProfileForm() {
   const handleEmailChangeModalSubmit = async () => {
     if (!emailChangeData.password.trim()) {
       toast({
-        title: '오류',
-        description: '비밀번호를 입력해주세요.',
+        title: t('auth.profileForm.errors.errorTitle'),
+        description: t('auth.profileForm.errors.passwordRequired'),
         variant: 'destructive',
       });
       return;
@@ -699,8 +706,10 @@ export default function ProfileForm() {
       if (responseData.requires_logout === 'true') {
         // 성공 메시지 표시
         toast({
-          title: '🎉 이메일 변경 완료!',
-          description: `이메일이 성공적으로 변경되었습니다.\n새로운 이메일: ${emailChangeData.email}\n\n보안을 위해 다시 로그인해주세요.`,
+          title: t('auth.profileForm.emailChangeCompleteTitle'),
+          description: t('auth.profileForm.emailChangeCompleteDescription', {
+            email: emailChangeData.email,
+          }),
           duration: 5000,
         });
 
@@ -713,8 +722,8 @@ export default function ProfileForm() {
         // 2초 후 랜딩 페이지로 리다이렉트
         setTimeout(() => {
           toast({
-            title: '로그아웃',
-            description: '새로운 이메일로 다시 로그인해주세요.',
+            title: t('auth.profileForm.logoutTitle'),
+            description: t('auth.profileForm.logoutDescription'),
             duration: 3000,
           });
           router.push('/landing?status=logout');
@@ -733,9 +742,10 @@ export default function ProfileForm() {
       };
       logger.error('이메일 변경 실패', { error });
       const errorMsg =
-        apiError.response?.data?.detail || '이메일 변경에 실패했습니다.';
+        apiError.response?.data?.detail ||
+        t('auth.profileForm.errors.emailChangeFailed');
       toast({
-        title: '오류',
+        title: t('auth.profileForm.errors.errorTitle'),
         description: errorMsg,
         variant: 'destructive',
       });
@@ -751,8 +761,8 @@ export default function ProfileForm() {
   const handleNicknameCheck = async () => {
     if (!profileData.nickname || profileData.nickname === originalNickname) {
       toast({
-        title: '알림',
-        description: '닉네임을 입력하거나 변경해주세요.',
+        title: t('auth.profileForm.noticeTitle'),
+        description: t('auth.profileForm.nicknameChangeRequired'),
       });
       return;
     }
@@ -771,8 +781,8 @@ export default function ProfileForm() {
     } catch (error) {
       logger.error('닉네임 확인 실패', { error });
       toast({
-        title: '오류',
-        description: '닉네임 확인에 실패했습니다.',
+        title: t('auth.profileForm.errors.errorTitle'),
+        description: t('auth.profileForm.errors.nicknameCheckFailed'),
         variant: 'destructive',
       });
     }
@@ -806,9 +816,8 @@ export default function ProfileForm() {
       if (response && response.success) {
         // 성공 토스트 메시지 (5.5초 표시)
         toast({
-          title: '✅ 계정 탈퇴 완료',
-          description:
-            '계정이 성공적으로 탈퇴되었습니다. 30일 이내에 복구할 수 있으며, 그 이후에는 모든 데이터가 영구적으로 삭제됩니다.',
+          title: t('auth.profileForm.withdrawSuccessTitle'),
+          description: t('auth.profileForm.withdrawSuccessDescription'),
           duration: 5500, // 5.5초
         });
 
@@ -826,7 +835,7 @@ export default function ProfileForm() {
           }, 100);
         }, 5500);
       } else {
-        throw new Error('탈퇴 처리에 실패했습니다.');
+        throw new Error(t('auth.profileForm.errors.withdrawFailed'));
       }
     } catch (error: unknown) {
       const apiError = error as {
@@ -847,9 +856,8 @@ export default function ProfileForm() {
 
         // 401 에러 시에도 탈퇴 완료 토스트 표시 (5.5초)
         toast({
-          title: '✅ 계정 탈퇴 완료',
-          description:
-            '계정이 성공적으로 탈퇴되었습니다. 30일 이내에 복구할 수 있으며, 그 이후에는 모든 데이터가 영구적으로 삭제됩니다.',
+          title: t('auth.profileForm.withdrawSuccessTitle'),
+          description: t('auth.profileForm.withdrawSuccessDescription'),
           duration: 5500, // 5.5초
         });
 
@@ -866,10 +874,10 @@ export default function ProfileForm() {
 
       // 다른 에러의 경우 에러 토스트 메시지
       toast({
-        title: '탈퇴 실패',
+        title: t('auth.profileForm.withdrawFailedTitle'),
         description:
           apiError.response?.data?.detail ||
-          '탈퇴 처리 중 오류가 발생했습니다.',
+          t('auth.profileForm.errors.withdrawProcessFailed'),
         variant: 'destructive',
       });
     } finally {
@@ -880,8 +888,8 @@ export default function ProfileForm() {
   const handlePasswordConfirm = () => {
     if (!withdrawPassword.trim()) {
       toast({
-        title: '입력 오류',
-        description: '비밀번호를 입력해주세요.',
+        title: t('auth.profileForm.inputErrorTitle'),
+        description: t('auth.profileForm.errors.passwordRequired'),
         variant: 'destructive',
       });
       return;

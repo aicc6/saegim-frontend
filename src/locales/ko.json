@@ -320,6 +320,47 @@
         "invalidFileTypeTitle": "잘못된 파일 타입",
         "invalidFileTypeDescription": "이미지 파일만 업로드 가능합니다."
       }
+    },
+    "profileForm": {
+      "noticeTitle": "알림",
+      "inputErrorTitle": "입력 오류",
+      "noChanges": "변경된 내용이 없습니다.",
+      "nicknameChangeRequired": "닉네임을 입력하거나 변경해주세요.",
+      "emailChangePrompt": "변경할 이메일 주소를 입력하세요:",
+      "imageUploadSuccessTitle": "✅ 프로필 이미지 업로드 완료",
+      "imageUploadSuccessDescription": "프로필 이미지가 성공적으로 업로드되었습니다. 사이드바에도 반영됩니다.",
+      "imageUploadSuccessDescriptionAlt": "프로필 이미지가 성공적으로 업로드되었습니다.",
+      "nicknameChangeSuccessTitle": "✅ 닉네임 변경 완료",
+      "nicknameChangeSuccessDescription": "닉네임이 \"{{oldNickname}}\"에서 \"{{newNickname}}\"으로 변경되었습니다.",
+      "profileUpdateSuccessTitle": "✅ 프로필 업데이트 완료",
+      "profileUpdateSuccessDescription": "프로필이 성공적으로 업데이트되었습니다.",
+      "emailChangeSentTitle": "📧 인증 이메일 발송 완료!",
+      "emailChangeSentDescription": "새로운 이메일({{email}})로 인증 링크를 발송했습니다.\n\n이메일을 확인하여 링크를 클릭해주세요.",
+      "emailChangeCompleteTitle": "🎉 이메일 변경 완료!",
+      "emailChangeCompleteDescription": "이메일이 성공적으로 변경되었습니다.\n새로운 이메일: {{email}}\n\n보안을 위해 다시 로그인해주세요.",
+      "logoutTitle": "로그아웃",
+      "logoutDescription": "새로운 이메일로 다시 로그인해주세요.",
+      "withdrawSuccessTitle": "✅ 계정 탈퇴 완료",
+      "withdrawSuccessDescription": "계정이 성공적으로 탈퇴되었습니다. 30일 이내에 복구할 수 있으며, 그 이후에는 모든 데이터가 영구적으로 삭제됩니다.",
+      "withdrawFailedTitle": "탈퇴 실패",
+      "errors": {
+        "errorTitle": "오류",
+        "invalidTokenTitle": "오류",
+        "invalidTokenDescription": "유효하지 않은 인증 링크입니다.",
+        "tokenVerifyFailed": "인증 링크가 유효하지 않습니다.",
+        "profileLoadFailed": "프로필 정보를 불러오는데 실패했습니다.",
+        "fileSizeExceeded": "파일 크기는 5MB 이하여야 합니다.",
+        "invalidFileType": "이미지 파일만 업로드 가능합니다.",
+        "imageUploadFailed": "프로필 사진 업로드에 실패했습니다.",
+        "profileUpdateFailed": "프로필 업데이트에 실패했습니다.",
+        "invalidEmailFormat": "올바른 이메일 형식을 입력해주세요.",
+        "emailChangeRequestFailed": "이메일 변경 요청에 실패했습니다.",
+        "passwordRequired": "비밀번호를 입력해주세요.",
+        "emailChangeFailed": "이메일 변경에 실패했습니다.",
+        "nicknameCheckFailed": "닉네임 확인에 실패했습니다.",
+        "withdrawFailed": "탈퇴 처리에 실패했습니다.",
+        "withdrawProcessFailed": "탈퇴 처리 중 오류가 발생했습니다."
+      }
     }
   },
   "create": {

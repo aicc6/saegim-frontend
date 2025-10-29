@@ -320,6 +320,47 @@
         "invalidFileTypeTitle": "無効なファイル形式",
         "invalidFileTypeDescription": "画像ファイルのみアップロード可能です。"
       }
+    },
+    "profileForm": {
+      "noticeTitle": "お知らせ",
+      "inputErrorTitle": "入力エラー",
+      "noChanges": "変更はありません。",
+      "nicknameChangeRequired": "ニックネームを入力または変更してください。",
+      "emailChangePrompt": "新しいメールアドレスを入力してください:",
+      "imageUploadSuccessTitle": "✅ プロフィール画像をアップロードしました",
+      "imageUploadSuccessDescription": "プロフィール画像が正常にアップロードされました。サイドバーにも反映されます。",
+      "imageUploadSuccessDescriptionAlt": "プロフィール画像が正常にアップロードされました。",
+      "nicknameChangeSuccessTitle": "✅ ニックネームを変更しました",
+      "nicknameChangeSuccessDescription": "ニックネームが\"{{oldNickname}}\"から\"{{newNickname}}\"に変更されました。",
+      "profileUpdateSuccessTitle": "✅ プロフィールを更新しました",
+      "profileUpdateSuccessDescription": "プロフィールが正常に更新されました。",
+      "emailChangeSentTitle": "📧 認証メールを送信しました！",
+      "emailChangeSentDescription": "{{email}}に認証リンクを送信しました。\n\nメールを確認してリンクをクリックしてください。",
+      "emailChangeCompleteTitle": "🎉 メールアドレスを変更しました！",
+      "emailChangeCompleteDescription": "メールアドレスが正常に変更されました。\n新しいメール: {{email}}\n\nセキュリティのため再度ログインしてください。",
+      "logoutTitle": "ログアウト",
+      "logoutDescription": "新しいメールアドレスで再度ログインしてください。",
+      "withdrawSuccessTitle": "✅ アカウントを削除しました",
+      "withdrawSuccessDescription": "アカウントが正常に削除されました。30日以内であれば復元できます。その後すべてのデータが完全に削除されます。",
+      "withdrawFailedTitle": "退会に失敗しました",
+      "errors": {
+        "errorTitle": "エラー",
+        "invalidTokenTitle": "エラー",
+        "invalidTokenDescription": "無効な認証リンクです。",
+        "tokenVerifyFailed": "認証リンクが無効です。",
+        "profileLoadFailed": "プロフィール情報の読み込みに失敗しました。",
+        "fileSizeExceeded": "ファイルサイズは5MB以下である必要があります。",
+        "invalidFileType": "画像ファイルのみアップロード可能です。",
+        "imageUploadFailed": "プロフィール画像のアップロードに失敗しました。",
+        "profileUpdateFailed": "プロフィールの更新に失敗しました。",
+        "invalidEmailFormat": "正しいメール形式を入力してください。",
+        "emailChangeRequestFailed": "メールアドレス変更リクエストに失敗しました。",
+        "passwordRequired": "パスワードを入力してください。",
+        "emailChangeFailed": "メールアドレスの変更に失敗しました。",
+        "nicknameCheckFailed": "ニックネームの確認に失敗しました。",
+        "withdrawFailed": "退会処理に失敗しました。",
+        "withdrawProcessFailed": "退会処理中にエラーが発生しました。"
+      }
     }
   },
   "create": {

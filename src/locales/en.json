@@ -320,6 +320,47 @@
         "invalidFileTypeTitle": "Invalid File Type",
         "invalidFileTypeDescription": "Only image files can be uploaded."
       }
+    },
+    "profileForm": {
+      "noticeTitle": "Notice",
+      "inputErrorTitle": "Input Error",
+      "noChanges": "No changes have been made.",
+      "nicknameChangeRequired": "Please enter or change your nickname.",
+      "emailChangePrompt": "Enter the new email address:",
+      "imageUploadSuccessTitle": "✅ Profile Image Uploaded",
+      "imageUploadSuccessDescription": "Profile image has been successfully uploaded. It will also be reflected in the sidebar.",
+      "imageUploadSuccessDescriptionAlt": "Profile image has been successfully uploaded.",
+      "nicknameChangeSuccessTitle": "✅ Nickname Changed",
+      "nicknameChangeSuccessDescription": "Nickname has been changed from \"{{oldNickname}}\" to \"{{newNickname}}\".",
+      "profileUpdateSuccessTitle": "✅ Profile Updated",
+      "profileUpdateSuccessDescription": "Profile has been successfully updated.",
+      "emailChangeSentTitle": "📧 Verification Email Sent!",
+      "emailChangeSentDescription": "A verification link has been sent to {{email}}.\n\nPlease check your email and click the link.",
+      "emailChangeCompleteTitle": "🎉 Email Changed!",
+      "emailChangeCompleteDescription": "Email has been successfully changed.\nNew email: {{email}}\n\nPlease log in again for security.",
+      "logoutTitle": "Logout",
+      "logoutDescription": "Please log in again with your new email.",
+      "withdrawSuccessTitle": "✅ Account Deleted",
+      "withdrawSuccessDescription": "Your account has been successfully deleted. You can restore it within 30 days, after which all data will be permanently deleted.",
+      "withdrawFailedTitle": "Withdrawal Failed",
+      "errors": {
+        "errorTitle": "Error",
+        "invalidTokenTitle": "Error",
+        "invalidTokenDescription": "Invalid verification link.",
+        "tokenVerifyFailed": "Verification link is invalid.",
+        "profileLoadFailed": "Failed to load profile information.",
+        "fileSizeExceeded": "File size must be 5MB or less.",
+        "invalidFileType": "Only image files can be uploaded.",
+        "imageUploadFailed": "Failed to upload profile image.",
+        "profileUpdateFailed": "Failed to update profile.",
+        "invalidEmailFormat": "Please enter a valid email format.",
+        "emailChangeRequestFailed": "Failed to request email change.",
+        "passwordRequired": "Please enter your password.",
+        "emailChangeFailed": "Failed to change email.",
+        "nicknameCheckFailed": "Failed to check nickname.",
+        "withdrawFailed": "Failed to process withdrawal.",
+        "withdrawProcessFailed": "An error occurred during withdrawal."
+      }
     }
   },
   "create": {
