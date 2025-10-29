@@ -927,7 +927,7 @@ export default function ProfileForm() {
             <div className="text-center">
               <div className="inline-block h-8 w-8 animate-spin rounded-full border-2 border-sage-30 border-t-sage-70 mb-4"></div>
               <p className="text-sage-100 font-medium">
-                프로필 정보를 불러오는 중...
+                {t('auth.profileForm.loading.message')}
               </p>
             </div>
           </div>
@@ -935,7 +935,7 @@ export default function ProfileForm() {
           {/* 기본 프로필 폼 구조 (로딩 중에도 표시) */}
           <div className="opacity-50">
             <h2 className="text-xl font-medium text-text-primary dark:text-text-dark mb-6">
-              프로필 정보
+              {t('auth.profileForm.sections.profileInfo')}
             </h2>
 
             <div className="flex space-x-6">
@@ -943,7 +943,11 @@ export default function ProfileForm() {
               <div className="flex flex-col items-center min-w-[240px]">
                 <div className="relative w-48 h-48 group">
                   <div className="w-full h-full bg-background-secondary dark:bg-background-dark-tertiary rounded-xl shadow-md flex items-center justify-center overflow-hidden">
-                    <span className="text-6xl" role="img" aria-label="카메라">
+                    <span
+                      className="text-6xl"
+                      role="img"
+                      aria-label={t('auth.profileForm.loading.cameraLabel')}
+                    >
                       📷
                     </span>
                   </div>
@@ -951,7 +955,7 @@ export default function ProfileForm() {
                 {/* 프로필 이미지 업로드 힌트 */}
                 <div className="mt-3 text-center">
                   <div className="text-sm text-text-secondary dark:text-text-dark-secondary">
-                    클릭하여 이미지 변경
+                    {t('auth.profileForm.loading.uploadHint')}
                   </div>
                 </div>
               </div>
@@ -960,14 +964,14 @@ export default function ProfileForm() {
               <div className="flex-1 space-y-6">
                 <div>
                   <div className="block text-sm font-medium text-text-primary dark:text-text-dark mb-2">
-                    닉네임
+                    {t('auth.profileForm.labels.nickname')}
                   </div>
                   <div className="h-12 bg-gray-100 dark:bg-background-dark-secondary rounded-lg border border-border-subtle dark:border-border-dark"></div>
                 </div>
 
                 <div>
                   <div className="block text-sm font-medium text-text-primary dark:text-text-dark mb-2">
-                    이메일
+                    {t('auth.profileForm.labels.currentEmail')}
                   </div>
                   <div className="h-12 bg-gray-100 dark:bg-background-dark-secondary rounded-lg border border-border-subtle dark:border-border-dark"></div>
                 </div>
@@ -998,12 +1002,12 @@ export default function ProfileForm() {
         {/* 보안 설정 섹션 */}
         <div className="bg-background-primary dark:bg-background-dark rounded-lg shadow-sm border border-border-subtle dark:border-border-dark p-6">
           <h2 className="text-xl font-medium text-text-primary dark:text-text-dark mb-6">
-            보안 설정
+            {t('auth.profileForm.sections.security')}
           </h2>
           <div className="space-y-6">
             <div>
               <div className="block text-sm font-medium text-text-primary dark:text-text-dark mb-2">
-                현재 비밀번호
+                {t('auth.profileForm.labels.currentPassword')}
               </div>
               <div className="h-12 bg-gray-100 dark:bg-background-dark-secondary rounded-lg border border-border-subtle dark:border-border-dark"></div>
             </div>
@@ -1025,7 +1029,7 @@ export default function ProfileForm() {
         {/* 계정 설정 섹션 */}
         <div className="bg-background-primary dark:bg-background-dark rounded-lg shadow-sm border border-border-subtle dark:border-border-dark p-6">
           <h2 className="text-xl font-medium text-text-primary dark:text-text-dark mb-6">
-            계정 설정
+            {t('auth.profileForm.sections.account')}
           </h2>
           <div className="space-y-6">
             <div>
@@ -1051,7 +1055,7 @@ export default function ProfileForm() {
       {/* 프로필 정보 섹션 */}
       <div className="bg-background-primary dark:bg-background-dark rounded-lg shadow-sm border border-border-subtle dark:border-border-dark p-6">
         <h2 className="text-xl font-medium text-text-primary dark:text-text-dark mb-6">
-          프로필 정보
+          {t('auth.profileForm.sections.profileInfo')}
         </h2>
 
         <div className="flex space-x-6">
@@ -1079,7 +1083,7 @@ export default function ProfileForm() {
                       src={
                         profileData.profileImage || authUser?.profileImage || ''
                       }
-                      alt="프로필 이미지"
+                      alt={t('auth.profileForm.labels.profileImageAlt')}
                       className="w-full h-full object-cover"
                       width={192}
                       height={192}
@@ -1090,7 +1094,11 @@ export default function ProfileForm() {
                       ).startsWith('data:')}
                     />
                   ) : (
-                    <span className="text-6xl" role="img" aria-label="카메라">
+                    <span
+                      className="text-6xl"
+                      role="img"
+                      aria-label={t('auth.profileForm.loading.cameraLabel')}
+                    >
                       📷
                     </span>
                   )}
@@ -1100,7 +1108,9 @@ export default function ProfileForm() {
                     <div className="absolute inset-0 bg-black/50 flex items-center justify-center rounded-xl">
                       <div className="text-white text-center">
                         <div className="inline-block h-8 w-8 animate-spin rounded-full border-2 border-white border-t-transparent mb-2"></div>
-                        <p className="text-sm">업로드 중...</p>
+                        <p className="text-sm">
+                          {t('auth.profileForm.labels.uploading')}
+                        </p>
                       </div>
                     </div>
                   )}
@@ -1127,7 +1137,9 @@ export default function ProfileForm() {
                         d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"
                       />
                     </svg>
-                    <span className="text-sm">프로필 사진 변경</span>
+                    <span className="text-sm">
+                      {t('auth.profileForm.labels.changeProfileImage')}
+                    </span>
                   </div>
                 </div>
               </label>
@@ -1141,10 +1153,10 @@ export default function ProfileForm() {
                 className="block text-sm font-medium text-text-primary dark:text-text-dark mb-2"
                 htmlFor="nickname"
               >
-                닉네임 입력
+                {t('auth.profileForm.labels.nickname')}
               </label>
               <p className="text-xs text-text-secondary dark:text-text-dark-secondary mb-2">
-                다른 사용자에게 표시되는 이름입니다.
+                {t('auth.profileForm.labels.nicknameDescription')}
               </p>
               <div className="flex gap-2">
                 <FormInput
@@ -1155,14 +1167,14 @@ export default function ProfileForm() {
                   onChange={handleInputChange}
                   maxLength={10}
                   className="flex-1"
-                  placeholder="닉네임을 입력하세요 (2-10자)"
+                  placeholder={t('auth.profileForm.labels.nicknamePlaceholder')}
                 />
                 <button
                   onClick={handleNicknameCheck}
                   className="saegim-button saegim-button-small"
                   disabled={isUpdating}
                 >
-                  중복확인
+                  {t('auth.profileForm.buttons.checkDuplicate')}
                 </button>
               </div>
             </div>
@@ -1172,15 +1184,15 @@ export default function ProfileForm() {
                 className="block text-sm font-medium text-text-primary dark:text-text-dark mb-2"
                 htmlFor="email"
               >
-                현재 이메일
+                {t('auth.profileForm.labels.currentEmail')}
               </label>
               <p className="text-xs text-text-secondary dark:text-text-dark-secondary mb-2">
-                로그인 및 알림에 사용되는 이메일입니다. (보안상 일부가
-                마스킹됩니다)
+                {t('auth.profileForm.labels.emailDescription')}
                 {profileData.accountType === 'social' && (
                   <span className="block mt-1 text-orange-600 dark:text-orange-400">
-                    ⚠️ 소셜 계정은 이메일 변경이 불가능합니다.{' '}
-                    {profileData.provider}에서 직접 변경해주세요.
+                    {t('auth.profileForm.labels.socialEmailWarning', {
+                      provider: profileData.provider,
+                    })}
                   </span>
                 )}
               </p>
@@ -1192,7 +1204,7 @@ export default function ProfileForm() {
                   value={maskEmail(profileData.email)}
                   readOnly
                   className="flex-1 px-4 py-3 bg-gray-100 dark:bg-background-dark-secondary border border-gray-300 dark:border-border-dark-subtle rounded-lg text-gray-600 dark:text-text-dark-secondary cursor-not-allowed"
-                  placeholder="현재 이메일"
+                  placeholder={t('auth.profileForm.labels.emailPlaceholder')}
                 />
                 {profileData.accountType === 'email' ? (
                   <button
@@ -1200,15 +1212,15 @@ export default function ProfileForm() {
                     className="saegim-button saegim-button-small"
                     disabled={isUpdating}
                   >
-                    이메일 변경
+                    {t('auth.profileForm.buttons.changeEmail')}
                   </button>
                 ) : (
                   <button
                     className="px-4 py-3 bg-gray-300 dark:bg-gray-600 text-gray-500 dark:text-gray-400 rounded-lg cursor-not-allowed"
                     disabled
-                    title="소셜 계정은 이메일 변경이 불가능합니다"
+                    title={t('auth.profileForm.buttons.changeNotAllowedTitle')}
                   >
-                    변경 불가
+                    {t('auth.profileForm.buttons.changeNotAllowed')}
                   </button>
                 )}
               </div>
@@ -1224,11 +1236,12 @@ export default function ProfileForm() {
               className="saegim-button saegim-button-medium"
               disabled={isUpdating || profileData.nickname === originalNickname}
             >
-              {isUpdating ? '업데이트 중...' : '프로필 업데이트'}
+              {isUpdating
+                ? t('auth.profileForm.buttons.updating')
+                : t('auth.profileForm.buttons.updateProfile')}
             </button>
             <p className="text-xs text-text-secondary dark:text-text-dark-secondary mt-2">
-              프로필 이미지는 업로드 시 자동으로 저장됩니다. 이 버튼은 닉네임
-              변경 시에만 사용됩니다.
+              {t('auth.profileForm.descriptions.profileImageAutoSave')}
             </p>
           </div>
         </div>
@@ -1237,14 +1250,15 @@ export default function ProfileForm() {
       {/* 보안 설정 섹션 */}
       <div className="bg-background-primary dark:bg-background-dark rounded-lg shadow-sm border border-border-subtle dark:border-border-dark p-6">
         <h2 className="text-xl font-medium text-text-primary dark:text-text-dark mb-2">
-          보안 설정
+          {t('auth.profileForm.sections.security')}
         </h2>
         <p className="text-sm text-text-secondary dark:text-text-dark-secondary mb-4">
-          계정 보안을 위한 설정을 관리합니다.
+          {t('auth.profileForm.descriptions.securityDescription')}
           {profileData.accountType === 'social' && (
             <span className="block mt-2 text-orange-600 dark:text-orange-400">
-              ⚠️ 소셜 계정은 비밀번호 변경이 불가능합니다.{' '}
-              {profileData.provider}에서 직접 관리해주세요.
+              {t('auth.profileForm.descriptions.socialPasswordWarning', {
+                provider: profileData.provider,
+              })}
             </span>
           )}
         </p>
@@ -1253,15 +1267,15 @@ export default function ProfileForm() {
             onClick={handlePasswordChange}
             className="saegim-button saegim-button-medium"
           >
-            비밀번호 변경
+            {t('auth.profileForm.buttons.changePassword')}
           </button>
         ) : (
           <button
             className="px-6 py-3 bg-gray-300 dark:bg-gray-600 text-gray-500 dark:text-gray-400 rounded-lg cursor-not-allowed"
             disabled
-            title="소셜 계정은 비밀번호 변경이 불가능합니다"
+            title={t('auth.profileForm.buttons.changeNotAllowedPasswordTitle')}
           >
-            변경 불가 (소셜 계정)
+            {t('auth.profileForm.buttons.changeNotAllowedSocial')}
           </button>
         )}
       </div>
@@ -1269,12 +1283,12 @@ export default function ProfileForm() {
       {/* 계정 설정 섹션 */}
       <div className="bg-background-primary dark:bg-background-dark rounded-lg shadow-sm border border-border-subtle dark:border-border-dark p-6">
         <h2 className="text-xl font-medium text-text-primary dark:text-text-dark mb-2">
-          계정 설정
+          {t('auth.profileForm.sections.account')}
         </h2>
         <p className="text-sm text-text-secondary dark:text-text-dark-secondary mb-4">
           {profileData.accountType === 'email'
-            ? '계정을 탈퇴하면 모든 데이터가 30일간 보관 후 영구적으로 삭제됩니다.'
-            : '소셜 계정 탈퇴 시 모든 데이터가 30일간 보관 후 영구적으로 삭제됩니다.'}
+            ? t('auth.profileForm.descriptions.accountDeleteEmail')
+            : t('auth.profileForm.descriptions.accountDeleteSocial')}
         </p>
         <div className="flex space-x-4">
           <button
@@ -1282,14 +1296,14 @@ export default function ProfileForm() {
             className="px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
           >
             {profileData.accountType === 'email'
-              ? '계정 탈퇴 (비밀번호 필요)'
-              : '계정 탈퇴'}
+              ? t('auth.profileForm.buttons.withdrawAccount')
+              : t('auth.profileForm.buttons.withdrawAccountSocial')}
           </button>
           <button
             onClick={handleCustomerService}
             className="px-6 py-3 bg-gray-600 dark:bg-gray-500 text-white rounded-lg hover:bg-gray-700 dark:hover:bg-gray-600 transition-colors"
           >
-            고객센터 문의
+            {t('auth.profileForm.buttons.customerService')}
           </button>
         </div>
       </div>
