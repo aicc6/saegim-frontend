@@ -25,6 +25,7 @@ import { DiaryCategory } from '@/types/category';
 import { useCategoryStore } from '@/stores/category';
 import { useCreateStore, WritingStyle, LengthOption } from '@/stores/create';
 import { EmotionOption, useEmotionStore } from '@/stores/emotion';
+import { useLanguageStore } from '@/stores/language';
 import { ChatInput } from '../chat/ChatInput';
 import Select from '../ui/custom/Select';
 
@@ -828,6 +829,8 @@ function CreateAi() {
         // 저장 중 로딩 토스트 표시
         const loadingToast = enhancedToast.diarySaving();
 
+        const targetLanguage = useLanguageStore.getState().language;
+
         const result = await diaryApi.createDiary({
           title:
             textToSave.slice(0, 50) + (textToSave.length > 50 ? '...' : ''),
@@ -845,6 +848,7 @@ function CreateAi() {
           diary_date: card.diaryDate || selectedDate || undefined, // 카드 고유 날짜 우선
           is_public: false,
           category_id: card.categoryId || undefined,
+          target_language: targetLanguage,
           // AI 생성 시 사용된 이미지 포함 (이미 서버에 업로드됨)
           uploaded_images:
             card.uploadedImages && card.uploadedImages.length > 0

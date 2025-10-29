@@ -2,6 +2,7 @@
  * 다이어리 관련 API
  */
 
+import type { LanguageCode } from '@/types/language';
 import { DiaryListEntry } from '@/types/diary';
 import { apiClient } from './client';
 
@@ -72,6 +73,7 @@ export const diaryApi = {
       file_size: number;
       filename: string;
     }> | null;
+    target_language?: LanguageCode;
   }) => apiClient.post('/api/diary', data),
 
   // 다이어리 삭제

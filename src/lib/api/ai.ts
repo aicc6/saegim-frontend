@@ -61,13 +61,16 @@ export const aiApi = {
       filename: string;
     }> | null;
   }) => {
+    const targetLanguage = data.language || DEFAULT_LANGUAGE;
+
     const requestBody: Record<string, unknown> = {
       prompt: data.prompt,
       style: data.style,
       length: data.length,
       emotion: data.emotion || '',
       regeneration_count: data.regeneration_count || 0,
-      language: data.language || DEFAULT_LANGUAGE,
+      language: targetLanguage,
+      target_language: targetLanguage,
     };
 
     // sessionId가 있을 때만 추가
@@ -102,12 +105,14 @@ export const aiApi = {
     }> | null;
     diary_date?: string;
   }): Promise<Response> => {
+    const targetLanguage = data.language || DEFAULT_LANGUAGE;
     const requestBody: Record<string, unknown> = {
       prompt: data.prompt,
       style: data.style,
       length: data.length,
       emotion: data.emotion || '',
-      language: data.language || DEFAULT_LANGUAGE,
+      language: targetLanguage,
+      target_language: targetLanguage,
       ...(data.sessionId && { session_id: data.sessionId }),
       ...(data.uploaded_images && { uploaded_images: data.uploaded_images }),
       ...(data.diary_date && { diary_date: data.diary_date }),

@@ -8,6 +8,7 @@ import { aiApi } from '@/lib/api/ai';
 import { ApiResponse } from '@/lib/api/client';
 import { DiaryEntry } from '@/types/diary';
 import { getLogger } from '@/lib/logger';
+import { useLanguageStore } from '@/stores/language';
 
 const logger = getLogger('useChatGeneration');
 
@@ -135,6 +136,8 @@ export const useChatGeneration = (
           return;
         }
 
+        const targetLanguage = useLanguageStore.getState().language;
+
         const response = (await diaryApi.createDiary({
           content: originalPrompt.trim(),
           user_emotion: emotion || undefined,
@@ -143,6 +146,7 @@ export const useChatGeneration = (
           ai_emotion_confidence: 0.8,
           keywords: messageKeywords || [],
           is_public: false,
+          target_language: targetLanguage,
         })) as ApiResponse<DiaryEntry>;
 
         router.push(`/viewPost/${response.data.id}`);
