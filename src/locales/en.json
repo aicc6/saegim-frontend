@@ -251,6 +251,75 @@
         "restorable": "Your account has been deleted. You can restore it within {{days}} days.",
         "expired": "The restoration period has expired. You can no longer recover this account."
       }
+    },
+    "resetPasswordErrorForm": {
+      "warningLabel": "Warning",
+      "title": "Email Verification Failed",
+      "descriptionLine1": "Are you a social account user?",
+      "descriptionLine2": "You cannot set a password.",
+      "notice": "Even with email notifications from your social account, you cannot set a password directly",
+      "resendButton": "Resend Password Reset Email",
+      "supportButton": "Contact Support"
+    },
+    "resetPasswordForm": {
+      "title": "Reset Password",
+      "description": "Enter your new password",
+      "emailLabel": "Email Address",
+      "emailPlaceholder": "Enter your registered email address",
+      "newPasswordLabel": "New Password",
+      "newPasswordPlaceholder": "Enter your new password",
+      "confirmLabel": "Confirm New Password",
+      "confirmPlaceholder": "Re-enter your new password",
+      "requirementsTitle": "Password Requirements",
+      "requirementMin": "At least 9 characters",
+      "requirementChars": "Include letters, numbers, and special characters",
+      "submit": "Change Password",
+      "submitting": "Changing...",
+      "backToLogin": "Back to Login",
+      "successTitle": "🔐 Password Changed",
+      "successDescription": "Your password has been successfully changed. Please log in with your new password.",
+      "successDescriptionAlt": "Your password has been changed. Please try logging in with your new password.",
+      "failureTitle": "Password Change Failed",
+      "failureDescription": "An error occurred while changing your password. Please try again.",
+      "errors": {
+        "invalidAccess": "Invalid access",
+        "invalidAccessTitle": "Invalid Access",
+        "invalidAccessDescription": "The password reset link is invalid.",
+        "emailMissing": "Email missing",
+        "emailRequiredTitle": "Email Required",
+        "emailRequiredDescription": "Please enter a valid email address.",
+        "codeMissing": "Verification code missing",
+        "errorTitle": "Error",
+        "missingInfoDescription": "Required information is missing. Please try again."
+      }
+    },
+    "supportForm": {
+      "title": "Contact Support",
+      "descriptionLine1": "Feel free to describe any issues or suggestions.",
+      "descriptionLine2": "We will respond as soon as possible.",
+      "titleLabel": "Title",
+      "titlePlaceholder": "Please enter a title",
+      "contentLabel": "Content",
+      "contentPlaceholder": "Please describe your inquiry in detail",
+      "imageUploadLabel": "Screenshot/Image Upload",
+      "imageAlt": "Uploaded image",
+      "imageUploadButton": "Upload Image",
+      "imageUploadFormat": "PNG, JPG, GIF up to 10MB",
+      "imageUploadHint": "Click to select file",
+      "submit": "Submit",
+      "submitting": "Submitting...",
+      "successTitle": "Inquiry Received",
+      "successDescription": "Your inquiry has been successfully received. We will respond as soon as possible.",
+      "failureTitle": "Submission Failed",
+      "failureDescription": "An error occurred while submitting your inquiry.",
+      "errors": {
+        "fileSizeExceeded": "File size exceeded",
+        "fileSizeTitle": "File Size Exceeded",
+        "fileSizeDescription": "File size must be 10MB or less.",
+        "invalidFileType": "Invalid file type",
+        "invalidFileTypeTitle": "Invalid File Type",
+        "invalidFileTypeDescription": "Only image files can be uploaded."
+      }
     }
   },
   "create": {

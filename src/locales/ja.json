@@ -251,6 +251,75 @@
         "restorable": "アカウントは削除されました。{{days}}日以内であれば復元できます。",
         "expired": "復元可能期間が過ぎたため、アカウントを復元できません。"
       }
+    },
+    "resetPasswordErrorForm": {
+      "warningLabel": "警告",
+      "title": "メール認証に失敗しました",
+      "descriptionLine1": "ソーシャルアカウントのユーザーですか？",
+      "descriptionLine2": "パスワードを設定できません。",
+      "notice": "ソーシャルアカウントからのメール通知を受け取っても、直接パスワードを設定することはできません",
+      "resendButton": "パスワード再設定メールを再送信",
+      "supportButton": "サポートに問い合わせる"
+    },
+    "resetPasswordForm": {
+      "title": "パスワード再設定",
+      "description": "新しいパスワードを入力してください",
+      "emailLabel": "メールアドレス",
+      "emailPlaceholder": "登録したメールアドレスを入力してください",
+      "newPasswordLabel": "新しいパスワード",
+      "newPasswordPlaceholder": "新しいパスワードを入力してください",
+      "confirmLabel": "新しいパスワード（確認）",
+      "confirmPlaceholder": "新しいパスワードをもう一度入力してください",
+      "requirementsTitle": "パスワードの要件",
+      "requirementMin": "9文字以上",
+      "requirementChars": "英文字、数字、特殊文字を含む",
+      "submit": "パスワードを変更",
+      "submitting": "変更中...",
+      "backToLogin": "ログインページに戻る",
+      "successTitle": "🔐 パスワードを変更しました",
+      "successDescription": "パスワードが正常に変更されました。新しいパスワードでログインしてください。",
+      "successDescriptionAlt": "パスワードが変更されました。新しいパスワードでログインしてみてください。",
+      "failureTitle": "パスワードの変更に失敗しました",
+      "failureDescription": "パスワード変更中にエラーが発生しました。もう一度お試しください。",
+      "errors": {
+        "invalidAccess": "不正なアクセス",
+        "invalidAccessTitle": "不正なアクセス",
+        "invalidAccessDescription": "パスワード再設定リンクが正しくありません。",
+        "emailMissing": "メールアドレスがありません",
+        "emailRequiredTitle": "メールアドレスが必要です",
+        "emailRequiredDescription": "有効なメールアドレスを入力してください。",
+        "codeMissing": "認証コードがありません",
+        "errorTitle": "エラー",
+        "missingInfoDescription": "必要な情報がありません。もう一度お試しください。"
+      }
+    },
+    "supportForm": {
+      "title": "サポートへのお問い合わせ",
+      "descriptionLine1": "問題や提案などをお気軽にご記入ください。",
+      "descriptionLine2": "できるだけ早く回答いたします。",
+      "titleLabel": "タイトル",
+      "titlePlaceholder": "タイトルを入力してください",
+      "contentLabel": "内容",
+      "contentPlaceholder": "お問い合わせ内容を詳しくご記入ください",
+      "imageUploadLabel": "スクリーンショット/画像アップロード",
+      "imageAlt": "アップロードされた画像",
+      "imageUploadButton": "画像をアップロード",
+      "imageUploadFormat": "PNG、JPG、GIF（10MBまで）",
+      "imageUploadHint": "クリックしてファイルを選択",
+      "submit": "送信",
+      "submitting": "送信中...",
+      "successTitle": "お問い合わせを受付ました",
+      "successDescription": "お問い合わせが正常に受付されました。できるだけ早く回答いたします。",
+      "failureTitle": "送信に失敗しました",
+      "failureDescription": "お問い合わせの送信中にエラーが発生しました。",
+      "errors": {
+        "fileSizeExceeded": "ファイルサイズ超過",
+        "fileSizeTitle": "ファイルサイズ超過",
+        "fileSizeDescription": "ファイルサイズは10MB以下である必要があります。",
+        "invalidFileType": "無効なファイル形式",
+        "invalidFileTypeTitle": "無効なファイル形式",
+        "invalidFileTypeDescription": "画像ファイルのみアップロード可能です。"
+      }
     }
   },
   "create": {

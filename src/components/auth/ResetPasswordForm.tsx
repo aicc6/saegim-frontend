@@ -48,30 +48,30 @@ export default function ResetPasswordForm() {
     // 인증코드가 전혀 없는 경우만 오류 처리
     if (!verificationCode) {
       handleApiError(
-        new Error('잘못된 접근'),
-        '잘못된 접근',
-        '비밀번호 재설정 링크가 올바르지 않습니다.',
+        new Error(t('auth.resetPasswordForm.errors.invalidAccess')),
+        t('auth.resetPasswordForm.errors.invalidAccessTitle'),
+        t('auth.resetPasswordForm.errors.invalidAccessDescription'),
       );
       router.push('/forgot-password');
     }
-  }, [verificationCode, router, handleApiError]);
+  }, [verificationCode, router, handleApiError, t]);
 
   const onSubmit = async (data: ResetPasswordFormData) => {
     // 사용할 이메일 결정 (URL 없으면 입력값 사용)
     const emailToUse = emailParam ? decodeURIComponent(emailParam) : emailInput;
     if (!emailToUse || !emailToUse.includes('@')) {
       handleApiError(
-        new Error('이메일 누락'),
-        '이메일 필요',
-        '유효한 이메일 주소를 입력해주세요.',
+        new Error(t('auth.resetPasswordForm.errors.emailMissing')),
+        t('auth.resetPasswordForm.errors.emailRequiredTitle'),
+        t('auth.resetPasswordForm.errors.emailRequiredDescription'),
       );
       return;
     }
     if (!verificationCode) {
       handleApiError(
-        new Error('인증 코드 누락'),
-        '오류',
-        '필요한 정보가 없습니다. 다시 시도해주세요.',
+        new Error(t('auth.resetPasswordForm.errors.codeMissing')),
+        t('auth.resetPasswordForm.errors.errorTitle'),
+        t('auth.resetPasswordForm.errors.missingInfoDescription'),
       );
       router.push('/forgot-password');
       return;
@@ -94,8 +94,8 @@ export default function ResetPasswordForm() {
         // 모바일 브라우저 호환성을 위해 매우 관대한 성공 처리
         // API 호출이 성공했고 명시적 실패가 아니면 성공으로 처리
         showSuccess(
-          '🔐 비밀번호 변경 완료',
-          '비밀번호가 성공적으로 변경되었습니다. 새 비밀번호로 로그인해주세요.',
+          t('auth.resetPasswordForm.successTitle'),
+          t('auth.resetPasswordForm.successDescription'),
           5000,
         );
 
@@ -114,8 +114,8 @@ export default function ResetPasswordForm() {
         if (!errorStatus || errorStatus >= 500) {
           // 네트워크 오류나 서버 오류는 실제로는 성공일 수 있음
           showSuccess(
-            '🔐 비밀번호 변경 완료',
-            '비밀번호가 변경되었습니다. 새 비밀번호로 로그인해보세요.',
+            t('auth.resetPasswordForm.successTitle'),
+            t('auth.resetPasswordForm.successDescriptionAlt'),
             5000,
           );
           router.push('/login?message=password_changed');
@@ -127,8 +127,8 @@ export default function ResetPasswordForm() {
       // 결정적 처리: 실패 시에는 실패로 명확히 안내하고, 페이지에 남겨 재시도 유도
       handleApiError(
         error,
-        '비밀번호 변경 실패',
-        '비밀번호 변경 중 오류가 발생했습니다. 다시 시도해주세요.',
+        t('auth.resetPasswordForm.failureTitle'),
+        t('auth.resetPasswordForm.failureDescription'),
       );
       return;
     }
@@ -139,16 +139,18 @@ export default function ResetPasswordForm() {
       {/* 성공 아이콘 */}
       <div className="flex justify-center">
         <div className="w-20 h-20 bg-sage-50/20 dark:bg-sage-50/10 rounded-full flex items-center justify-center">
-          <span className="text-4xl" role="img" aria-label="이메일">
+          <span className="text-4xl" role="img" aria-label={t('auth.email')}>
             ✉️
           </span>
         </div>
       </div>
 
       <div className="text-center">
-        <h1 className={TEXT_STYLES.heading.h1}>비밀번호 재설정</h1>
+        <h1 className={TEXT_STYLES.heading.h1}>
+          {t('auth.resetPasswordForm.title')}
+        </h1>
         <p className={TEXT_STYLES.description}>
-          새로운 비밀번호를 입력해주세요
+          {t('auth.resetPasswordForm.description')}
         </p>
       </div>
 
@@ -157,14 +159,14 @@ export default function ResetPasswordForm() {
         {!emailParam && (
           <div>
             <label className={TEXT_STYLES.label} htmlFor="email">
-              이메일 주소
+              {t('auth.resetPasswordForm.emailLabel')}
             </label>
             <FormInput
               type="email"
               id="email"
               value={emailInput}
               onChange={(e) => setEmailInput(e.target.value)}
-              placeholder="가입한 이메일 주소를 입력하세요"
+              placeholder={t('auth.resetPasswordForm.emailPlaceholder')}
               disabled={isSubmitting}
             />
           </div>
@@ -173,13 +175,13 @@ export default function ResetPasswordForm() {
         {/* 새 비밀번호 입력 */}
         <div>
           <label className={TEXT_STYLES.label} htmlFor="password">
-            새 비밀번호 입력
+            {t('auth.resetPasswordForm.newPasswordLabel')}
           </label>
           <FormInput
             type="password"
             id="password"
             {...register('password')}
-            placeholder="새 비밀번호를 입력하세요"
+            placeholder={t('auth.resetPasswordForm.newPasswordPlaceholder')}
             error={errors.password?.message}
             disabled={isSubmitting}
           />
@@ -188,13 +190,13 @@ export default function ResetPasswordForm() {
         {/* 새 비밀번호 확인 */}
         <div>
           <label className={TEXT_STYLES.label} htmlFor="passwordConfirm">
-            새 비밀번호 확인
+            {t('auth.resetPasswordForm.confirmLabel')}
           </label>
           <FormInput
             type="password"
             id="passwordConfirm"
             {...register('passwordConfirm')}
-            placeholder="새 비밀번호를 다시 입력하세요"
+            placeholder={t('auth.resetPasswordForm.confirmPlaceholder')}
             error={errors.passwordConfirm?.message}
             disabled={isSubmitting}
           />
@@ -203,11 +205,11 @@ export default function ResetPasswordForm() {
         {/* 비밀번호 보안 요구사항 안내 */}
         <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800/30 rounded-lg p-4">
           <h3 className={`text-sm font-medium ${TEXT_STYLES.info.blue} mb-2`}>
-            비밀번호 요구사항
+            {t('auth.resetPasswordForm.requirementsTitle')}
           </h3>
           <ul className={`text-xs ${TEXT_STYLES.info.blueSecondary} space-y-1`}>
-            <li>• 9자 이상</li>
-            <li>• 영문, 숫자, 특수문자 포함</li>
+            <li>• {t('auth.resetPasswordForm.requirementMin')}</li>
+            <li>• {t('auth.resetPasswordForm.requirementChars')}</li>
           </ul>
         </div>
 
@@ -217,7 +219,9 @@ export default function ResetPasswordForm() {
           disabled={isSubmitting}
           className="w-full saegim-button saegim-button-large disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          {isSubmitting ? '변경 중...' : '비밀번호 변경'}
+          {isSubmitting
+            ? t('auth.resetPasswordForm.submitting')
+            : t('auth.resetPasswordForm.submit')}
         </button>
       </form>
 
@@ -228,7 +232,7 @@ export default function ResetPasswordForm() {
           onClick={() => router.push('/login')}
           className={TEXT_STYLES.link}
         >
-          로그인 페이지로 돌아가기
+          {t('auth.resetPasswordForm.backToLogin')}
         </button>
       </div>
     </div>

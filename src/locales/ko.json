@@ -251,6 +251,75 @@
         "restorable": "탈퇴된 계정입니다. {{days}}일 이내에 복구할 수 있습니다.",
         "expired": "탈퇴 후 30일이 경과되어 복구할 수 없습니다."
       }
+    },
+    "resetPasswordErrorForm": {
+      "warningLabel": "경고",
+      "title": "이메일 인증 실패",
+      "descriptionLine1": "소셜계정 사용자입니까?",
+      "descriptionLine2": "비밀번호를 설정할 수 없습니다.",
+      "notice": "소셜계정에서 이메일 알림받기로도 직접 비밀번호 설정은 불가 안내",
+      "resendButton": "이메일 재설정 다시 받기",
+      "supportButton": "고객센터 문의 안내"
+    },
+    "resetPasswordForm": {
+      "title": "비밀번호 재설정",
+      "description": "새로운 비밀번호를 입력해주세요",
+      "emailLabel": "이메일 주소",
+      "emailPlaceholder": "가입한 이메일 주소를 입력하세요",
+      "newPasswordLabel": "새 비밀번호 입력",
+      "newPasswordPlaceholder": "새 비밀번호를 입력하세요",
+      "confirmLabel": "새 비밀번호 확인",
+      "confirmPlaceholder": "새 비밀번호를 다시 입력하세요",
+      "requirementsTitle": "비밀번호 요구사항",
+      "requirementMin": "9자 이상",
+      "requirementChars": "영문, 숫자, 특수문자 포함",
+      "submit": "비밀번호 변경",
+      "submitting": "변경 중...",
+      "backToLogin": "로그인 페이지로 돌아가기",
+      "successTitle": "🔐 비밀번호 변경 완료",
+      "successDescription": "비밀번호가 성공적으로 변경되었습니다. 새 비밀번호로 로그인해주세요.",
+      "successDescriptionAlt": "비밀번호가 변경되었습니다. 새 비밀번호로 로그인해보세요.",
+      "failureTitle": "비밀번호 변경 실패",
+      "failureDescription": "비밀번호 변경 중 오류가 발생했습니다. 다시 시도해주세요.",
+      "errors": {
+        "invalidAccess": "잘못된 접근",
+        "invalidAccessTitle": "잘못된 접근",
+        "invalidAccessDescription": "비밀번호 재설정 링크가 올바르지 않습니다.",
+        "emailMissing": "이메일 누락",
+        "emailRequiredTitle": "이메일 필요",
+        "emailRequiredDescription": "유효한 이메일 주소를 입력해주세요.",
+        "codeMissing": "인증 코드 누락",
+        "errorTitle": "오류",
+        "missingInfoDescription": "필요한 정보가 없습니다. 다시 시도해주세요."
+      }
+    },
+    "supportForm": {
+      "title": "고객센터 문의",
+      "descriptionLine1": "문제 발생, 제안 등을 자유롭게 작성해주세요.",
+      "descriptionLine2": "빠른 시일 내에 답변 드리겠습니다.",
+      "titleLabel": "제목 입력",
+      "titlePlaceholder": "제목을 입력해주세요",
+      "contentLabel": "내용 입력",
+      "contentPlaceholder": "문의하실 내용을 자세히 작성해주세요",
+      "imageUploadLabel": "스크린샷/이미지 업로드",
+      "imageAlt": "업로드된 이미지",
+      "imageUploadButton": "이미지 업로드",
+      "imageUploadFormat": "PNG, JPG, GIF up to 10MB",
+      "imageUploadHint": "클릭하여 파일 선택",
+      "submit": "전송하기",
+      "submitting": "전송 중...",
+      "successTitle": "문의 접수 완료",
+      "successDescription": "문의가 성공적으로 접수되었습니다. 빠른 시일 내에 답변 드리겠습니다.",
+      "failureTitle": "문의 접수 실패",
+      "failureDescription": "문의 접수 중 오류가 발생했습니다.",
+      "errors": {
+        "fileSizeExceeded": "파일 크기 초과",
+        "fileSizeTitle": "파일 크기 초과",
+        "fileSizeDescription": "파일 크기는 10MB 이하여야 합니다.",
+        "invalidFileType": "잘못된 파일 타입",
+        "invalidFileTypeTitle": "잘못된 파일 타입",
+        "invalidFileTypeDescription": "이미지 파일만 업로드 가능합니다."
+      }
     }
   },
   "create": {

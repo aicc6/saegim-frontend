@@ -1,10 +1,12 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
+import { useTranslation } from 'react-i18next';
 import { TEXT_STYLES } from '@/constants';
 
 export default function ResetPasswordErrorForm() {
   const router = useRouter();
+  const { t } = useTranslation();
 
   const handleResendEmail = () => {
     router.push('/forgot-password');
@@ -19,7 +21,11 @@ export default function ResetPasswordErrorForm() {
       {/* 에러 아이콘 */}
       <div className="flex justify-center">
         <div className="w-20 h-20 bg-red-50 dark:bg-red-900/20 rounded-full flex items-center justify-center">
-          <span className="text-4xl" role="img" aria-label="경고">
+          <span
+            className="text-4xl"
+            role="img"
+            aria-label={t('auth.resetPasswordErrorForm.warningLabel')}
+          >
             ⚠️
           </span>
         </div>
@@ -27,11 +33,13 @@ export default function ResetPasswordErrorForm() {
 
       {/* 에러 메시지 */}
       <div className="space-y-2">
-        <h1 className={TEXT_STYLES.heading.h1}>이메일 인증 실패</h1>
+        <h1 className={TEXT_STYLES.heading.h1}>
+          {t('auth.resetPasswordErrorForm.title')}
+        </h1>
         <p className={TEXT_STYLES.secondary}>
-          소셜계정 사용자입니까?
+          {t('auth.resetPasswordErrorForm.descriptionLine1')}
           <br />
-          비밀번호를 설정할 수 없습니다.
+          {t('auth.resetPasswordErrorForm.descriptionLine2')}
         </p>
       </div>
 
@@ -40,7 +48,7 @@ export default function ResetPasswordErrorForm() {
         {/* 에러 표시 카드 */}
         <div className="bg-red-50 dark:bg-red-900/20 rounded-lg p-4">
           <p className={TEXT_STYLES.error}>
-            소셜계정에서 이메일 알림받기로도 직접 비밀번호 설정은 불가 안내
+            {t('auth.resetPasswordErrorForm.notice')}
           </p>
         </div>
 
@@ -49,7 +57,7 @@ export default function ResetPasswordErrorForm() {
           onClick={handleResendEmail}
           className="w-full saegim-button saegim-button-large"
         >
-          이메일 재설정 다시 받기
+          {t('auth.resetPasswordErrorForm.resendButton')}
         </button>
 
         {/* 고객센터 문의 버튼 */}
@@ -57,7 +65,7 @@ export default function ResetPasswordErrorForm() {
           onClick={handleGoToHelp}
           className={`w-full ${TEXT_STYLES.button.secondary}`}
         >
-          고객센터 문의 안내
+          {t('auth.resetPasswordErrorForm.supportButton')}
         </button>
       </div>
     </div>

@@ -39,9 +39,9 @@ export default function SupportForm() {
       // 파일 크기 검증 (10MB)
       if (file.size > 10 * 1024 * 1024) {
         handleApiError(
-          new Error('파일 크기 초과'),
-          '파일 크기 초과',
-          '파일 크기는 10MB 이하여야 합니다.',
+          new Error(t('auth.supportForm.errors.fileSizeExceeded')),
+          t('auth.supportForm.errors.fileSizeTitle'),
+          t('auth.supportForm.errors.fileSizeDescription'),
         );
         return;
       }
@@ -49,9 +49,9 @@ export default function SupportForm() {
       // 파일 타입 검증
       if (!file.type.startsWith('image/')) {
         handleApiError(
-          new Error('잘못된 파일 타입'),
-          '잘못된 파일 타입',
-          '이미지 파일만 업로드 가능합니다.',
+          new Error(t('auth.supportForm.errors.invalidFileType')),
+          t('auth.supportForm.errors.invalidFileTypeTitle'),
+          t('auth.supportForm.errors.invalidFileTypeDescription'),
         );
         return;
       }
@@ -102,8 +102,8 @@ export default function SupportForm() {
       console.log('API 응답 성공:', response.data);
 
       showSuccess(
-        '문의 접수 완료',
-        '문의가 성공적으로 접수되었습니다. 빠른 시일 내에 답변 드리겠습니다.',
+        t('auth.supportForm.successTitle'),
+        t('auth.supportForm.successDescription'),
       );
 
       // 폼 초기화
@@ -115,8 +115,8 @@ export default function SupportForm() {
       console.error('폼 제출 실패:', error);
       handleApiError(
         error,
-        '문의 접수 실패',
-        '문의 접수 중 오류가 발생했습니다.',
+        t('auth.supportForm.failureTitle'),
+        t('auth.supportForm.failureDescription'),
       );
     }
   };
@@ -124,11 +124,13 @@ export default function SupportForm() {
   return (
     <div className="space-y-6">
       <div className="text-center">
-        <h1 className={TEXT_STYLES.heading.h1}>고객센터 문의</h1>
+        <h1 className={TEXT_STYLES.heading.h1}>
+          {t('auth.supportForm.title')}
+        </h1>
         <p className={TEXT_STYLES.description}>
-          문제 발생, 제안 등을 자유롭게 작성해주세요.
+          {t('auth.supportForm.descriptionLine1')}
           <br />
-          빠시간 내에 답변 드리겠습니다.
+          {t('auth.supportForm.descriptionLine2')}
         </p>
       </div>
 
@@ -136,13 +138,13 @@ export default function SupportForm() {
         {/* 제목 입력 */}
         <div>
           <label className={TEXT_STYLES.label} htmlFor="title">
-            제목 입력
+            {t('auth.supportForm.titleLabel')}
           </label>
           <FormInput
             type="text"
             id="title"
             {...register('title')}
-            placeholder="제목을 입력해주세요"
+            placeholder={t('auth.supportForm.titlePlaceholder')}
             error={errors.title?.message}
             disabled={isSubmitting}
           />
@@ -151,14 +153,14 @@ export default function SupportForm() {
         {/* 내용 입력 */}
         <div>
           <label className={TEXT_STYLES.label} htmlFor="content">
-            내용 입력
+            {t('auth.supportForm.contentLabel')}
           </label>
           <textarea
             id="content"
             {...register('content')}
             rows={6}
             className="w-full px-4 py-3 bg-background-primary dark:bg-background-dark border border-border-subtle dark:border-border-dark rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 text-text-primary dark:text-text-dark resize-none"
-            placeholder="문의하실 내용을 자세히 작성해주세요"
+            placeholder={t('auth.supportForm.contentPlaceholder')}
             disabled={isSubmitting}
           />
           {errors.content && (
@@ -171,7 +173,7 @@ export default function SupportForm() {
         {/* 이미지 업로드 */}
         <div>
           <label className={TEXT_STYLES.label} htmlFor="file-upload">
-            스크린샷/이미지 업로드
+            {t('auth.supportForm.imageUploadLabel')}
           </label>
 
           {imagePreview ? (
@@ -179,7 +181,7 @@ export default function SupportForm() {
             <div className="mt-2 relative">
               <Image
                 src={imagePreview}
-                alt="업로드된 이미지"
+                alt={t('auth.supportForm.imageAlt')}
                 width={400}
                 height={192}
                 className="w-full max-w-md h-48 object-cover rounded-lg border border-border-subtle dark:border-border-dark"
@@ -205,7 +207,7 @@ export default function SupportForm() {
               }}
               tabIndex={0}
               role="button"
-              aria-label="이미지 업로드"
+              aria-label={t('auth.supportForm.imageUploadLabel')}
             >
               <div className="space-y-1 text-center">
                 <svg
@@ -224,14 +226,14 @@ export default function SupportForm() {
                 </svg>
                 <div className="text-sm text-text-secondary dark:text-text-dark-secondary">
                   <span className="font-medium text-primary hover:text-primary/80">
-                    이미지 업로드
+                    {t('auth.supportForm.imageUploadButton')}
                   </span>
                 </div>
                 <p className="text-xs text-text-secondary dark:text-text-dark-secondary">
-                  PNG, JPG, GIF up to 10MB
+                  {t('auth.supportForm.imageUploadFormat')}
                 </p>
                 <p className="text-xs text-text-secondary dark:text-text-dark-secondary">
-                  클릭하여 파일 선택
+                  {t('auth.supportForm.imageUploadHint')}
                 </p>
               </div>
 
@@ -255,7 +257,9 @@ export default function SupportForm() {
           disabled={isSubmitting}
           className="w-full saegim-button saegim-button-large disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          {isSubmitting ? '전송 중...' : '전송하기'}
+          {isSubmitting
+            ? t('auth.supportForm.submitting')
+            : t('auth.supportForm.submit')}
         </button>
       </form>
     </div>
