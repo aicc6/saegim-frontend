@@ -235,13 +235,16 @@ export const useAuthStore = create<AuthState>()(
         name: 'auth-storage',
         storage: {
           getItem: (name: string) => {
+            if (typeof window === 'undefined') return null;
             const value = localStorage.getItem(name);
             return value ? JSON.parse(value) : null;
           },
           setItem: (name: string, value: unknown) => {
+            if (typeof window === 'undefined') return;
             localStorage.setItem(name, JSON.stringify(value));
           },
           removeItem: (name: string) => {
+            if (typeof window === 'undefined') return;
             localStorage.removeItem(name);
           },
         },

@@ -67,7 +67,9 @@ export const useDiaryStore = create<DiaryState>((set, get) => ({
   currentPage: 1,
   pageSize: 20,
   deletedImageIds: new Set(
-    JSON.parse(localStorage.getItem('deletedImageIds') || '[]'),
+    typeof window !== 'undefined'
+      ? JSON.parse(localStorage.getItem('deletedImageIds') || '[]')
+      : [],
   ), // localStorage에서 복원
   tempEntry: null, // 이전 데이터 유지를 위한 임시 상태
 
@@ -281,10 +283,12 @@ export const useDiaryStore = create<DiaryState>((set, get) => ({
     set((state) => {
       const newDeletedImageIds = new Set([...state.deletedImageIds, imageId]);
       // localStorage에 저장
-      localStorage.setItem(
-        'deletedImageIds',
-        JSON.stringify(Array.from(newDeletedImageIds)),
-      );
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(
+          'deletedImageIds',
+          JSON.stringify(Array.from(newDeletedImageIds)),
+        );
+      }
       return { deletedImageIds: newDeletedImageIds };
     });
   },
@@ -296,10 +300,12 @@ export const useDiaryStore = create<DiaryState>((set, get) => ({
         [...state.deletedImageIds].filter((id) => id !== imageId),
       );
       // localStorage에 저장
-      localStorage.setItem(
-        'deletedImageIds',
-        JSON.stringify(Array.from(newDeletedImageIds)),
-      );
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(
+          'deletedImageIds',
+          JSON.stringify(Array.from(newDeletedImageIds)),
+        );
+      }
       return { deletedImageIds: newDeletedImageIds };
     });
   },
@@ -307,7 +313,9 @@ export const useDiaryStore = create<DiaryState>((set, get) => ({
   // 모든 삭제된 이미지 ID 초기화
   clearDeletedImageIds: () => {
     // localStorage에서도 제거
-    localStorage.removeItem('deletedImageIds');
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('deletedImageIds');
+    }
     set({ deletedImageIds: new Set() });
   },
 
