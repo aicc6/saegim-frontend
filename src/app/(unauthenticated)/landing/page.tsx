@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useEffect, useRef, Suspense } from 'react';
+import { useEffect, useRef, useState, Suspense } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Heart,
@@ -11,6 +11,7 @@ import {
   Play,
   CheckCircle,
   AlertCircle,
+  Smartphone,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -18,6 +19,7 @@ import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { Toaster } from '@/components/ui/toaster';
 import { ToastAction, type ToastActionElement } from '@/components/ui/toast';
+import { getAppDownloadInfo, type AppDownloadInfo } from '@/lib/api';
 
 const features = [
   {
@@ -53,6 +55,26 @@ function LandingWithSearchParams() {
   const { toast } = useToast();
   const { t } = useTranslation();
   const statusTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const [androidDownloadInfo, setAndroidDownloadInfo] =
+    useState<AppDownloadInfo | null>(null);
+  const [isLoadingDownload, setIsLoadingDownload] = useState(false);
+
+  // 앱 다운로드 정보 로드
+  useEffect(() => {
+    const loadDownloadInfo = async () => {
+      setIsLoadingDownload(true);
+      try {
+        const info = await getAppDownloadInfo('android');
+        setAndroidDownloadInfo(info);
+      } catch (error) {
+        console.error('Failed to load Android download info:', error);
+      } finally {
+        setIsLoadingDownload(false);
+      }
+    };
+
+    loadDownloadInfo();
+  }, []);
 
   useEffect(() => {
     // URL 파라미터에서 상태 확인
@@ -195,6 +217,48 @@ function LandingWithSearchParams() {
     router.push('/login?redirect=records');
   };
 
+  const handleDownloadApp = () => {
+    if (androidDownloadInfo) {
+      try {
+        const url = androidDownloadInfo.url;
+
+        let isExternal = true;
+        try {
+          const parsed = new URL(url);
+          isExternal = parsed.origin !== window.location.origin;
+        } catch {
+          isExternal = true;
+        }
+
+        if (isExternal) {
+          window.open(url, '_blank', 'noopener');
+        } else {
+          const link = document.createElement('a');
+          link.href = url;
+          link.download = androidDownloadInfo.fileName;
+          link.target = '_blank';
+          link.rel = 'noopener noreferrer';
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+        }
+      } catch (error) {
+        console.error('Download start failed:', error);
+        toast({
+          title: t('landing.download.errorTitle'),
+          description: t('landing.download.errorDescription'),
+          variant: 'destructive',
+        });
+      }
+    } else {
+      toast({
+        title: t('landing.download.loadingTitle'),
+        description: t('landing.download.loadingDescription'),
+        variant: 'destructive',
+      });
+    }
+  };
+
   const quoteLines = t('landing.hero.quoteText').split('\n');
 
   return (
@@ -242,6 +306,16 @@ function LandingWithSearchParams() {
                   <Play className="w-4 h-4 mr-2" />
                   {t('landing.hero.viewRecords')}
                 </Button>
+                <Button
+                  size="lg"
+                  variant="outline"
+                  className="border-sage-30 bg-sage-10 text-sage-100 hover:bg-sage-20 w-full sm:w-auto shadow-sm"
+                  onClick={handleDownloadApp}
+                  disabled={isLoadingDownload || !androidDownloadInfo}
+                >
+                  <Smartphone className="w-4 h-4 mr-2" />
+                  {isLoadingDownload ? '로딩 중...' : '안드로이드 앱 다운로드'}
+                </Button>
               </div>
             </div>
 
@@ -285,6 +359,92 @@ function LandingWithSearchParams() {
               {/* 배경 장식 */}
               <div className="absolute -top-4 -right-4 w-72 h-72 bg-sage-30 rounded-full opacity-20 blur-3xl"></div>
               <div className="absolute -bottom-8 -left-8 w-64 h-64 bg-sage-40 rounded-full opacity-20 blur-3xl"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* 모바일 앱 다운로드 섹션 */}
+      <section className="py-16 bg-gradient-to-b from-sage-20 to-sage-10">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="bg-sage-10/80 backdrop-blur-sm border border-sage-30 rounded-2xl shadow-xl overflow-hidden">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
+              {/* 텍스트 콘텐츠 */}
+              <div className="p-8 lg:p-12 space-y-6">
+                <div className="inline-flex items-center gap-2 bg-sage-20 text-sage-100 px-4 py-2 rounded-full text-sm font-medium">
+                  <Smartphone className="w-4 h-4" />
+                  모바일 앱 출시
+                </div>
+                <h2 className="text-3xl lg:text-4xl font-bold text-sage-100">
+                  언제 어디서나
+                  <br />
+                  <span className="text-sage-70">새김과 함께</span>
+                </h2>
+                <p className="text-lg text-sage-80 leading-relaxed">
+                  새김 안드로이드 앱을 다운로드하고 언제 어디서나 당신의 감정을
+                  기록하세요. 모바일에 최적화된 UI로 더욱 편리하게 일기를 작성할
+                  수 있습니다.
+                </p>
+                <div className="flex flex-col sm:flex-row gap-4">
+                  <Button
+                    size="lg"
+                    className="bg-sage-50 hover:bg-sage-60 text-white"
+                    onClick={handleDownloadApp}
+                    disabled={isLoadingDownload || !androidDownloadInfo}
+                  >
+                    <Smartphone className="w-5 h-5 mr-2" />
+                    {isLoadingDownload
+                      ? '로딩 중...'
+                      : '안드로이드 앱 다운로드'}
+                  </Button>
+                  <Button
+                    size="lg"
+                    variant="outline"
+                    className="border-sage-30 text-sage-100 hover:bg-sage-10"
+                    disabled
+                  >
+                    iOS 앱 준비 중
+                  </Button>
+                </div>
+                <p className="text-sm text-sage-60">
+                  ✨ 현재 안드로이드 버전이 제공됩니다. iOS 버전도 곧 출시될
+                  예정입니다.
+                </p>
+              </div>
+
+              {/* 이미지/일러스트 */}
+              <div className="relative bg-gradient-to-br from-sage-20 to-sage-30 p-8 lg:p-12 h-full min-h-[400px] flex items-center justify-center">
+                <div className="relative">
+                  {/* 모바일 앱 미리보기 카드 */}
+                  <div className="bg-sage-10/80 backdrop-blur-sm border border-sage-30 rounded-3xl shadow-2xl p-6 max-w-sm">
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-12 h-12 bg-sage-20 rounded-full flex items-center justify-center">
+                          <Heart className="w-6 h-6 text-sage-70" />
+                        </div>
+                        <div>
+                          <h3 className="font-bold text-sage-100">새김</h3>
+                          <p className="text-sm text-sage-70">
+                            감성 AI 다이어리
+                          </p>
+                        </div>
+                      </div>
+                      <div className="bg-sage-10 rounded-xl p-4 space-y-2">
+                        <div className="h-2 bg-sage-30 rounded w-3/4"></div>
+                        <div className="h-2 bg-sage-30 rounded w-full"></div>
+                        <div className="h-2 bg-sage-30 rounded w-5/6"></div>
+                      </div>
+                      <div className="flex gap-2">
+                        <div className="flex-1 h-20 bg-sage-20 rounded-lg"></div>
+                        <div className="flex-1 h-20 bg-sage-20 rounded-lg"></div>
+                      </div>
+                    </div>
+                  </div>
+                  {/* 배경 장식 */}
+                  <div className="absolute -top-8 -right-8 w-32 h-32 bg-sage-40 rounded-full opacity-30 blur-2xl"></div>
+                  <div className="absolute -bottom-8 -left-8 w-40 h-40 bg-sage-50 rounded-full opacity-20 blur-2xl"></div>
+                </div>
+              </div>
             </div>
           </div>
         </div>

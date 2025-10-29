@@ -20,6 +20,8 @@ export { imageApi } from './image';
 export { aiApi } from './ai';
 export type { AIGenerationResult } from './ai';
 
+export * from './app-version';
+
 import { notificationApi as _notificationApi } from './notification';
 export { notificationApi } from './notification';
 export type {

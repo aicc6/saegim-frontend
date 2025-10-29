@@ -281,6 +281,12 @@
     "toastAction": {
       "loginAlt": "Go to login page"
     },
+    "download": {
+      "errorTitle": "Download failed",
+      "errorDescription": "We couldn’t start the download. Please check your network connection and try again.",
+      "loadingTitle": "Preparing download",
+      "loadingDescription": "We’re loading the app download link. Please try again in a moment."
+    },
     "features": {
       "title": "What Makes Saegim Special",
       "subtitle": "Experience an emotional journaling journey where AI meets the healing power of nature",

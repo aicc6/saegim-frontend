@@ -281,6 +281,12 @@
     "toastAction": {
       "loginAlt": "로그인 페이지로 이동"
     },
+    "download": {
+      "errorTitle": "다운로드 실패",
+      "errorDescription": "다운로드를 시작할 수 없습니다. 네트워크 상태를 확인해주세요.",
+      "loadingTitle": "다운로드 준비 중",
+      "loadingDescription": "앱 다운로드 링크를 불러오는 중입니다. 잠시 후 다시 시도해주세요."
+    },
     "features": {
       "title": "새김만의 특별한 기능",
       "subtitle": "AI 기술과 자연 치유의 만남으로 당신만의 특별한 감정 기록 경험을 제공합니다",
