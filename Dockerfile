@@ -60,6 +60,8 @@ RUN npm ci --omit=dev
 FROM node:20-alpine AS runner
 WORKDIR /app
 
+ENV PORT=4000
+
 RUN apk add --no-cache dumb-init curl
 RUN mkdir -p /app && chown -R node:node /app
 
@@ -83,4 +85,4 @@ EXPOSE 4000
 
 # 헬스체크는 파이프라인(run 옵션)에서 설정(중복 방지)
 ENTRYPOINT ["dumb-init", "--"]
-CMD ["PORT=4000", "npm", "start"]
+CMD ["npm", "start"]
