@@ -277,7 +277,7 @@ pipeline {
               --health-interval=30s \
               --health-timeout=10s \
               --health-retries=3 \
-              -p 4000:44000 \\
+              -p 44000:4000 \\
               "${imageRef}"
 
             echo "== No host port binding by policy (NPM routes by container name) =="
