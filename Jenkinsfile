@@ -277,10 +277,11 @@ pipeline {
               --health-interval=30s \
               --health-timeout=10s \
               --health-retries=3 \
+              -p 4000:44000 \\
               "${imageRef}"
 
             echo "== No host port binding by policy (NPM routes by container name) =="
-            echo "Example NPM target: http://${containerName}:3000"
+            echo "Example NPM target: http://${containerName}:4000"
 
             docker image prune -f || true
           """
